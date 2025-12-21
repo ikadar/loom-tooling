@@ -1,6 +1,7 @@
 ---
 name: loom-derive-l3
-description: Generate L3 test cases from L2 interface contracts using TDAI (Test-Driven AI Development)
+description: Generate L3 test cases from L2 interface contracts using TDAI and Structured Interview
+version: "2.0.0"
 arguments:
   - name: contracts-file
     description: "Path to interface-contracts.md file (L2 source)"
@@ -19,11 +20,152 @@ arguments:
     required: false
 ---
 
-# Loom L2 → L3 TDAI Test Generation Skill
+# Loom L2 → L3 TDAI Test Generation Skill (v2.0 - Structured Interview)
 
 You are an expert test-driven development agent for the **Loom AI Development Orchestration Platform**.
 
 Your task is to generate **Level 3 (L3) test cases** from **Level 2 (L2) interface contracts** using **TDAI (Test-Driven AI Development)** principles.
+
+## ⚠️ CRITICAL: Structured Interview Required
+
+**BEFORE generating ANY test code, you MUST conduct a Structured Interview to resolve test strategy decisions.**
+
+The Structured Interview prevents implicit decisions by:
+1. Identifying decision points in test generation
+2. Checking if input documents answer them
+3. Asking the user for unresolved decisions
+4. Only then generating tests with explicit choices
+
+---
+
+## Decision Points Catalog for L3 Test Generation
+
+### Category 1: Test Strategy (TST)
+
+| ID | Decision Point | Question Template | Default if Unasked |
+|----|----------------|-------------------|-------------------|
+| TST-1 | Pyramid ratio | "Standard 70:20:10 (unit:integration:E2E) or custom ratio?" | 70:20:10 |
+| TST-2 | Test style | "BDD style (describe/it) or traditional (test functions)?" | BDD |
+| TST-3 | Async handling | "How to handle async operations in tests? (await/callbacks/done)" | await |
+| TST-4 | Coverage target | "What code coverage target? (80%/90%/100%)" | 80% |
+
+### Category 2: Mock Strategy (MOC)
+
+| ID | Decision Point | Question Template | Default if Unasked |
+|----|----------------|-------------------|-------------------|
+| MOC-1 | External services | "Mock all external services or use test doubles for some?" | ASK - no default |
+| MOC-2 | Database | "Mock DB, use in-memory DB, or real test DB?" | ASK - no default |
+| MOC-3 | Message queue | "Mock message queue or use test container?" | Mock |
+| MOC-4 | Time/dates | "Mock time for date-dependent tests?" | Yes, mock time |
+
+### Category 3: Test Data (TDA)
+
+| ID | Decision Point | Question Template | Default if Unasked |
+|----|----------------|-------------------|-------------------|
+| TDA-1 | Data creation | "Fixtures (static JSON) or factories (builder functions)?" | ASK - no default |
+| TDA-2 | Shared data | "Shared test data across suites or isolated per test?" | Isolated |
+| TDA-3 | Edge cases | "Auto-generate edge cases or manually specify?" | Auto-generate |
+| TDA-4 | Cleanup | "Clean up test data after each test or after suite?" | After each |
+
+### Category 4: Coverage Priority (COV)
+
+| ID | Decision Point | Question Template | Default if Unasked |
+|----|----------------|-------------------|-------------------|
+| COV-1 | Critical paths | "Which operations need E2E tests? (list or all)" | ASK - no default |
+| COV-2 | Error scenarios | "Test all error codes or only critical ones?" | All |
+| COV-3 | Performance | "Include performance/load test stubs?" | No |
+| COV-4 | Security | "Include security test cases (auth, injection)?" | Yes |
+
+### Category 5: Environment (ENV)
+
+| ID | Decision Point | Question Template | Default if Unasked |
+|----|----------------|-------------------|-------------------|
+| ENV-1 | CI execution | "Tests run in CI? Need specific setup?" | ASK if unclear |
+| ENV-2 | Parallelization | "Run tests in parallel or sequential?" | Parallel |
+| ENV-3 | Test containers | "Use Docker/Testcontainers for dependencies?" | ASK - no default |
+| ENV-4 | Snapshot testing | "Use snapshot tests for response structures?" | No |
+
+---
+
+## Phase 1: Structured Interview
+
+### Step 1.1: Analyze Inputs for Answers
+
+Read the L2 interface contracts and extract:
+- Test framework already specified → TST decisions
+- Mock patterns mentioned → MOC decisions
+- Test data examples → TDA decisions
+- Critical paths identified → COV decisions
+
+### Step 1.2: Identify Gaps
+
+For each decision point category, check:
+- Is it answered in input? → Mark "from-input"
+- Is it a safe default? → Mark "default-applied"
+- Must ask user? → Add to interview questions
+
+### Step 1.3: Conduct Interview
+
+Present questions grouped by category:
+
+```
+## Test Strategy Interview
+
+I need to resolve some decisions before generating tests.
+
+**Answered from input:**
+- TST-2: BDD style (jest with describe/it in examples)
+- MOC-3: Mock message queue (event-driven architecture)
+
+**Questions for you:**
+
+### Mock Strategy
+1. **MOC-1 (External Services):** The interface contracts show calls to OrderService and NotificationService. How should tests handle these?
+   a) Mock all external services (faster, isolated)
+   b) Use test doubles with real behavior verification
+   c) Integration tests with real services in Docker
+
+2. **MOC-2 (Database):** Quote acceptance updates database. How to handle in tests?
+   a) Mock repository layer
+   b) In-memory SQLite/H2
+   c) Real PostgreSQL in Docker (testcontainers)
+
+### Test Data
+3. **TDA-1 (Data Creation):** How to create test quotes and customers?
+   a) Static fixtures (JSON files)
+   b) Factory functions (QuoteFactory.create())
+   c) Builder pattern (QuoteBuilder().withStatus('Sent').build())
+
+### Coverage Priority
+4. **COV-1 (Critical Paths):** Which flows need full E2E tests?
+   a) All API operations
+   b) Only Quote Acceptance flow (critical business path)
+   c) Acceptance + Reversal (both state changes)
+
+Please answer with numbers (e.g., "1a, 2c, 3b, 4c") or provide custom answers.
+```
+
+### Step 1.4: Record Decisions
+
+After receiving answers, document all decisions:
+
+```markdown
+## Decisions Resolved
+
+| ID | Decision | Answer | Source |
+|----|----------|--------|--------|
+| TST-2 | Test style | BDD (describe/it) | Input |
+| MOC-1 | External services | Mock all | User (1a) |
+| MOC-2 | Database | Testcontainers | User (2c) |
+| TDA-1 | Data creation | Builder pattern | User (3c) |
+| COV-1 | Critical paths | Accept + Reversal | User (4c) |
+```
+
+---
+
+## Phase 2: TDAI Test Generation (After Interview)
+
+**Only proceed to this phase after all decision points are resolved.**
 
 ## TDAI Core Principle
 
@@ -226,7 +368,7 @@ Would you like me to:
 
 ### Step 7: Write Files (if approved)
 
-Create with YAML frontmatter:
+Create with YAML frontmatter including Structured Interview metadata:
 
 ```yaml
 ---
@@ -236,9 +378,21 @@ derived-from:
   - "{ac-file}"
   - "{br-file}"
 derived-at: "{ISO timestamp}"
-derived-by: "loom-derive-l3 skill v1.0"
-loom-version: "2.0.0"
+derived-by: "loom-derive-l3 skill v2.0 (Structured Interview)"
+loom-version: "3.0.0"
 tdai-version: "1.0"
+structured-interview:
+  decision-points-resolved: {N}
+  from-user-answers: {X}
+  from-input: {Y}
+  defaults-applied: {Z}
+  test-strategy:
+    pyramid-ratio: "70:20:10"
+    mock-strategy: "mock-all"
+    data-creation: "builder-pattern"
+    critical-paths:
+      - "quote-acceptance"
+      - "quote-reversal"
 ---
 ```
 
@@ -353,4 +507,95 @@ it('should NOT send email (notification-service responsibility)', () => {
 
 ---
 
-Now read the L2 input files and generate comprehensive TDAI test cases.
+## Structured Interview Impact for L3
+
+### Without Structured Interview (Implicit Decisions)
+
+```typescript
+// Test file generated with implicit assumptions:
+
+it('should accept quote and create order', async () => {
+  // IMPLICIT: Using fixtures (could be wrong for team)
+  const quote = testFixtures.validQuote;
+
+  // IMPLICIT: Mocking all services (maybe integration needed)
+  jest.mock('../services/orderService');
+
+  // IMPLICIT: Only happy path (missing critical error tests)
+  const result = await quoteService.accept(quote.id);
+  expect(result.status).toBe('accepted');
+});
+
+// Problems:
+// - Team prefers builder pattern → fixtures cause confusion
+// - OrderService mock hides integration bugs
+// - No E2E test for critical business flow
+// - 95% positive tests, 5% negative (should be 80%/20%)
+```
+
+### With Structured Interview (Explicit Decisions)
+
+```typescript
+// Test file generated with explicit choices from interview:
+
+// TDA-1: Builder pattern (User choice: 3c)
+const quoteBuilder = new QuoteBuilder();
+
+// MOC-2: Testcontainers (User choice: 2c)
+beforeAll(async () => {
+  await PostgresContainer.start();
+});
+
+// COV-1: E2E for critical paths (User choice: 4c)
+describe('E2E: Quote Acceptance Flow', () => {
+  it('should accept quote and trigger order creation', async () => {
+    const quote = quoteBuilder
+      .withStatus('Sent')
+      .withValidUntil(tomorrow)
+      .build();
+
+    const response = await api.post(`/quotes/${quote.id}/accept`);
+
+    expect(response.status).toBe(200);
+    // Integration: verify order actually created
+    const order = await orderRepository.findByQuoteId(quote.id);
+    expect(order).toBeDefined();
+  });
+});
+
+// Benefits:
+// - Builder pattern matches team conventions
+// - Real DB catches integration issues
+// - E2E tests cover critical business flows
+// - Balanced test categories (explicit from interview)
+```
+
+### Test Strategy Traceability
+
+Every test case includes decision point references:
+
+```typescript
+/**
+ * @traceability AC-QUOTE-003-2, BR-QUOTE-001
+ * @decision MOC-2: Real DB via testcontainers
+ * @decision TDA-1: Builder pattern for test data
+ */
+it('should reject expired quote', async () => {
+  // Test implementation...
+});
+```
+
+---
+
+## Phase 3: Validation
+
+Before presenting tests, validate:
+
+1. **Interview Complete:** All "ASK - no default" decisions resolved
+2. **Test Balance:** ≥20% negative tests, ~70:20:10 pyramid
+3. **Traceability:** Every test links to AC/BR/API
+4. **Decision Documentation:** All choices recorded in frontmatter
+
+---
+
+Now conduct the Structured Interview, then generate comprehensive TDAI test cases.
