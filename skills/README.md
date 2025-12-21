@@ -1,6 +1,6 @@
 # Loom Skills
 
-Claude Code skills for Loom document derivation.
+Claude Code skills for Loom document derivation and validation.
 
 ## Overview
 
@@ -8,50 +8,53 @@ These skills enable AI-driven document derivation following the Loom (AI-DOP) me
 
 ## Quick Start
 
-Use the unified `/loom` command for all derivations:
+Use the unified `/loom` command for derivation and validation:
 
 ```bash
-# L0 → L1: User stories to acceptance criteria + business rules
-/loom --level L1 --input user-stories.md --output-dir output/
+# Derive documents
+/loom derive --level L1 --input user-stories.md --output-dir output/
+/loom derive --level L2 --input ac.md,br.md --output-dir output/
+/loom derive --level L3 --input contracts.md,ac.md,br.md --output-dir output/
 
-# Domain modeling
-/loom --level domain --input stories.md,vocabulary.md --output-dir output/
-
-# L1 → L2: AC + BR to interface contracts + sequences
-/loom --level L2 --input ac.md,br.md --output-dir output/
-
-# L2 → L3: Contracts to test cases
-/loom --level L3 --input contracts.md,ac.md,br.md --output-dir output/
+# Validate documents
+/loom validate --dir output/
+/loom validate --dir output/ --check coverage
 ```
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    /loom (dispatcher)                   │
-│              Unified interface for all levels           │
-└─────────────────────┬───────────────────────────────────┘
-                      │
-        ┌─────────────┼─────────────┬─────────────┐
-        ▼             ▼             ▼             ▼
-┌───────────┐  ┌───────────┐  ┌───────────┐  ┌───────────┐
-│loom-derive│  │loom-domain│  │ loom-l2   │  │ loom-l3   │
-│   (L1)    │  │           │  │           │  │           │
-└───────────┘  └───────────┘  └───────────┘  └───────────┘
-   Specialized skills with focused prompts & SI catalogs
+┌─────────────────────────────────────────────────────────────────┐
+│                      /loom (dispatcher)                         │
+│           Unified interface for derivation & validation         │
+└───────────────────────────┬─────────────────────────────────────┘
+                            │
+          ┌─────────────────┼─────────────────┐
+          │                 │                 │
+          ▼                 ▼                 ▼
+    ┌───────────┐     ┌───────────┐     ┌─────────────┐
+    │  derive   │     │  derive   │     │  validate   │
+    │  L1/L2/L3 │     │  domain   │     │             │
+    └───────────┘     └───────────┘     └─────────────┘
+          │                 │                 │
+          ▼                 ▼                 ▼
+    ┌───────────┐     ┌───────────┐     ┌─────────────┐
+    │loom-derive│     │loom-domain│     │loom-validate│
+    │loom-l2/l3 │     │           │     │             │
+    └───────────┘     └───────────┘     └─────────────┘
+    Specialized skills with focused prompts & SI catalogs
 ```
-
-The `/loom` dispatcher routes to specialized skills, preserving their focused intelligence while providing a unified UX.
 
 ## Available Skills
 
-| Skill | Level | Input | Output |
-|-------|-------|-------|--------|
+| Skill | Purpose | Input | Output |
+|-------|---------|-------|--------|
 | `loom.md` | Dispatcher | any | routes to specialized skill |
 | `loom-derive.md` | L0 → L1 | user-stories.md | acceptance-criteria.md, business-rules.md |
 | `loom-derive-domain.md` | L0 → Domain | stories + vocabulary | domain-model.md |
 | `loom-derive-l2.md` | L1 → L2 | AC + BR | interface-contracts.md, sequence-design.md |
 | `loom-derive-l3.md` | L2 → L3 | contracts + AC + BR | test-cases.md |
+| `loom-validate.md` | Validation | all docs | validation report |
 
 ## Installation
 
@@ -73,41 +76,101 @@ ln -s /path/to/loom-tooling/skills my-project/.claude/skills
 ### Unified Command (Recommended)
 
 ```bash
-/loom --level <L1|domain|L2|L3> --input <file(s)> --output-dir <dir>
+# Derivation
+/loom derive --level <L1|domain|L2|L3> --input <file(s)> --output-dir <dir>
+
+# Validation
+/loom validate --dir <dir> [--check <check>]
 ```
 
-**Examples:**
+**Derivation Examples:**
 
 ```bash
 # Derive AC and BR from user stories
-/loom --level L1 --input requirements/user-stories.md --output-dir requirements/
+/loom derive --level L1 --input requirements/user-stories.md --output-dir requirements/
 
 # Derive domain model
-/loom --level domain --input requirements/user-stories.md,requirements/vocabulary.md --output-dir design/
+/loom derive --level domain --input stories.md,vocabulary.md --output-dir design/
 
 # Derive API contracts and sequences
-/loom --level L2 --input requirements/acceptance-criteria.md,requirements/business-rules.md --output-dir design/
+/loom derive --level L2 --input ac.md,br.md --output-dir design/
 
 # Derive test cases
-/loom --level L3 --input design/interface-contracts.md,requirements/acceptance-criteria.md,requirements/business-rules.md --output-dir tests/
+/loom derive --level L3 --input contracts.md,ac.md,br.md --output-dir tests/
+```
+
+**Validation Examples:**
+
+```bash
+# Run all checks
+/loom validate --dir output/
+
+# Check only traceability
+/loom validate --dir output/ --check traceability
+
+# Check test coverage
+/loom validate --dir output/ --check coverage
 ```
 
 ### Direct Skill Invocation (Advanced)
 
-You can also invoke specialized skills directly for more control:
+```bash
+# Derivation skills
+/loom-derive --input-file user-stories.md --output-dir output/
+/loom-derive-domain --user-stories-file stories.md --output-dir output/
+/loom-derive-l2 --ac-file ac.md --br-file br.md --output-dir output/
+/loom-derive-l3 --contracts-file contracts.md --ac-file ac.md --br-file br.md --output-dir output/
+
+# Validation skill
+/loom-validate --dir output/ --check all
+```
+
+## Validation Checks
+
+| Check | Description |
+|-------|-------------|
+| `traceability` | Verify all IDs and cross-references are valid |
+| `format` | Check YAML frontmatter, ID conventions, document structure |
+| `coverage` | Ensure every requirement has tests, every error code is tested |
+| `consistency` | Detect duplicate IDs, contradicting SI decisions |
+| `all` | Run all checks (default) |
+
+### Validation Output
+
+```
+LOOM VALIDATION REPORT
+======================
+
+Directory: poc/booking-system/
+
+Traceability .......... ✅ PASS (0 issues)
+Format ................ ⚠️  WARN (1 issue)
+Coverage .............. ✅ PASS (100%)
+Consistency ........... ✅ PASS (0 issues)
+
+─────────────────────────────────────────
+Overall: 1 warning, 0 errors
+```
+
+## Recommended Workflow
 
 ```bash
-# L0 → L1
-/loom-derive --input-file user-stories.md --output-dir output/
+# 1. Derive L1 from user stories
+/loom derive --level L1 --input user-stories.md --output-dir output/
 
-# Domain
-/loom-derive-domain --user-stories-file stories.md --vocabulary-file vocab.md --output-dir output/
+# 2. Derive domain model
+/loom derive --level domain --input stories.md,vocabulary.md --output-dir output/
 
-# L1 → L2
-/loom-derive-l2 --ac-file ac.md --br-file br.md --output-dir output/
+# 3. Derive L2
+/loom derive --level L2 --input ac.md,br.md --output-dir output/
 
-# L2 → L3
-/loom-derive-l3 --contracts-file contracts.md --ac-file ac.md --br-file br.md --output-dir output/
+# 4. Derive L3
+/loom derive --level L3 --input contracts.md,ac.md,br.md --output-dir output/
+
+# 5. Validate before commit
+/loom validate --dir output/
+
+# 6. Fix any issues, commit
 ```
 
 ## Structured Interview
@@ -144,3 +207,4 @@ Skills can be customized per project by editing the copied `.md` files:
 - Modify output templates
 - Add project-specific rules
 - Customize SI decision point catalogs
+- Add project-specific validation rules

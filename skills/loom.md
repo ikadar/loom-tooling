@@ -1,32 +1,48 @@
 ---
 name: loom
-description: Unified Loom derivation skill - routes to specialized skills based on level
-version: "1.0.0"
+description: Unified Loom skill - routes to specialized skills for derivation and validation
+version: "1.1.0"
 arguments:
+  - name: command
+    description: "Command: derive | validate (default: derive)"
+    required: false
   - name: level
-    description: "Derivation level: L1 | domain | L2 | L3"
-    required: true
+    description: "Derivation level: L1 | domain | L2 | L3 (for derive command)"
+    required: false
   - name: input
     description: "Input file(s). For L2/L3 with multiple inputs, use comma-separated paths."
-    required: true
+    required: false
   - name: output-dir
-    description: "Directory for generated documents"
-    required: true
+    description: "Directory for generated documents (derive) or documents to validate (validate)"
+    required: false
+  - name: check
+    description: "Validation check: traceability | format | coverage | consistency | all (for validate)"
+    required: false
+  - name: dir
+    description: "Alias for output-dir, used with validate command"
+    required: false
 ---
 
-# Loom Unified Derivation Skill (Dispatcher)
+# Loom Unified Skill (Dispatcher)
 
-You are the **Loom Dispatcher** - a routing skill that invokes the appropriate specialized derivation skill based on the `--level` argument.
+You are the **Loom Dispatcher** - a routing skill that invokes the appropriate specialized skill based on the command.
 
 ## Your Role
 
-You do NOT perform derivation directly. Instead, you:
+You do NOT perform derivation or validation directly. Instead, you:
 
-1. Parse the `--level` argument
-2. Map the `--input` argument to the correct format for the target skill
-3. Invoke the appropriate specialized skill using the **Skill tool**
+1. Parse the command (`derive` or `validate`)
+2. Route to the appropriate specialized skill
+3. Map arguments to the target skill's format
 
-## Routing Table
+## Commands
+
+| Command | Description | Target Skills |
+|---------|-------------|---------------|
+| `derive` | Generate documents from source | loom-derive, loom-derive-domain, loom-derive-l2, loom-derive-l3 |
+| `validate` | Check documents for issues | loom-validate |
+
+## Derive Routing Table
 
 | Level | Target Skill | Input Mapping |
 |-------|--------------|---------------|
@@ -35,11 +51,22 @@ You do NOT perform derivation directly. Instead, you:
 | `L2` | `loom-derive-l2` | `--input` → `--ac-file` (first), `--br-file` (second) |
 | `L3` | `loom-derive-l3` | `--input` → `--contracts-file` (first), `--ac-file` (second), `--br-file` (third) |
 
+## Validate Routing
+
+| Check | Description |
+|-------|-------------|
+| `traceability` | Verify all IDs and references are valid |
+| `format` | Check document structure and conventions |
+| `coverage` | Ensure all requirements have tests |
+| `consistency` | Detect contradictions and duplicates |
+| `all` | Run all checks (default) |
+
 ## Execution Flow
 
+### Derive Flow
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  /loom --level L1 --input stories.md --output-dir out/  │
+│  /loom derive --level L1 --input stories.md --output-dir out/  │
 └─────────────────────────┬───────────────────────────────┘
                           │
                           ▼
@@ -49,15 +76,22 @@ You do NOT perform derivation directly. Instead, you:
                           │
                           ▼
               ┌───────────────────────┐
-              │  Map arguments:       │
-              │  input → input-file   │
-              └───────────┬───────────┘
+              │  Invoke Skill tool:   │
+              │  skill: "loom-derive" │
+              └───────────────────────┘
+```
+
+### Validate Flow
+```
+┌─────────────────────────────────────────────────────────┐
+│  /loom validate --dir output/ --check all               │
+└─────────────────────────┬───────────────────────────────┘
                           │
                           ▼
               ┌───────────────────────┐
               │  Invoke Skill tool:   │
-              │  skill: "loom-derive" │
-              │  args: mapped args    │
+              │  skill: "loom-validate" │
+              │  args: --dir --check  │
               └───────────────────────┘
 ```
 
@@ -65,19 +99,39 @@ You do NOT perform derivation directly. Instead, you:
 
 When invoked, follow these steps EXACTLY:
 
-### Step 1: Validate Level
+### Step 0: Determine Command
 
-Check that `--level` is one of: `L1`, `domain`, `L2`, `L3`
+Check the first argument or `--command`:
+- If `derive` or `--level` is present → **Derive flow**
+- If `validate` or `--check` is present → **Validate flow**
+- If neither → Show help
+
+### Step 1a: Validate Flow - Check Level
+
+For derive command, check that `--level` is one of: `L1`, `domain`, `L2`, `L3`
 
 If invalid, respond with:
 ```
 Error: Invalid level "{level}". Valid levels are: L1, domain, L2, L3
 
 Usage:
-  /loom --level L1 --input user-stories.md --output-dir output/
-  /loom --level domain --input stories.md,vocabulary.md --output-dir output/
-  /loom --level L2 --input ac.md,br.md --output-dir output/
-  /loom --level L3 --input contracts.md,ac.md,br.md --output-dir output/
+  /loom derive --level L1 --input user-stories.md --output-dir output/
+  /loom derive --level domain --input stories.md,vocabulary.md --output-dir output/
+  /loom derive --level L2 --input ac.md,br.md --output-dir output/
+  /loom derive --level L3 --input contracts.md,ac.md,br.md --output-dir output/
+```
+
+### Step 1b: Validate Flow - Check Directory
+
+For validate command, ensure `--dir` is provided:
+
+```
+Error: Missing --dir argument.
+
+Usage:
+  /loom validate --dir output/
+  /loom validate --dir output/ --check traceability
+  /loom validate --dir output/ --check all
 ```
 
 ### Step 2: Parse Input Files
@@ -155,33 +209,50 @@ The specialized skill will handle the actual derivation with Structured Intervie
 If user invokes `/loom` without arguments or with `--help`, display:
 
 ```
-Loom - Unified Document Derivation
+Loom - Unified Document Derivation & Validation
 
 Usage:
-  /loom --level <level> --input <file(s)> --output-dir <dir>
+  /loom derive --level <level> --input <file(s)> --output-dir <dir>
+  /loom validate --dir <dir> [--check <check>]
 
-Levels:
+Commands:
+  derive    Generate documents from source (default)
+  validate  Check documents for issues
+
+Derive Levels:
   L1      Derive acceptance criteria and business rules from user stories
   domain  Derive domain model from user stories and vocabulary
   L2      Derive interface contracts and sequences from AC + BR
   L3      Derive test cases from contracts + AC + BR
 
-Examples:
-  /loom --level L1 --input user-stories.md --output-dir output/
-  /loom --level domain --input stories.md,vocabulary.md --output-dir output/
-  /loom --level L2 --input ac.md,br.md --output-dir output/
-  /loom --level L3 --input contracts.md,ac.md,br.md --output-dir output/
+Validation Checks:
+  traceability  Verify all IDs and references are valid
+  format        Check document structure and conventions
+  coverage      Ensure all requirements have tests
+  consistency   Detect contradictions and duplicates
+  all           Run all checks (default)
 
-For more info on a specific level:
-  /loom-derive --help        # L1 details
-  /loom-derive-domain --help # Domain details
-  /loom-derive-l2 --help     # L2 details
-  /loom-derive-l3 --help     # L3 details
+Examples:
+  # Derivation
+  /loom derive --level L1 --input user-stories.md --output-dir output/
+  /loom derive --level L2 --input ac.md,br.md --output-dir output/
+
+  # Validation
+  /loom validate --dir output/
+  /loom validate --dir output/ --check coverage
+
+  # Short forms (derive is default)
+  /loom --level L1 --input stories.md --output-dir output/
+
+For more info:
+  /loom-derive --help     # L1 derivation details
+  /loom-validate --help   # Validation details
 ```
 
 ## Important Notes
 
-1. **Do NOT perform derivation yourself** - always dispatch to the specialized skill
-2. **The specialized skills handle Structured Interview** - you just route
-3. **Preserve all arguments** - pass through output-dir and any other common args
+1. **Do NOT perform derivation or validation yourself** - always dispatch to the specialized skill
+2. **The specialized skills handle the actual work** - you just route
+3. **Preserve all arguments** - pass through to target skill
 4. **Multiple inputs use comma separation** - no spaces around commas
+5. **Validate after derive** - recommended workflow is derive then validate
