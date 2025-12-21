@@ -1,6 +1,6 @@
 # Loom Tooling
 
-Loom tooling for AI-driven development: skills, RAG engine, and MCP server.
+Loom tooling for AI-driven development: commands, RAG engine, and MCP server.
 
 ## Overview
 
@@ -8,7 +8,7 @@ This repository contains the tooling components for the Loom (AI-DOP) framework:
 
 ```
 loom-tooling/
-├── skills/           # Claude Code skills for derivation
+├── commands/         # Claude Code slash commands for derivation
 ├── rag/              # RAG engine for knowledge-enhanced derivation
 ├── templates/        # Project templates
 ├── docs/             # Documentation
@@ -17,36 +17,45 @@ loom-tooling/
 
 ## Components
 
-### Skills (`skills/`)
+### Commands (`commands/`)
 
-Claude Code skills for document derivation with **Structured Interview** pattern:
+Claude Code slash commands for document derivation with **Structured Interview** pattern:
 
-| Skill | Version | Purpose |
-|-------|---------|---------|
-| `loom-derive.md` | v2.0 | L0 → L1 derivation (user stories → AC, BR) |
-| `loom-derive-domain.md` | v1.0 | Domain modeling (vocabulary → domain model) |
-| `loom-derive-l2.md` | v2.0 | L1 → L2 derivation (AC, BR → API contracts, sequences) |
-| `loom-derive-l3.md` | v2.0 | L2 → L3 derivation (contracts → TDAI test cases) |
+| Command | Purpose |
+|---------|---------|
+| `/loom` | Backend dispatcher (routes to derive/validate) |
+| `/loom-derive` | L0 → L1 derivation (user stories → AC, BR) |
+| `/loom-derive-l2` | L1 → L2 derivation (AC, BR → API contracts) |
+| `/loom-derive-l3` | L2 → L3 derivation (contracts → test cases) |
+| `/loom-validate` | Validate all documents |
+| `/loom-ui` | UI/UX dispatcher (routes to UI derive/validate) |
+| `/loom-ui-patterns` | Generate cross-cutting UI patterns |
+| `/loom-ui-derive-l1` | UI stories + AC from mockups |
+| `/loom-ui-derive-l2` | Component specs + state machines |
+| `/loom-ui-derive-l3` | E2E + visual + manual QA tests |
+| `/loom-ui-validate` | Validate UI documents |
 
-**All skills use Structured Interview (SI):** AI asks targeted questions before making decisions, preventing implicit/wrong choices.
+**All commands use Structured Interview (SI):** AI asks targeted questions before making decisions, preventing implicit/wrong choices.
 
 **Usage in project:**
 ```bash
-# Copy skills to your project
-cp loom-tooling/skills/*.md my-project/.claude/skills/
+# Symlink commands to your project
+ln -s /path/to/loom-tooling/commands my-project/.claude/commands
 
 # Use in Claude Code
-/loom-derive --input-file ai-dop/requirements/user-stories.md
+/loom derive --level L1 --input user-stories.md --output-dir output/
+/loom-ui validate --dir ui/
 ```
 
 ### RAG Engine (`rag/`)
 
-Knowledge-enhanced derivation using RAG (Retrieval-Augmented Generation).
+Knowledge-enhanced derivation using RAG (Retrieval-Augmented Generation) with **Self-Learning System**.
 
 **Features:**
 - Vector DB: Chroma (local, free)
 - Embeddings: HuggingFace all-MiniLM-L6-v2 (local, free)
-- Knowledge base: Loom guidelines
+- Knowledge sources: Guidelines + Project docs (learns from derived documents)
+- Cross-chain SI reuse: Backend and UI decisions in single knowledge base
 
 **Setup:**
 ```bash
@@ -76,19 +85,20 @@ Model Context Protocol server for Loom tools integration.
 
 ## Installation in Project
 
-### Option 1: Copy Skills (Simple)
+### Option 1: Symlink (Recommended)
 
 ```bash
-# Copy skills to your project
-mkdir -p my-project/.claude/skills
-cp loom-tooling/skills/*.md my-project/.claude/skills/
+# Symlink commands (updates automatically)
+mkdir -p my-project/.claude
+ln -s /path/to/loom-tooling/commands my-project/.claude/commands
 ```
 
-### Option 2: Symlink (Development)
+### Option 2: Copy
 
 ```bash
-# Symlink for development (skills update automatically)
-ln -s /path/to/loom-tooling/skills my-project/.claude/skills
+# Copy commands to your project
+mkdir -p my-project/.claude/commands
+cp loom-tooling/commands/*.md my-project/.claude/commands/
 ```
 
 ### Option 3: MCP Server (Future)
@@ -112,6 +122,7 @@ ln -s /path/to/loom-tooling/skills my-project/.claude/skills
 
 ## Version
 
+- v0.3.0 - Commands restructure + UI/UX skill chain (2025-12-21)
 - v0.2.0 - Structured Interview pattern added to all skills (2025-12-21)
 - v0.1.0 - Initial release (skills + RAG PoC)
 
