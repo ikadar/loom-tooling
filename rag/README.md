@@ -197,12 +197,12 @@ Using HuggingFace `all-MiniLM-L6-v2`:
 | `requirements.txt` | Python dependencies |
 | `test_derivation.py` | Comparison test script |
 
-## Integration with Skills
+## Integration with Commands
 
-The derivation skills can use the RAG engine:
+The derivation commands can use the RAG engine:
 
 ```python
-# In skill execution
+# In command execution
 rag = create_self_learning_rag(
     guidelines_dir="specs-for-ai/ai-pds-specification/9300-guidelines",
     project_dir="project/docs"
