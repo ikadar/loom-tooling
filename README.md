@@ -19,13 +19,16 @@ loom-tooling/
 
 ### Skills (`skills/`)
 
-Claude Code skills for document derivation:
+Claude Code skills for document derivation with **Structured Interview** pattern:
 
-| Skill | Purpose |
-|-------|---------|
-| `loom-derive.md` | L0 → L1 derivation (user stories → AC, BR) |
-| `loom-derive-l2.md` | L1 → L2 derivation (AC, BR → API contracts, sequences) |
-| `loom-derive-l3.md` | L2 → L3 derivation (contracts → test cases) |
+| Skill | Version | Purpose |
+|-------|---------|---------|
+| `loom-derive.md` | v2.0 | L0 → L1 derivation (user stories → AC, BR) |
+| `loom-derive-domain.md` | v1.0 | Domain modeling (vocabulary → domain model) |
+| `loom-derive-l2.md` | v2.0 | L1 → L2 derivation (AC, BR → API contracts, sequences) |
+| `loom-derive-l3.md` | v2.0 | L2 → L3 derivation (contracts → TDAI test cases) |
+
+**All skills use Structured Interview (SI):** AI asks targeted questions before making decisions, preventing implicit/wrong choices.
 
 **Usage in project:**
 ```bash
@@ -109,6 +112,7 @@ ln -s /path/to/loom-tooling/skills my-project/.claude/skills
 
 ## Version
 
+- v0.2.0 - Structured Interview pattern added to all skills (2025-12-21)
 - v0.1.0 - Initial release (skills + RAG PoC)
 
 ## License
