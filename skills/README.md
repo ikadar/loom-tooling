@@ -316,6 +316,33 @@ The UI skill chain has 21 dedicated SI questions:
 | L2-UI (UI-LOAD-*, etc.) | 5 | Loading state primary, error display primary, empty state style, validation timing, transitions |
 | L3-UI (UI-E2E-*, etc.) | 5 | E2E framework, visual testing tool, browser matrix, a11y tools, QA process |
 
+### Cross-Chain SI Sharing (Self-Learning System)
+
+SI decisions from **both chains feed into the same knowledge base**. The RAG engine retrieves and reuses decisions across chains:
+
+```
+Backend SI decisions          UI SI decisions
+(EH-1, AU-1, VAL-1)          (CC-1, UI-DS-1, UI-STATE-1)
+        │                            │
+        └──────────┬─────────────────┘
+                   ▼
+            ┌─────────────┐
+            │ RAG Engine  │  ← Single knowledge base
+            └─────────────┘
+                   │
+        ┌──────────┴──────────┐
+        ▼                     ▼
+   Backend derive        UI derive
+   (finds UI-DS-1)       (finds AU-1)
+```
+
+**Benefits:**
+- Authorization model (AU-1) informs both API contracts and UI permission checks
+- Error handling (EH-1) consistent across backend responses and UI error displays
+- Design system (UI-DS-1) informs API response structure for optimal UI consumption
+
+See `rag/README.md` for full Self-Learning System documentation.
+
 ## PoC Results
 
 ### Backend Derivation

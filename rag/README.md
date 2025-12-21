@@ -219,6 +219,64 @@ for decision_point in required_decisions:
         questions.append(decision_point)
 ```
 
+## Full-Stack Self-Learning
+
+The Self-Learning System works across **both backend and UI/UX** document chains. All derived documents feed into the same knowledge base:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                 FULL-STACK SELF-LEARNING                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  Backend Docs                    UI/UX Docs                     │
+│  ┌─────────────┐                ┌─────────────┐                │
+│  │ AC, BR, L2  │                │ UI-AC, L2-UI│                │
+│  │ SI: EH-1,   │                │ SI: CC-1,   │                │
+│  │     AU-1    │                │     UI-DS-1 │                │
+│  └──────┬──────┘                └──────┬──────┘                │
+│         │                              │                        │
+│         └──────────┬───────────────────┘                        │
+│                    ▼                                            │
+│           ┌───────────────┐                                    │
+│           │  RAG Engine   │ ◄── Single knowledge base          │
+│           │  (ChromaDB)   │                                    │
+│           └───────────────┘                                    │
+│                    │                                            │
+│         ┌─────────┴─────────┐                                  │
+│         ▼                   ▼                                  │
+│    Backend derive      UI derive                               │
+│    (reuses EH-1,       (reuses CC-1,                          │
+│     finds UI-DS-1)      finds AU-1)                           │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Indexed Document Types
+
+| Chain | Documents | SI Prefixes |
+|-------|-----------|-------------|
+| Backend | acceptance-criteria.md, business-rules.md, interface-contracts.md, test-cases.md | EH-*, AU-*, VAL-*, API-* |
+| UI/UX | ui-patterns.md, ui-interaction-stories.md, ui-acceptance-criteria.md, component-specs.md, state-machines.md | CC-*, UI-COMP-*, UI-STATE-*, UI-E2E-* |
+
+### Cross-Chain Benefits
+
+1. **Shared decisions** - Authorization model (AU-1) used by both backend AC and UI components
+2. **Consistency** - Same error handling strategy reflected in API contracts and UI error displays
+3. **Traceability bridge** - Business Rules (BR-*) link backend to UI; both chains reference them
+
+### Example: Cross-Chain Reuse
+
+```python
+# UI derivation finds backend decision
+rag.retrieve_si_decision("AU-1")
+# → Found in acceptance-criteria.md: "customer-or-provider"
+
+# Backend derivation finds UI decision
+rag.retrieve_si_decision("UI-DS-1")
+# → Found in ui-interaction-stories.md: "shadcn"
+# → Informs: API should return data compatible with shadcn patterns
+```
+
 ## Key Insight
 
 The Self-Learning System creates a **virtuous cycle**:
