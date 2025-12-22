@@ -1,7 +1,7 @@
 ---
 name: loom-derive
-description: Orchestrate L0 → L1 derivation using completeness-driven discovery
-version: "4.1.0"
+description: Orchestrate L0 → L1 derivation using completeness-driven discovery with RAG
+version: "5.0.0"
 arguments:
   - name: input-file
     description: "Path to single L0 input file. Use this OR --input-dir, not both."
@@ -15,6 +15,9 @@ arguments:
   - name: decisions-file
     description: "Path to decisions.md file (default: {input-dir}/decisions.md or {input-file-dir}/decisions.md)"
     required: false
+  - name: guidelines-dir
+    description: "Path to guidelines directory for RAG (default: ai-pds-specification/9000-appendix/9300-guidelines)"
+    required: false
 ---
 
 # Loom L0 → L1 Derivation (Orchestrator)
@@ -26,30 +29,57 @@ Orchestrates the complete L0 → L1 derivation process.
 ```
 /loom-derive (this command)
     │
-    ├─→ Phase 0: Read & Parse Input
-    │       └─→ Read L0 files + decisions.md (if exists)
+    ├─→ Phase 0: Read & Parse Input + Initialize RAG
+    │       ├─→ Read L0 files + decisions.md (if exists)
+    │       └─→ rag_initialize(guidelines_dir, project_dir)
     │
     ├─→ Phase 1: Domain Discovery
+    │       ├─→ rag_retrieve("domain vocabulary {domain}")
     │       └─→ Extract entities, operations, relationships, UI mentions
     │
     ├─→ Phase 2: Completeness Analysis (parallel)
+    │       ├─→ rag_retrieve("entity completeness checklist")
     │       ├─→ /loom-analyze-entities → entity ambiguities
     │       ├─→ /loom-analyze-operations → operation ambiguities
     │       └─→ /loom-analyze-ui → UI ambiguities (or request UI input)
     │
     ├─→ Phase 3: Merge & Filter Ambiguities
-    │       └─→ Remove already-resolved (from decisions.md)
+    │       ├─→ rag_get_decisions(topic) for each ambiguity
+    │       └─→ Remove already-resolved (from decisions.md + RAG)
     │
     ├─→ Phase 4: Structured Interview
     │       └─→ /loom-interview → new resolutions only
     │
     ├─→ Phase 5: Derivation
+    │       ├─→ rag_retrieve("acceptance criteria format")
     │       └─→ Generate AC + BR using ALL resolutions (existing + new)
     │
-    └─→ Phase 6: Write Output
+    └─→ Phase 6: Write Output + Update RAG
             ├─→ acceptance-criteria.md, business-rules.md
-            └─→ APPEND new resolutions to decisions.md
+            ├─→ APPEND new resolutions to decisions.md
+            └─→ rag_index(decisions.md, "decisions")
 ```
+
+## RAG Integration
+
+This command uses the **loom-rag** MCP server for knowledge-enhanced derivation.
+
+### MCP Tools Used
+
+| Tool | When | Purpose |
+|------|------|---------|
+| `rag_initialize` | Phase 0 | Load guidelines + project context |
+| `rag_retrieve` | Phase 1, 2, 5 | Get relevant guidelines and patterns |
+| `rag_get_decisions` | Phase 3 | Check if decision already exists |
+| `rag_index` | Phase 6 | Index new decisions for future use |
+
+### Knowledge Sources
+
+| Source | Priority | Content |
+|--------|----------|---------|
+| `guidelines` | 1 | Format rules, checklists, templates |
+| `project` | 2 | Domain vocabulary, derived docs |
+| `decisions` | 3 | Past SI answers (highest priority) |
 
 ## Reference Documents
 
@@ -59,9 +89,35 @@ Orchestrates the complete L0 → L1 derivation process.
 
 ---
 
-## Phase 0: Read & Parse Input
+## Phase 0: Read & Parse Input + Initialize RAG
 
-### Single File Mode
+### 0.1 Initialize RAG
+
+**FIRST:** Initialize the RAG knowledge base with MCP tool:
+
+```
+rag_initialize({
+  guidelines_dir: "{guidelines-dir or default}",
+  project_dir: "{input-dir}"
+})
+```
+
+This loads:
+- Guidelines (format rules, checklists)
+- Project documents (domain vocabulary, existing docs)
+- Previous decisions (if indexed)
+
+**Expected response:**
+```json
+{
+  "success": true,
+  "guidelines_dir": "/path/to/guidelines",
+  "project_dir": "/path/to/input",
+  "knowledge_sources": 2
+}
+```
+
+### 0.2 Single File Mode
 
 ```bash
 /loom-derive --input-file path/to/input.md --output-dir path/to/output
@@ -69,7 +125,7 @@ Orchestrates the complete L0 → L1 derivation process.
 
 Read the specified file.
 
-### Directory Mode
+### 0.3 Directory Mode
 
 ```bash
 /loom-derive --input-dir path/to/input/ --output-dir path/to/output
@@ -87,13 +143,13 @@ Read the specified file.
 {content}
 ```
 
-### Validation
+### 0.4 Validation
 
 - If both `--input-file` and `--input-dir` → Error
 - If neither → Error
 - If no `.md` files found → Error
 
-### Load Existing Decisions
+### 0.5 Load Existing Decisions
 
 Check for `decisions.md` in the input directory:
 
@@ -135,7 +191,21 @@ If no `decisions.md` exists, continue with empty resolutions list.
 
 ## Phase 1: Domain Discovery
 
-Extract from input:
+### 1.1 Retrieve Domain Context (RAG)
+
+Before extraction, retrieve relevant domain vocabulary:
+
+```
+rag_retrieve({
+  query: "domain vocabulary terminology glossary",
+  sources: ["project"],
+  limit: 5
+})
+```
+
+Use retrieved context to ensure consistent terminology during extraction.
+
+### 1.2 Extract from Input
 
 ```yaml
 domain:
@@ -181,9 +251,29 @@ domain:
 
 ## Phase 2: Completeness Analysis
 
-Run analysis commands (conceptually in parallel):
+### 2.0 Retrieve Checklist Context (RAG)
 
-### 2.1 Entity Analysis
+Before running analysis, retrieve checklist guidelines:
+
+```
+rag_retrieve({
+  query: "entity completeness checklist attributes lifecycle",
+  sources: ["guidelines"],
+  limit: 5
+})
+```
+
+```
+rag_retrieve({
+  query: "operation completeness checklist inputs outputs errors",
+  sources: ["guidelines"],
+  limit: 5
+})
+```
+
+Use retrieved context to guide thorough analysis.
+
+### 2.1 Entity Analysis (parallel)
 
 Apply `/loom-analyze-entities` logic:
 - Use `entity-checklist.md` reference
@@ -227,6 +317,40 @@ Which option?
 ---
 
 ## Phase 3: Merge & Filter Ambiguities
+
+### 3.0 Check RAG for Past Decisions
+
+For each discovered ambiguity, check if already decided:
+
+```
+rag_get_decisions({
+  topic: "{ambiguity question}",
+  entity: "{entity name if applicable}"
+})
+```
+
+**Example:**
+```
+rag_get_decisions({
+  topic: "station deletion cascade behavior",
+  entity: "Station"
+})
+```
+
+**Response:**
+```json
+{
+  "topic": "station deletion cascade behavior",
+  "decisions_found": 1,
+  "decisions": [{
+    "content": "A: Block deletion if tasks exist",
+    "source": "decisions.md",
+    "source_type": "decisions"
+  }]
+}
+```
+
+If decision found → mark as resolved, don't ask again.
 
 ### 3.1 Combine All Ambiguities
 
@@ -303,6 +427,28 @@ Apply `/loom-interview` logic:
 
 ## Phase 5: Derivation
 
+### 5.0 Retrieve Format Guidelines (RAG)
+
+Before generating, retrieve format templates:
+
+```
+rag_retrieve({
+  query: "acceptance criteria format Given When Then template",
+  sources: ["guidelines"],
+  limit: 3
+})
+```
+
+```
+rag_retrieve({
+  query: "business rules format invariant enforcement template",
+  sources: ["guidelines"],
+  limit: 3
+})
+```
+
+Use retrieved templates to ensure consistent output format.
+
 With all ambiguities resolved, generate:
 
 ### 5.1 Acceptance Criteria
@@ -350,7 +496,7 @@ For each constraint/rule:
 
 ---
 
-## Phase 6: Write Output
+## Phase 6: Write Output + Update RAG
 
 ### Files Generated
 
@@ -358,6 +504,33 @@ For each constraint/rule:
 2. `{output-dir}/business-rules.md`
 3. `{input-dir}/decisions.md` - **APPEND** new resolutions (persistent)
 4. `{output-dir}/interview-record.md` - Full session log (optional, for audit)
+
+### 6.0 Update RAG Index
+
+After writing files, index new content for future use:
+
+```
+rag_index({
+  file_path: "{input-dir}/decisions.md",
+  source_type: "decisions"
+})
+```
+
+```
+rag_index({
+  file_path: "{output-dir}/acceptance-criteria.md",
+  source_type: "project"
+})
+```
+
+```
+rag_index({
+  file_path: "{output-dir}/business-rules.md",
+  source_type: "project"
+})
+```
+
+This enables the **self-learning loop**: future derivations will use these decisions and patterns.
 
 ### 6.1 Update decisions.md
 
@@ -429,7 +602,7 @@ derived-from:
   - "{input-file-2}"
   - "decisions.md"
 derived-at: "{ISO timestamp}"
-derived-by: "loom-derive v4.1.0"
+derived-by: "loom-derive v5.0.0"
 completeness-analysis:
   entities-analyzed: 5
   operations-analyzed: 8
