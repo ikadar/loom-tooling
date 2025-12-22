@@ -1,554 +1,504 @@
 ---
 name: loom-derive
-description: Derive L1 documents (acceptance criteria, business rules) from L0 user stories using Structured Interview
-version: "2.0.0"
+description: Orchestrate L0 → L1 derivation using completeness-driven discovery
+version: "4.1.0"
 arguments:
   - name: input-file
-    description: "Path to user-stories.md file (L0 source)"
-    required: true
+    description: "Path to single L0 input file. Use this OR --input-dir, not both."
+    required: false
+  - name: input-dir
+    description: "Path to directory containing L0 input files (reads all *.md files). Use this OR --input-file, not both."
+    required: false
   - name: output-dir
     description: "Directory for generated L1 documents"
     required: true
-  - name: story-id
-    description: "Specific user story ID to derive (e.g., US-QUOTE-003). If omitted, derives all."
+  - name: decisions-file
+    description: "Path to decisions.md file (default: {input-dir}/decisions.md or {input-file-dir}/decisions.md)"
     required: false
 ---
 
-# Loom L0 → L1 Derivation Skill (with Structured Interview)
+# Loom L0 → L1 Derivation (Orchestrator)
 
-You are an expert documentation derivation agent for the **Loom AI Development Orchestration Platform**.
+Orchestrates the complete L0 → L1 derivation process.
 
-Your task is to derive **Level 1 (L1) documents** from **Level 0 (L0) user stories**.
-
-**CRITICAL:** You must follow the **Structured Interview Pattern** - never make implicit decisions. When information is missing, ASK before deriving.
-
-## The Structured Interview Pattern
-
-Before deriving any output, you must:
-
-1. **Identify decision points** that need resolution
-2. **Check if input provides answers** to those decision points
-3. **Ask targeted questions** for any gaps
-4. **Iterate** until all decision points are resolved
-5. **Only then derive** with full explicit context
+## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                   STRUCTURED INTERVIEW LOOP                      │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  READ INPUT (L0 user story)                                     │
-│         │                                                        │
-│         ▼                                                        │
-│  ┌──────────────────────────────────────┐                       │
-│  │     IDENTIFY DECISION POINTS         │                       │
-│  │     (see Decision Points Catalog)    │                       │
-│  └──────────────────┬───────────────────┘                       │
-│                     │                                            │
-│                     ▼                                            │
-│  ┌──────────────────────────────────────┐                       │
-│  │  For each decision point:            │                       │
-│  │  - Does input contain answer?        │                       │
-│  │  - If NO → add to questions list     │                       │
-│  └──────────────────┬───────────────────┘                       │
-│                     │                                            │
-│                     ▼                                            │
-│           ┌─────────────────┐                                   │
-│           │  Questions      │                                   │
-│           │  remaining?     │                                   │
-│           └────────┬────────┘                                   │
-│                    │                                             │
-│         ┌──────────┴──────────┐                                 │
-│         │                     │                                  │
-│        NO                    YES                                 │
-│         │                     │                                  │
-│         ▼                     ▼                                  │
-│  ┌─────────────┐      ┌─────────────────┐                       │
-│  │   DERIVE    │      │   ASK USER      │                       │
-│  │   OUTPUT    │      │   (batch Qs)    │                       │
-│  └─────────────┘      └────────┬────────┘                       │
-│                                │                                 │
-│                                ▼                                 │
-│                        ┌─────────────┐                          │
-│                        │   RECEIVE   │                          │
-│                        │   ANSWERS   │                          │
-│                        └──────┬──────┘                          │
-│                               │                                  │
-│                               └───────────► LOOP BACK            │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
+/loom-derive (this command)
+    │
+    ├─→ Phase 0: Read & Parse Input
+    │       └─→ Read L0 files + decisions.md (if exists)
+    │
+    ├─→ Phase 1: Domain Discovery
+    │       └─→ Extract entities, operations, relationships, UI mentions
+    │
+    ├─→ Phase 2: Completeness Analysis (parallel)
+    │       ├─→ /loom-analyze-entities → entity ambiguities
+    │       ├─→ /loom-analyze-operations → operation ambiguities
+    │       └─→ /loom-analyze-ui → UI ambiguities (or request UI input)
+    │
+    ├─→ Phase 3: Merge & Filter Ambiguities
+    │       └─→ Remove already-resolved (from decisions.md)
+    │
+    ├─→ Phase 4: Structured Interview
+    │       └─→ /loom-interview → new resolutions only
+    │
+    ├─→ Phase 5: Derivation
+    │       └─→ Generate AC + BR using ALL resolutions (existing + new)
+    │
+    └─→ Phase 6: Write Output
+            ├─→ acceptance-criteria.md, business-rules.md
+            └─→ APPEND new resolutions to decisions.md
 ```
 
-## Decision Points Catalog
+## Reference Documents
 
-### Category 1: Scope Clarification
+- `.claude/docs/checklists/entity-checklist.md`
+- `.claude/docs/checklists/operation-checklist.md`
+- `.claude/docs/checklists/ui-checklist.md`
 
-| ID | Decision Point | Question Template | Default if Unasked |
-|----|----------------|-------------------|-------------------|
-| SC-1 | Edge cases | "Should we handle the case when {field} is empty/null/zero?" | Include basic edge cases |
-| SC-2 | Feature boundary | "Is {related functionality} in scope for this story?" | Exclude unless mentioned |
-| SC-3 | Multi-step | "Can this operation be interrupted, or must it complete atomically?" | Atomic unless stated |
+---
 
-### Category 2: Error Handling
+## Phase 0: Read & Parse Input
 
-| ID | Decision Point | Question Template | Default if Unasked |
-|----|----------------|-------------------|-------------------|
-| EH-1 | Error severity | "If {condition}, should this be a blocking error or a warning?" | Blocking error |
-| EH-2 | Recovery | "After {error}, can the user retry or is it terminal?" | Retryable |
-| EH-3 | Partial success | "If step 2 fails after step 1 succeeds, should we rollback?" | Rollback |
+### Single File Mode
 
-### Category 3: Authorization
-
-| ID | Decision Point | Question Template | Default if Unasked |
-|----|----------------|-------------------|-------------------|
-| AU-1 | Role exceptions | "Can anyone besides {role} perform this action?" | Only specified role |
-| AU-2 | Delegation | "Can {role} delegate this capability?" | No delegation |
-| AU-3 | Self-service | "Can users do this for themselves only, or for others too?" | Self only |
-
-### Category 4: Side Effects
-
-| ID | Decision Point | Question Template | Default if Unasked |
-|----|----------------|-------------------|-------------------|
-| SE-1 | Notifications | "Should {action} trigger a notification to {stakeholder}?" | ASK - no default |
-| SE-2 | Audit trail | "Is an audit log required for {action}?" | Yes for mutations |
-| SE-3 | Related entities | "Should {related entity} be created/updated automatically?" | ASK - no default |
-
-### Category 5: State Transitions
-
-| ID | Decision Point | Question Template | Default if Unasked |
-|----|----------------|-------------------|-------------------|
-| ST-1 | Valid sources | "From which states can this transition occur?" | ASK - no default |
-| ST-2 | Reversibility | "Can {action} be undone? If yes, how?" | ASK - no default |
-| ST-3 | Concurrency | "What if two users try {action} simultaneously?" | First wins, second gets error |
-
-### When to Use Defaults vs Ask
-
-**ALWAYS ASK (no safe default):**
-- SE-1: Notifications (business decision)
-- SE-3: Related entity creation (domain logic)
-- ST-1: Valid source states (domain logic)
-- ST-2: Reversibility (business decision)
-
-**USE DEFAULT if not critical:**
-- SC-1, SC-2, SC-3: Scope (mention in output that default was used)
-- EH-1, EH-2, EH-3: Error handling (conservative defaults)
-- AU-1, AU-2, AU-3: Authorization (restrictive defaults)
-- ST-3: Concurrency (optimistic default)
-
-## Input and Output
-
-**Input (L0):** User stories in "As a... I want... So that..." format
-**Outputs (L1):**
-1. `acceptance-criteria.md` - Testable criteria in Given/When/Then format
-2. `business-rules.md` - Constraints and invariants with enforcement mechanisms
-
-## Derivation Workflow
-
-### Phase 1: Structured Interview
-
-#### Step 1.1: Read and Parse L0
-
-Read the input file using the Read tool. Parse each user story to extract:
-- **Story ID** (e.g., US-QUOTE-003)
-- **Role** (the "As a" part)
-- **Capability** (the "I want" part)
-- **Outcome** (the "So that" part)
-- **Acceptance criteria hints** (bulleted list in the story)
-
-#### Step 1.2: Identify Decision Points
-
-Analyze the user story and identify which decision points from the catalog need resolution.
-
-**Look for these signals:**
-
-| Signal in Story | Triggers Decision Point |
-|-----------------|-------------------------|
-| Status change mentioned | ST-1 (valid source states), ST-2 (reversibility) |
-| "automatically" | SE-3 (related entity creation) |
-| Role mentioned in "As a" | AU-1 (role exceptions) |
-| "notify", "alert", "email" | SE-1 (notifications) |
-| Implicit error cases | EH-1, EH-2, EH-3 (error handling) |
-| Edge cases not specified | SC-1 (edge cases) |
-
-#### Step 1.3: Check Input for Answers
-
-For each identified decision point, check if the user story already provides the answer:
-
-```
-Example:
-  Story: "Quote status changes to Accepted"
-
-  Decision Point ST-1: "From which states can this transition occur?"
-  Story provides: NO explicit source states mentioned
-  → ADD TO QUESTIONS LIST
-
-  Decision Point SE-3: "Should Order be created automatically?"
-  Story provides: YES - "An order is created automatically"
-  → RESOLVED, no need to ask
+```bash
+/loom-derive --input-file path/to/input.md --output-dir path/to/output
 ```
 
-#### Step 1.4: Ask Questions (if any)
+Read the specified file.
 
-If questions remain, present them to the user using the AskUserQuestion tool:
+### Directory Mode
+
+```bash
+/loom-derive --input-dir path/to/input/ --output-dir path/to/output
+```
+
+1. Glob for all `*.md` files in directory
+2. Read all files
+3. Concatenate with source markers:
 
 ```markdown
-## Structured Interview: Clarification Needed
+<!-- SOURCE: file1.md -->
+{content}
 
-I've identified the following decision points that need your input before I can derive accurate L1 documents:
-
-### State Transitions
-1. **From which states can a Quote be accepted?**
-   - Only from "Sent" status?
-   - From "Sent" or "Expired" (with renewal)?
-   - Other states?
-
-### Error Handling
-2. **If the quote has expired, what should happen?**
-   - Block with error "Quote expired"
-   - Allow acceptance with warning
-   - Auto-renew and accept
-
-### Authorization
-3. **Can anyone besides the customer accept the quote?**
-   - Only the specific customer
-   - Any user from the customer's organization
-   - Sales rep on behalf of customer
-
-Please answer these questions so I can proceed with accurate derivation.
+<!-- SOURCE: file2.md -->
+{content}
 ```
 
-#### Step 1.5: Process Answers and Loop
+### Validation
 
-When user answers:
-1. Record each answer with its decision point ID
-2. Check if new questions arise from the answers
-3. If new questions → ask again
-4. If all resolved → proceed to Phase 2
+- If both `--input-file` and `--input-dir` → Error
+- If neither → Error
+- If no `.md` files found → Error
 
-### Phase 2: Derivation
+### Load Existing Decisions
 
-#### Step 2.1: Generate Acceptance Criteria
+Check for `decisions.md` in the input directory:
 
-For each user story, generate **4-7 acceptance criteria** using the resolved decision points.
+```bash
+# Default location
+{input-dir}/decisions.md
+# Or explicitly specified
+--decisions-file path/to/decisions.md
+```
 
-**ID Format:** `AC-{DOMAIN}-{NUM}` (e.g., `AC-QUOTE-003`)
+If `decisions.md` exists, parse it:
 
-**Structure:**
+```yaml
+existing_resolutions:
+  - id: "AMB-ENT-001"
+    question: "What happens to tasks when station deleted?"
+    answer: "Block deletion if tasks exist"
+    decided_at: "2025-12-21T10:30:00Z"
+    source: "user"
+
+  - id: "AMB-OP-005"
+    question: "Time snap granularity?"
+    answer: "15 minutes"
+    decided_at: "2025-12-21T10:32:00Z"
+    source: "user"
+```
+
+**Output:**
+```markdown
+## Existing Decisions Loaded
+
+Found `decisions.md` with **23** previous resolutions.
+These will be used and not asked again.
+```
+
+If no `decisions.md` exists, continue with empty resolutions list.
+
+---
+
+## Phase 1: Domain Discovery
+
+Extract from input:
+
+```yaml
+domain:
+  entities:
+    - name: "Station"
+      mentioned_attributes: [name, category, capacity, operating_hours]
+      mentioned_operations: [create, update]
+      mentioned_states: []
+
+    - name: "Job"
+      mentioned_attributes: [client, deadline, paper_status, bat_status]
+      mentioned_operations: [create, delete, schedule]
+      mentioned_states: [late, on_time]
+
+  operations:
+    - name: "Schedule Task"
+      actor: "Scheduler"
+      trigger: "drag-and-drop"
+      target: "Task"
+      mentioned_inputs: [task_id, station_id, start_time]
+      mentioned_rules: [no_overlap, precedence, snap_grid]
+
+  relationships:
+    - from: "Job"
+      to: "Task"
+      type: "contains"
+      cardinality: "1:N"
+
+  business_rules:
+    - "No overlapping tasks on capacity-1 stations"
+    - "Task sequence must be respected"
+
+  ui_mentions:
+    - "Scheduling Grid"
+    - "Left Panel"
+    - "Right Panel"
+    - "drag-and-drop"
+```
+
+**Output:** Present discovery summary to user.
+
+---
+
+## Phase 2: Completeness Analysis
+
+Run analysis commands (conceptually in parallel):
+
+### 2.1 Entity Analysis
+
+Apply `/loom-analyze-entities` logic:
+- Use `entity-checklist.md` reference
+- Check every entity against full checklist
+- Generate entity ambiguities
+
+### 2.2 Operation Analysis
+
+Apply `/loom-analyze-operations` logic:
+- Use `operation-checklist.md` reference
+- Check every operation against full checklist
+- Generate operation ambiguities
+
+### 2.3 UI Analysis
+
+Apply `/loom-analyze-ui` logic:
+- First check if UI spec exists
+- If UI mentioned but no spec → **STOP and request UI input**
+- If UI spec exists → analyze with `ui-checklist.md`
+- Generate UI ambiguities
+
+**If UI input missing:**
 
 ```markdown
-### AC-{DOMAIN}-{NUM} – {Descriptive Title}
+## ⚠️ UI/UX Specification Required
 
-**Given** [precondition/initial state]
-**When** [action or trigger]
-**Then** [expected outcome]
-**And** [additional outcomes if any]
+UI components are mentioned but not specified:
+- Scheduling Grid
+- Left Panel (job list)
+- Right Panel (late jobs)
+- Drag-and-drop interactions
+
+**Options:**
+1. Provide UI/UX specification file
+2. Answer UI questions interactively (many questions)
+3. Mark UI as out of scope (will skip UI analysis)
+
+Which option?
+```
+
+---
+
+## Phase 3: Merge & Filter Ambiguities
+
+### 3.1 Combine All Ambiguities
+
+```yaml
+all_ambiguities:
+  total: 87
+
+  by_severity:
+    critical: 23
+    important: 41
+    minor: 23
+
+  by_source:
+    entities: 36
+    operations: 29
+    ui: 22
+```
+
+### 3.2 Filter Already-Resolved
+
+Compare against `existing_resolutions` from decisions.md:
+
+```yaml
+# Match by question similarity, not just ID
+# (IDs may change between runs, questions are stable)
+
+filtered_ambiguities:
+  total: 64  # 87 - 23 already resolved
+
+  already_resolved: 23
+  new_to_ask: 64
+
+  by_severity:
+    critical: 18  # was 23, 5 already resolved
+    important: 31 # was 41, 10 already resolved
+    minor: 15     # was 23, 8 already resolved
+```
+
+**Output:**
+```markdown
+## Ambiguity Summary
+
+| Category | Found | Already Resolved | To Ask |
+|----------|-------|------------------|--------|
+| Entities | 36 | 12 | 24 |
+| Operations | 29 | 8 | 21 |
+| UI | 22 | 3 | 19 |
+| **Total** | **87** | **23** | **64** |
+
+Using 23 decisions from `decisions.md`.
+```
+
+---
+
+## Phase 4: Structured Interview
+
+Apply `/loom-interview` logic:
+
+1. Prioritize by severity (critical first)
+2. Group by source/entity for context
+3. Batch questions (4-6 per round)
+4. Record all answers
+5. Handle follow-up questions
+6. Bulk confirm minor defaults
+
+**Loop until:**
+- Zero critical ambiguities remaining
+- Zero important ambiguities remaining
+- All minor have resolution or confirmed default
+
+**Output:** Full interview record.
+
+---
+
+## Phase 5: Derivation
+
+With all ambiguities resolved, generate:
+
+### 5.1 Acceptance Criteria
+
+For each user story/operation:
+
+```markdown
+### AC-{DOMAIN}-{NUM} – {Title}
+
+**Given** [precondition]
+**When** [action]
+**Then** [outcome]
+
+**Resolved Ambiguities:**
+- AMB-XXX: {answer}
 
 **Error Cases:**
-- [condition] → [error behavior]
-
-**Decision Points Resolved:**
-- {DP-ID}: {answer} (from Structured Interview)
+- {condition} → {behavior} (from AMB-YYY)
 
 **Traceability:**
-- User Story: {input-file}#us-{id}
-- Entity: ENT-{EntityName} (if applicable)
+- Input: {source_file} § "{section}"
+- Interview: Round {N}, AMB-XXX
 ```
 
-**IMPORTANT:** Include a "Decision Points Resolved" section showing which Structured Interview answers informed this AC.
+### 5.2 Business Rules
 
-#### Step 2.2: Generate Business Rules
-
-Extract business rules informed by Structured Interview answers.
-
-**ID Format:** `BR-{DOMAIN}-{NUM}` (e.g., `BR-QUOTE-001`)
-
-**Structure:**
+For each constraint/rule:
 
 ```markdown
-### BR-{DOMAIN}-{NUM} – {Rule Title}
+### BR-{DOMAIN}-{NUM} – {Title}
 
-**Rule:**
-[Clear statement of the constraint or invariant]
+**Rule:** [Statement]
 
-**Invariant:**
-[What must always be true - use MUST/MUST NOT language]
+**Invariant:** [Formal condition using MUST/MUST NOT]
 
 **Enforcement:**
-- **Precondition:** [When this rule applies]
-- **Violation Behavior:** [What happens if rule is violated]
-- **Error Code:** `{ERROR_CODE}`
+- Check point: [where]
+- Violation: [behavior]
+- Error: `{ERROR_CODE}`
 
-**Decision Points Resolved:**
-- {DP-ID}: {answer} (from Structured Interview)
-
-**Traceability:**
-- User Story: {input-file}#us-{id}
-- Acceptance Criteria: AC-{DOMAIN}-{NUM}
+**Source:**
+- Input: {source}
+- Interview: AMB-XXX
 ```
 
-### Phase 3: Validation and Approval
-
-#### Step 3.1: Validate Output
-
-Before presenting results, verify:
-
-- [ ] All AC IDs are unique and follow naming pattern
-- [ ] All BR IDs are unique and follow naming pattern
-- [ ] Each user story has 4-7 acceptance criteria
-- [ ] Each AC uses Given/When/Then format consistently
-- [ ] All business rules have enforcement mechanisms defined
-- [ ] All traceability links reference valid story IDs
-- [ ] **All decision points are documented in outputs**
-- [ ] No implicit decisions made (everything traced to interview or input)
-
-#### Step 3.2: Present for Approval
-
-Show the generated documents with Structured Interview summary:
-
-```markdown
-## Derivation Results for {story-id}
-
-### Structured Interview Summary
-
-| Decision Point | Question | Answer | Source |
-|----------------|----------|--------|--------|
-| ST-1 | From which states can Quote be accepted? | Only "Sent" | User answer |
-| SE-3 | Should Order be created automatically? | Yes | Input (story) |
-| AU-1 | Who can accept? | Only the customer | User answer |
-
 ---
 
-### acceptance-criteria.md
+## Phase 6: Write Output
 
-{Show full generated content}
-
----
-
-### business-rules.md
-
-{Show full generated content}
-
----
-
-### Derivation Metrics
-
-| Metric | Count |
-|--------|-------|
-| Acceptance Criteria | N |
-| Business Rules | M |
-| Decision Points Resolved | X |
-| - From User Answers | Y |
-| - From Input | Z |
-| Traceability Links | W |
-
-Would you like me to:
-1. **Write files** to {output-dir}/
-2. **Modify** something specific
-3. **Ask more questions** about a specific area
-4. **Cancel** derivation
-```
-
-#### Step 3.3: Write Files (if approved)
-
-When the user approves, use the Write tool to create:
+### Files Generated
 
 1. `{output-dir}/acceptance-criteria.md`
 2. `{output-dir}/business-rules.md`
+3. `{input-dir}/decisions.md` - **APPEND** new resolutions (persistent)
+4. `{output-dir}/interview-record.md` - Full session log (optional, for audit)
 
-Add YAML frontmatter with interview record:
+### 6.1 Update decisions.md
+
+**CRITICAL:** Append new resolutions to `decisions.md`, preserving existing ones.
+
+```markdown
+---
+# decisions.md - Loom Decision Log
+# This file persists interview answers across derivation runs.
+# DO NOT delete - answers will be asked again!
+---
+
+## Entity Decisions
+
+### Station
+
+- **AMB-ENT-001: Deletion behavior**
+  - Q: What happens to tasks when station deleted?
+  - A: Block deletion if tasks exist
+  - Decided: 2025-12-21 by user
+
+- **AMB-ENT-002: Name uniqueness**
+  - Q: Must station name be unique?
+  - A: Yes, unique within organization
+  - Decided: 2025-12-21 by user
+
+### Job
+
+- **AMB-ENT-010: Late threshold**
+  - Q: When is a job considered "late"?
+  - A: When any task misses its deadline by > 0 minutes
+  - Decided: 2025-12-21 by user
+
+## Operation Decisions
+
+### Schedule Task
+
+- **AMB-OP-001: Overlap behavior**
+  - Q: What happens when task overlaps existing?
+  - A: Block with error, show conflict details
+  - Decided: 2025-12-21 by user
+
+## UI Decisions
+
+- **AMB-UI-001: Drag feedback**
+  - Q: What visual feedback during task drag?
+  - A: Ghost image + valid/invalid drop zone highlighting
+  - Decided: 2025-12-21 by user
+
+## Defaults Accepted
+
+The following minor decisions use suggested defaults:
+
+| ID | Question | Default | Accepted |
+|----|----------|---------|----------|
+| AMB-ENT-050 | Max station name length | 100 chars | 2025-12-21 |
+| AMB-ENT-051 | Max job title length | 200 chars | 2025-12-21 |
+| AMB-OP-050 | Operation timeout | 30 seconds | 2025-12-21 |
+```
+
+### 6.2 Frontmatter for L1 Documents
 
 ```yaml
 ---
+id: L1-AC
 status: draft
-derived-from: "{input-file}"
+derived-from:
+  - "{input-file-1}"
+  - "{input-file-2}"
+  - "decisions.md"
 derived-at: "{ISO timestamp}"
-derived-by: "loom-derive skill v2.0 (Structured Interview)"
-loom-version: "3.0.0"
-structured-interview:
-  decision-points-resolved: N
-  from-user-answers: X
-  from-input: Y
+derived-by: "loom-derive v4.1.0"
+completeness-analysis:
+  entities-analyzed: 5
+  operations-analyzed: 8
+  ambiguities-found: 87
+  ambiguities-resolved: 87
+decisions:
+  from-existing: 23    # loaded from decisions.md
+  from-this-session: 64  # asked in this run
+  total: 87
 ---
-```
-
-## Quality Standards
-
-### Structured Interview Quality
-
-- **No implicit decisions**: Every non-trivial choice is traced to input or user answer
-- **Batch questions**: Group related questions together (max 5 per batch)
-- **Provide context**: Explain why each question matters
-- **Offer options**: Give concrete choices, not open-ended questions
-- **Record everything**: All decisions documented in output
-
-### Acceptance Criteria Quality
-
-- **Atomic**: One testable condition per criterion
-- **Independent**: Can be verified in isolation
-- **Unambiguous**: Single interpretation (no implicit assumptions)
-- **Complete**: Covers the full story intent + interview resolutions
-- **Traceable**: Links to story AND decision points
-
-### Business Rules Quality
-
-- **Declarative**: States what, not how
-- **Technology-agnostic**: No implementation details
-- **Enforceable**: Can be validated programmatically
-- **Traceable**: Links to requirements, entities, AND decision points
-
-## Example Derivation with Structured Interview
-
-### Input (L0 User Story)
-
-```markdown
-### US-QUOTE-003 – Customer accepts a quote online
-**As a** customer
-**I want** to accept a quote online
-**So that** I can confirm the order quickly without paperwork.
-
-**Acceptance criteria (examples):**
-- Customer can open the quote from a secure link or portal.
-- Customer can click an "Accept" action.
-- The system records the acceptance timestamp and identity.
-- Quote status changes to `Accepted`.
-- An order is created automatically from the accepted quote.
-```
-
-### Phase 1: Structured Interview
-
-**Identified Decision Points:**
-- ST-1: Valid source states for acceptance (not specified in input)
-- ST-2: Can acceptance be reversed? (not specified)
-- AU-1: Can anyone besides customer accept? (not specified)
-- SE-1: Who should be notified? (not specified)
-
-**Questions Asked:**
-
-```markdown
-## Structured Interview: Clarification Needed
-
-### State Transitions
-1. **From which states can a Quote be accepted?**
-   a) Only from "Sent" status
-   b) From "Sent" or "Draft" (internal acceptance)
-   c) Other: ___
-
-2. **Can a Quote acceptance be reversed (cancelled)?**
-   a) No, acceptance is final
-   b) Yes, within 24 hours
-   c) Yes, until Order is fulfilled
-   d) Other: ___
-
-### Authorization
-3. **Who can accept a Quote on behalf of the customer?**
-   a) Only the specific customer user
-   b) Any user from the customer's organization
-   c) Customer or Sales rep with permission
-   d) Other: ___
-
-### Notifications
-4. **Who should be notified when a Quote is accepted?**
-   a) Sales rep who created the quote
-   b) Sales rep + customer (confirmation)
-   c) Sales rep + customer + fulfillment team
-   d) Other: ___
-```
-
-**User Answers:**
-1. a) Only from "Sent" status
-2. c) Yes, until Order is fulfilled
-3. b) Any user from the customer's organization
-4. c) Sales rep + customer + fulfillment team
-
-### Phase 2: Derived Output
-
-**acceptance-criteria.md:**
-
-```markdown
-### AC-QUOTE-003-1 – Accept quote from Sent status only
-
-**Given** a customer has received a quote with status `Sent`
-**And** the quote is within its validity period
-**When** the customer accesses the quote via secure link or portal
-**And** clicks the "Accept" action
-**Then** the system records the acceptance with:
-  - User identity (authenticated customer from organization)
-  - Timestamp (ISO 8601 format)
-  - Quote version accepted
-**And** the quote status changes to `Accepted`
-
-**Error Cases:**
-- Quote status is not `Sent` → Error: "Only sent quotes can be accepted"
-- Quote has expired → Error: "Quote has expired"
-- User not from customer's organization → Error: "Unauthorized"
-
-**Decision Points Resolved:**
-- ST-1: Only from "Sent" status (User answer)
-- AU-1: Any user from customer's organization (User answer)
-
-**Traceability:**
-- User Story: user-stories.md#us-quote-003
-- Entity: ENT-Quote, ENT-Customer
-```
-
-```markdown
-### AC-QUOTE-003-2 – Order creation on acceptance
-
-**Given** a quote has been successfully accepted
-**When** the acceptance is confirmed
-**Then** an Order is automatically created with:
-  - Reference to the accepted Quote
-  - All line items from the Quote
-  - Customer information
-**And** the Order status is set to `Pending`
-
-**Decision Points Resolved:**
-- SE-3: Order created automatically (From input)
-
-**Traceability:**
-- User Story: user-stories.md#us-quote-003
-- Entity: ENT-Quote, ENT-Order
-```
-
-```markdown
-### AC-QUOTE-003-3 – Acceptance can be reversed
-
-**Given** a quote has been accepted
-**And** the resulting Order has NOT been fulfilled
-**When** the customer requests to reverse the acceptance
-**Then** the Quote status reverts to `Sent`
-**And** the associated Order is cancelled
-**And** audit trail records the reversal
-
-**Error Cases:**
-- Order already fulfilled → Error: "Cannot reverse, order is fulfilled"
-
-**Decision Points Resolved:**
-- ST-2: Reversible until Order is fulfilled (User answer)
-
-**Traceability:**
-- User Story: user-stories.md#us-quote-003
-- Entity: ENT-Quote, ENT-Order
-```
-
-```markdown
-### AC-QUOTE-003-4 – Notifications on acceptance
-
-**Given** a quote has been accepted
-**When** the acceptance is processed
-**Then** the following are notified:
-  - Sales rep who created the quote (email + in-app)
-  - Customer (confirmation email)
-  - Fulfillment team (work queue notification)
-
-**Decision Points Resolved:**
-- SE-1: Notify sales rep + customer + fulfillment (User answer)
-
-**Traceability:**
-- User Story: user-stories.md#us-quote-003
-- Entity: ENT-Quote, ENT-Notification
 ```
 
 ---
 
-Now read the input file and begin the Structured Interview process.
+## Quality Criteria
+
+Before writing output, verify:
+
+- [ ] All entities analyzed with full checklist
+- [ ] All operations analyzed with full checklist
+- [ ] UI analyzed OR explicitly marked out of scope
+- [ ] Zero critical ambiguities remaining
+- [ ] Zero important ambiguities remaining
+- [ ] All minor have resolution or confirmed default
+- [ ] All ACs trace to input and/or interview
+- [ ] All BRs trace to input and/or interview
+- [ ] Interview record complete
+
+---
+
+## Summary Output
+
+```markdown
+## Derivation Complete
+
+### Input
+- Files: {list}
+- Total lines: {N}
+- Existing decisions: {M} (from decisions.md)
+
+### Analysis
+| Category | Analyzed | Ambiguities | Already Resolved | Asked |
+|----------|----------|-------------|------------------|-------|
+| Entities | 5 | 36 | 12 | 24 |
+| Operations | 8 | 29 | 8 | 21 |
+| UI | 1 screen | 22 | 3 | 19 |
+| **Total** | | **87** | **23** | **64** |
+
+### Interview (this session)
+| Rounds | From User | From Defaults |
+|--------|-----------|---------------|
+| 12 | 52 | 12 |
+
+### Output
+| Document | Items |
+|----------|-------|
+| Acceptance Criteria | 34 |
+| Business Rules | 12 |
+
+### Files Written
+- {output-dir}/acceptance-criteria.md
+- {output-dir}/business-rules.md
+- {input-dir}/decisions.md (23 existing + 64 new = 87 total)
+
+**Expansion:** {input_lines} → {output_lines} ({ratio}x)
+```
+
+---
+
+## Now: Execute
+
+Begin with Phase 0: Read input files.
