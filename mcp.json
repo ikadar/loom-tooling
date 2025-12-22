@@ -1,7 +1,7 @@
 {
   "mcpServers": {
     "loom-rag": {
-      "command": "python",
+      "command": "/Users/istvan/Code/loom-tooling/.venv/bin/python",
       "args": ["mcp/server.py"],
       "cwd": "/Users/istvan/Code/loom-tooling",
       "env": {}
