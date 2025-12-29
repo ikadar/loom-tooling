@@ -51,3 +51,15 @@ var DeriveAggregateDesign string
 
 //go:embed derive-data-model.md
 var DeriveDataModel string
+
+//go:embed derive-feature-tickets.md
+var DeriveFeatureTickets string
+
+//go:embed derive-service-boundaries.md
+var DeriveServiceBoundaries string
+
+//go:embed derive-event-design.md
+var DeriveEventDesign string
+
+//go:embed derive-dependency-graph.md
+var DeriveDependencyGraph string
