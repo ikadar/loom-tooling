@@ -39,3 +39,15 @@ var DeriveDomainModel string
 
 //go:embed derive-bounded-context.md
 var DeriveBoundedContext string
+
+//go:embed derive-interface-contracts.md
+var DeriveInterfaceContracts string
+
+//go:embed derive-sequence-design.md
+var DeriveSequenceDesign string
+
+//go:embed derive-aggregate-design.md
+var DeriveAggregateDesign string
+
+//go:embed derive-data-model.md
+var DeriveDataModel string

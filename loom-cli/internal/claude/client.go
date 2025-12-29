@@ -92,6 +92,47 @@ func (c *Client) CallWithSystemPrompt(systemPrompt, userPrompt string) (string, 
 	return response.Result, nil
 }
 
+// sanitizeJSON attempts to fix common JSON issues from LLM output
+func sanitizeJSON(jsonStr string) string {
+	// Fix line breaks inside strings by reconstructing the JSON
+	// This is a simple approach - replace literal newlines within quoted strings
+	var result strings.Builder
+	inString := false
+	escaped := false
+
+	for i := 0; i < len(jsonStr); i++ {
+		c := jsonStr[i]
+
+		if escaped {
+			result.WriteByte(c)
+			escaped = false
+			continue
+		}
+
+		if c == '\\' {
+			result.WriteByte(c)
+			escaped = true
+			continue
+		}
+
+		if c == '"' {
+			inString = !inString
+			result.WriteByte(c)
+			continue
+		}
+
+		if inString && (c == '\n' || c == '\r') {
+			// Replace literal newline with escaped version
+			result.WriteString("\\n")
+			continue
+		}
+
+		result.WriteByte(c)
+	}
+
+	return result.String()
+}
+
 // CallJSON sends a prompt expecting JSON response
 func (c *Client) CallJSON(prompt string, result interface{}) error {
 	response, err := c.Call(prompt)
@@ -106,6 +147,8 @@ func (c *Client) CallJSON(prompt string, result interface{}) error {
 		codeBlockEnd := strings.Index(response[codeBlockStart:], "```")
 		if codeBlockEnd != -1 {
 			jsonStr := strings.TrimSpace(response[codeBlockStart : codeBlockStart+codeBlockEnd])
+			// Sanitize JSON - fix line breaks inside strings
+			jsonStr = sanitizeJSON(jsonStr)
 			if err := json.Unmarshal([]byte(jsonStr), result); err != nil {
 				// Show debug info on parse error
 				preview := jsonStr
@@ -137,6 +180,8 @@ func (c *Client) CallJSON(prompt string, result interface{}) error {
 	}
 
 	jsonStr := response[jsonStart : jsonEnd+1]
+	// Sanitize JSON - fix line breaks inside strings
+	jsonStr = sanitizeJSON(jsonStr)
 	if err := json.Unmarshal([]byte(jsonStr), result); err != nil {
 		// Show debug info on parse error
 		preview := jsonStr

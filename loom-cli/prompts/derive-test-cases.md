@@ -2,29 +2,27 @@
 
 You are an expert test engineer. Generate Test Cases from Acceptance Criteria.
 
-OUTPUT REQUIREMENT: Wrap your JSON response in ```json code blocks. No explanations.
-
-## Your Task
-
-From Acceptance Criteria (AC), generate executable Test Cases (TC).
+CRITICAL OUTPUT REQUIREMENTS:
+1. Wrap response in ```json code blocks
+2. NO explanations - JSON only
+3. ALL string values must be SHORT (max 50 chars)
+4. NO line breaks within any string value
+5. Use simple IDs like "user1" not full email addresses
 
 ## Test Case Format
 
-For EACH Acceptance Criteria, generate test cases covering:
+For EACH AC generate 1-2 test cases maximum:
 - Happy path (required)
-- Error cases (for each AC error case)
-- Edge cases where applicable
+- One error case (if applicable)
 
-### TC Structure
-- id: TC-{AC-ID}-{NN} (e.g., TC-AC-CART-001-01)
-- name: Descriptive test name
-- type: happy_path | error_case | edge_case | boundary
-- ac_ref: The AC ID being tested
-- br_refs: Related Business Rule IDs
-- preconditions: List of required conditions
-- test_data: Field/value/notes for test inputs
-- steps: Numbered test steps
-- expected_results: Expected outcomes
+### TC Structure (keep values SHORT)
+- id: TC-{AC-ID}-{NN}
+- name: Short name (max 50 chars)
+- type: happy_path | error_case
+- ac_ref: AC ID
+- preconditions: Short list
+- steps: Short steps
+- expected_results: Short results
 
 ## Output Format
 
@@ -33,30 +31,27 @@ For EACH Acceptance Criteria, generate test cases covering:
   "test_cases": [
     {
       "id": "TC-AC-CART-001-01",
-      "name": "Add single product to empty cart",
+      "name": "Add product to cart",
       "type": "happy_path",
       "ac_ref": "AC-CART-001",
-      "br_refs": ["BR-STOCK-001"],
-      "preconditions": ["User is logged in", "Cart is empty"],
+      "br_refs": [],
+      "preconditions": ["User logged in", "Cart empty"],
       "test_data": [
-        {"field": "product_id", "value": "PROD-001", "notes": "Valid product"},
-        {"field": "quantity", "value": 1, "notes": "Minimum quantity"}
+        {"field": "product_id", "value": "P001", "notes": "Valid"}
       ],
-      "steps": ["Navigate to product page", "Click Add to Cart"],
-      "expected_results": ["Cart count increases to 1", "Product appears in cart"]
+      "steps": ["Go to product", "Click add"],
+      "expected_results": ["Item in cart"]
     }
   ],
   "summary": {
     "total": 10,
     "happy_path": 5,
-    "error_case": 4,
-    "edge_case": 1
+    "error_case": 5,
+    "edge_case": 0
   }
 }
 ```
 
----
+REMINDER: JSON only. All strings under 50 chars. No line breaks in strings.
 
-REMINDER: Output ONLY a ```json code block. No explanations.
-
-ACCEPTANCE CRITERIA INPUT:
+INPUT:
