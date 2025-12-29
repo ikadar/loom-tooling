@@ -1,0 +1,3937 @@
+{
+  "summary": {
+    "test_cases_generated": 83,
+    "tech_specs_generated": 31,
+    "coverage": {
+      "acs_covered": 84,
+      "brs_covered": 31,
+      "happy_path_tests": 47,
+      "error_tests": 33,
+      "edge_case_tests": 4
+    }
+  },
+  "test_cases": [
+    {
+      "id": "TC-AC-PROD-001-01",
+      "name": "Filter products by single category",
+      "type": "happy_path",
+      "ac_ref": "AC-PROD-001",
+      "br_refs": [],
+      "preconditions": [
+        "Product listing page is accessible",
+        "Multiple products exist in different categories"
+      ],
+      "test_data": [
+        {
+          "field": "category",
+          "value": "Electronics",
+          "notes": "Valid category with products"
+        },
+        {
+          "field": "sort_by",
+          "value": "name",
+          "notes": "Default sort"
+        },
+        {
+          "field": "page_size",
+          "value": 20,
+          "notes": "Default pagination"
+        }
+      ],
+      "steps": [
+        "Navigate to product listing page",
+        "Select 'Electronics' from category filter",
+        "Observe the filtered results"
+      ],
+      "expected_results": [
+        "Only products in Electronics category are displayed",
+        "Products are sorted by name",
+        "Maximum 20 products per page"
+      ]
+    },
+    {
+      "id": "TC-AC-PROD-001-02",
+      "name": "Filter products by price range and availability",
+      "type": "happy_path",
+      "ac_ref": "AC-PROD-001",
+      "br_refs": [],
+      "preconditions": [
+        "Product listing page is accessible",
+        "Products exist in various price ranges"
+      ],
+      "test_data": [
+        {
+          "field": "price_min",
+          "value": 10,
+          "notes": "Minimum price"
+        },
+        {
+          "field": "price_max",
+          "value": 50,
+          "notes": "Maximum price"
+        },
+        {
+          "field": "availability",
+          "value": "in_stock",
+          "notes": "Only available products"
+        },
+        {
+          "field": "sort_by",
+          "value": "price_asc",
+          "notes": "Price ascending"
+        }
+      ],
+      "steps": [
+        "Navigate to product listing page",
+        "Set minimum price to $10",
+        "Set maximum price to $50",
+        "Select 'In Stock' availability filter",
+        "Select 'Price: Low to High' sort option"
+      ],
+      "expected_results": [
+        "Only products priced between $10-$50 are displayed",
+        "All displayed products are in stock",
+        "Products are sorted by price ascending",
+        "Maximum 20 products per page"
+      ]
+    },
+    {
+      "id": "TC-AC-PROD-001-03",
+      "name": "Sort products by newest",
+      "type": "happy_path",
+      "ac_ref": "AC-PROD-001",
+      "br_refs": [],
+      "preconditions": [
+        "Product listing page is accessible",
+        "Products with different creation dates exist"
+      ],
+      "test_data": [
+        {
+          "field": "sort_by",
+          "value": "newest",
+          "notes": "Sort by creation date descending"
+        }
+      ],
+      "steps": [
+        "Navigate to product listing page",
+        "Select 'Newest' sort option"
+      ],
+      "expected_results": [
+        "Products are sorted by creation date descending",
+        "Most recently added products appear first"
+      ]
+    },
+    {
+      "id": "TC-AC-PROD-001-04",
+      "name": "No products match applied filters",
+      "type": "error_case",
+      "ac_ref": "AC-PROD-001",
+      "br_refs": [],
+      "preconditions": [
+        "Product listing page is accessible"
+      ],
+      "test_data": [
+        {
+          "field": "category",
+          "value": "Electronics",
+          "notes": "Valid category"
+        },
+        {
+          "field": "price_min",
+          "value": 10000,
+          "notes": "Very high minimum price"
+        },
+        {
+          "field": "price_max",
+          "value": 20000,
+          "notes": "Very high maximum price"
+        }
+      ],
+      "steps": [
+        "Navigate to product listing page",
+        "Select 'Electronics' category",
+        "Set price range to $10,000 - $20,000 where no products exist"
+      ],
+      "expected_results": [
+        "Empty state is displayed",
+        "'No products found' message is shown",
+        "Option to clear filters is available"
+      ]
+    },
+    {
+      "id": "TC-AC-PROD-001-05",
+      "name": "Invalid price range - minimum greater than maximum",
+      "type": "error_case",
+      "ac_ref": "AC-PROD-001",
+      "br_refs": [],
+      "preconditions": [
+        "Product listing page is accessible"
+      ],
+      "test_data": [
+        {
+          "field": "price_min",
+          "value": 100,
+          "notes": "Higher than max"
+        },
+        {
+          "field": "price_max",
+          "value": 50,
+          "notes": "Lower than min"
+        }
+      ],
+      "steps": [
+        "Navigate to product listing page",
+        "Set minimum price to $100",
+        "Set maximum price to $50",
+        "Attempt to apply filter"
+      ],
+      "expected_results": [
+        "Validation error is displayed",
+        "Filter is not applied until corrected"
+      ]
+    },
+    {
+      "id": "TC-AC-PROD-002-01",
+      "name": "View out-of-stock product in listing",
+      "type": "happy_path",
+      "ac_ref": "AC-PROD-002",
+      "br_refs": [],
+      "preconditions": [
+        "Product exists with zero inventory"
+      ],
+      "test_data": [
+        {
+          "field": "product_id",
+          "value": "PROD-OOS-001",
+          "notes": "Out of stock product"
+        },
+        {
+          "field": "inventory",
+          "value": 0,
+          "notes": "Zero available"
+        }
+      ],
+      "steps": [
+        "Navigate to product listing page",
+        "Locate out-of-stock product in listing"
+      ],
+      "expected_results": [
+        "Product is displayed in listing",
+        "'Out of stock' indicator is visible"
+      ]
+    },
+    {
+      "id": "TC-AC-PROD-002-02",
+      "name": "View out-of-stock product detail page",
+      "type": "happy_path",
+      "ac_ref": "AC-PROD-002",
+      "br_refs": [],
+      "preconditions": [
+        "Product exists with zero inventory"
+      ],
+      "test_data": [
+        {
+          "field": "product_id",
+          "value": "PROD-OOS-001",
+          "notes": "Out of stock product"
+        }
+      ],
+      "steps": [
+        "Navigate to product detail page for out-of-stock product"
+      ],
+      "expected_results": [
+        "Product details are displayed",
+        "'Out of stock' indicator is visible",
+        "Add to cart button is disabled"
+      ]
+    },
+    {
+      "id": "TC-AC-CART-001-01",
+      "name": "Add single in-stock product to cart",
+      "type": "happy_path",
+      "ac_ref": "AC-CART-001",
+      "br_refs": [],
+      "preconditions": [
+        "User is viewing an in-stock product",
+        "Product has no variants or variant is selected"
+      ],
+      "test_data": [
+        {
+          "field": "product_id",
+          "value": "PROD-001",
+          "notes": "Valid in-stock product"
+        },
+        {
+          "field": "quantity",
+          "value": 1,
+          "notes": "Single item"
+        },
+        {
+          "field": "available_stock",
+          "value": 10,
+          "notes": "Sufficient stock"
+        }
+      ],
+      "steps": [
+        "Navigate to product detail page",
+        "Set quantity to 1",
+        "Click 'Add to Cart' button"
+      ],
+      "expected_results": [
+        "Item is added to cart",
+        "Toast notification appears",
+        "'View Cart' option is shown in toast",
+        "Cart item count updates to reflect new item"
+      ]
+    },
+    {
+      "id": "TC-AC-CART-001-02",
+      "name": "Add product with maximum available quantity",
+      "type": "happy_path",
+      "ac_ref": "AC-CART-001",
+      "br_refs": [],
+      "preconditions": [
+        "User is viewing an in-stock product"
+      ],
+      "test_data": [
+        {
+          "field": "product_id",
+          "value": "PROD-002",
+          "notes": "Product with limited stock"
+        },
+        {
+          "field": "quantity",
+          "value": 5,
+          "notes": "Equal to available stock"
+        },
+        {
+          "field": "available_stock",
+          "value": 5,
+          "notes": "Limited inventory"
+        }
+      ],
+      "steps": [
+        "Navigate to product detail page",
+        "Set quantity to 5 (max available)",
+        "Click 'Add to Cart' button"
+      ],
+      "expected_results": [
+        "Item is added to cart with quantity 5",
+        "Toast notification appears",
+        "Cart item count updates"
+      ]
+    },
+    {
+      "id": "TC-AC-CART-001-03",
+      "name": "Add to cart disabled for out-of-stock product",
+      "type": "error_case",
+      "ac_ref": "AC-CART-001",
+      "br_refs": [],
+      "preconditions": [
+        "Product has zero inventory"
+      ],
+      "test_data": [
+        {
+          "field": "product_id",
+          "value": "PROD-OOS-001",
+          "notes": "Out of stock product"
+        },
+        {
+          "field": "available_stock",
+          "value": 0,
+          "notes": "No inventory"
+        }
+      ],
+      "steps": [
+        "Navigate to out-of-stock product detail page",
+        "Observe add to cart button state"
+      ],
+      "expected_results": [
+        "Add to cart button is disabled",
+        "'Out of Stock' message is displayed"
+      ]
+    },
+    {
+      "id": "TC-AC-CART-001-04",
+      "name": "Quantity exceeds available stock",
+      "type": "error_case",
+      "ac_ref": "AC-CART-001",
+      "br_refs": [],
+      "preconditions": [
+        "User is viewing an in-stock product"
+      ],
+      "test_data": [
+        {
+          "field": "product_id",
+          "value": "PROD-003",
+          "notes": "Limited stock product"
+        },
+        {
+          "field": "quantity",
+          "value": 15,
+          "notes": "Exceeds available"
+        },
+        {
+          "field": "available_stock",
+          "value": 10,
+          "notes": "Available inventory"
+        }
+      ],
+      "steps": [
+        "Navigate to product detail page",
+        "Attempt to set quantity to 15",
+        "Click 'Add to Cart' button"
+      ],
+      "expected_results": [
+        "Quantity is limited to available stock (10)",
+        "Notification is shown about stock limitation"
+      ]
+    },
+    {
+      "id": "TC-AC-CART-001-05",
+      "name": "Add to cart disabled when variant not selected",
+      "type": "error_case",
+      "ac_ref": "AC-CART-001",
+      "br_refs": [],
+      "preconditions": [
+        "Product has multiple variants",
+        "No variant selected"
+      ],
+      "test_data": [
+        {
+          "field": "product_id",
+          "value": "PROD-VAR-001",
+          "notes": "Product with size variants"
+        },
+        {
+          "field": "variant_selected",
+          "value": false,
+          "notes": "No variant chosen"
+        }
+      ],
+      "steps": [
+        "Navigate to product with variants",
+        "Do not select any variant",
+        "Observe add to cart button state"
+      ],
+      "expected_results": [
+        "Add to cart button is disabled",
+        "Prompt to select variant is displayed"
+      ]
+    },
+    {
+      "id": "TC-AC-CART-002-01",
+      "name": "Add existing product increments quantity",
+      "type": "happy_path",
+      "ac_ref": "AC-CART-002",
+      "br_refs": [],
+      "preconditions": [
+        "User has Product A with quantity 2 in cart",
+        "Product A is in stock"
+      ],
+      "test_data": [
+        {
+          "field": "product_id",
+          "value": "PROD-A",
+          "notes": "Already in cart"
+        },
+        {
+          "field": "cart_quantity",
+          "value": 2,
+          "notes": "Current cart quantity"
+        },
+        {
+          "field": "add_quantity",
+          "value": 1,
+          "notes": "Additional quantity"
+        },
+        {
+          "field": "available_stock",
+          "value": 10,
+          "notes": "Sufficient stock"
+        }
+      ],
+      "steps": [
+        "Navigate to Product A detail page",
+        "Set quantity to 1",
+        "Click 'Add to Cart' button"
+      ],
+      "expected_results": [
+        "Cart item quantity increases to 3",
+        "No new line item created",
+        "Cart shows single entry for Product A with quantity 3"
+      ]
+    },
+    {
+      "id": "TC-AC-CART-002-02",
+      "name": "Add existing product - merged total exceeds stock",
+      "type": "error_case",
+      "ac_ref": "AC-CART-002",
+      "br_refs": [],
+      "preconditions": [
+        "User has Product B with quantity 8 in cart",
+        "Product B has 10 available stock"
+      ],
+      "test_data": [
+        {
+          "field": "product_id",
+          "value": "PROD-B",
+          "notes": "Already in cart"
+        },
+        {
+          "field": "cart_quantity",
+          "value": 8,
+          "notes": "Current cart quantity"
+        },
+        {
+          "field": "add_quantity",
+          "value": 5,
+          "notes": "Would exceed stock"
+        },
+        {
+          "field": "available_stock",
+          "value": 10,
+          "notes": "Available inventory"
+        }
+      ],
+      "steps": [
+        "Navigate to Product B detail page",
+        "Set quantity to 5",
+        "Click 'Add to Cart' button"
+      ],
+      "expected_results": [
+        "Cart quantity set to maximum available (10)",
+        "Notification shown about stock limitation"
+      ]
+    },
+    {
+      "id": "TC-AC-CART-003-01",
+      "name": "Guest user adds item to session cart",
+      "type": "happy_path",
+      "ac_ref": "AC-CART-003",
+      "br_refs": [],
+      "preconditions": [
+        "User is not logged in",
+        "No existing session cart"
+      ],
+      "test_data": [
+        {
+          "field": "product_id",
+          "value": "PROD-001",
+          "notes": "Valid product"
+        },
+        {
+          "field": "quantity",
+          "value": 1,
+          "notes": "Single item"
+        }
+      ],
+      "steps": [
+        "As guest user, navigate to product page",
+        "Add product to cart"
+      ],
+      "expected_results": [
+        "Session-based cart is created",
+        "Item is added to cart",
+        "Cart persists across page navigation"
+      ]
+    },
+    {
+      "id": "TC-AC-CART-003-02",
+      "name": "Guest cart persists for 7 days of inactivity",
+      "type": "edge_case",
+      "ac_ref": "AC-CART-003",
+      "br_refs": [],
+      "preconditions": [
+        "Guest user has items in session cart"
+      ],
+      "test_data": [
+        {
+          "field": "cart_items",
+          "value": 2,
+          "notes": "Items in cart"
+        },
+        {
+          "field": "inactivity_days",
+          "value": 6,
+          "notes": "Less than expiry"
+        }
+      ],
+      "steps": [
+        "As guest user, add items to cart",
+        "Simulate 6 days of inactivity",
+        "Return to site"
+      ],
+      "expected_results": [
+        "Cart items are preserved",
+        "Cart is accessible"
+      ]
+    },
+    {
+      "id": "TC-AC-CART-004-01",
+      "name": "Cart merge on login - no duplicates",
+      "type": "happy_path",
+      "ac_ref": "AC-CART-004",
+      "br_refs": [],
+      "preconditions": [
+        "Guest user has items in session cart",
+        "User account exists with different items in cart"
+      ],
+      "test_data": [
+        {
+          "field": "guest_cart_items",
+          "value": [
+            {
+              "product": "PROD-A",
+              "qty": 2
+            }
+          ],
+          "notes": "Guest cart"
+        },
+        {
+          "field": "account_cart_items",
+          "value": [
+            {
+              "product": "PROD-B",
+              "qty": 1
+            }
+          ],
+          "notes": "Account cart"
+        }
+      ],
+      "steps": [
+        "As guest, add Product A (qty 2) to cart",
+        "Log in to account that has Product B (qty 1) in cart"
+      ],
+      "expected_results": [
+        "Cart contains both Product A (qty 2) and Product B (qty 1)",
+        "Total of 2 line items in cart"
+      ]
+    },
+    {
+      "id": "TC-AC-CART-004-02",
+      "name": "Cart merge on login - duplicate products combined",
+      "type": "happy_path",
+      "ac_ref": "AC-CART-004",
+      "br_refs": [],
+      "preconditions": [
+        "Guest user has Product A in session cart",
+        "User account has same Product A in cart"
+      ],
+      "test_data": [
+        {
+          "field": "guest_cart_items",
+          "value": [
+            {
+              "product": "PROD-A",
+              "qty": 2
+            }
+          ],
+          "notes": "Guest cart"
+        },
+        {
+          "field": "account_cart_items",
+          "value": [
+            {
+              "product": "PROD-A",
+              "qty": 3
+            }
+          ],
+          "notes": "Account cart"
+        }
+      ],
+      "steps": [
+        "As guest, add Product A (qty 2) to cart",
+        "Log in to account that has Product A (qty 3) in cart"
+      ],
+      "expected_results": [
+        "Cart contains Product A with combined quantity 5",
+        "Single line item for Product A"
+      ]
+    },
+    {
+      "id": "TC-AC-CART-004-03",
+      "name": "Cart merge - merged quantity exceeds stock",
+      "type": "error_case",
+      "ac_ref": "AC-CART-004",
+      "br_refs": [],
+      "preconditions": [
+        "Guest and account carts have same product",
+        "Combined quantity exceeds stock"
+      ],
+      "test_data": [
+        {
+          "field": "guest_cart_items",
+          "value": [
+            {
+              "product": "PROD-A",
+              "qty": 6
+            }
+          ],
+          "notes": "Guest cart"
+        },
+        {
+          "field": "account_cart_items",
+          "value": [
+            {
+              "product": "PROD-A",
+              "qty": 7
+            }
+          ],
+          "notes": "Account cart"
+        },
+        {
+          "field": "available_stock",
+          "value": 10,
+          "notes": "Max available"
+        }
+      ],
+      "steps": [
+        "As guest, add Product A (qty 6) to cart",
+        "Log in to account that has Product A (qty 7) in cart"
+      ],
+      "expected_results": [
+        "Cart contains Product A with quantity limited to 10",
+        "Notification shown about stock limitation"
+      ]
+    },
+    {
+      "id": "TC-AC-CART-005-01",
+      "name": "Update cart item quantity within valid range",
+      "type": "happy_path",
+      "ac_ref": "AC-CART-005",
+      "br_refs": [],
+      "preconditions": [
+        "Customer has product in cart",
+        "Product has sufficient stock"
+      ],
+      "test_data": [
+        {
+          "field": "product_id",
+          "value": "PROD-001",
+          "notes": "Product in cart"
+        },
+        {
+          "field": "current_quantity",
+          "value": 2,
+          "notes": "Current quantity"
+        },
+        {
+          "field": "new_quantity",
+          "value": 5,
+          "notes": "Updated quantity"
+        },
+        {
+          "field": "available_stock",
+          "value": 10,
+          "notes": "Sufficient stock"
+        }
+      ],
+      "steps": [
+        "Navigate to cart",
+        "Update quantity from 2 to 5",
+        "Observe cart update"
+      ],
+      "expected_results": [
+        "Cart item quantity updates to 5",
+        "Cart total recalculates",
+        "Current product price is used in calculation"
+      ]
+    },
+    {
+      "id": "TC-AC-CART-005-02",
+      "name": "Update cart quantity to zero removes item",
+      "type": "error_case",
+      "ac_ref": "AC-CART-005",
+      "br_refs": [],
+      "preconditions": [
+        "Customer has product in cart"
+      ],
+      "test_data": [
+        {
+          "field": "product_id",
+          "value": "PROD-001",
+          "notes": "Product in cart"
+        },
+        {
+          "field": "current_quantity",
+          "value": 2,
+          "notes": "Current quantity"
+        },
+        {
+          "field": "new_quantity",
+          "value": 0,
+          "notes": "Zero quantity"
+        }
+      ],
+      "steps": [
+        "Navigate to cart",
+        "Set quantity to 0"
+      ],
+      "expected_results": [
+        "Item is removed from cart",
+        "Cart total recalculates"
+      ]
+    },
+    {
+      "id": "TC-AC-CART-005-03",
+      "name": "Update cart quantity exceeds available stock",
+      "type": "error_case",
+      "ac_ref": "AC-CART-005",
+      "br_refs": [],
+      "preconditions": [
+        "Customer has product in cart"
+      ],
+      "test_data": [
+        {
+          "field": "product_id",
+          "value": "PROD-001",
+          "notes": "Product in cart"
+        },
+        {
+          "field": "new_quantity",
+          "value": 20,
+          "notes": "Exceeds stock"
+        },
+        {
+          "field": "available_stock",
+          "value": 10,
+          "notes": "Max available"
+        }
+      ],
+      "steps": [
+        "Navigate to cart",
+        "Attempt to set quantity to 20"
+      ],
+      "expected_results": [
+        "Quantity limited to available stock (10)",
+        "Notification shown about stock limitation"
+      ]
+    },
+    {
+      "id": "TC-AC-CART-005-04",
+      "name": "Update cart with negative quantity",
+      "type": "error_case",
+      "ac_ref": "AC-CART-005",
+      "br_refs": [],
+      "preconditions": [
+        "Customer has product in cart"
+      ],
+      "test_data": [
+        {
+          "field": "product_id",
+          "value": "PROD-001",
+          "notes": "Product in cart"
+        },
+        {
+          "field": "new_quantity",
+          "value": -1,
+          "notes": "Invalid negative quantity"
+        }
+      ],
+      "steps": [
+        "Navigate to cart",
+        "Attempt to set quantity to -1"
+      ],
+      "expected_results": [
+        "Validation error is displayed",
+        "Quantity remains unchanged"
+      ]
+    },
+    {
+      "id": "TC-AC-CART-006-01",
+      "name": "Remove item from cart with undo option",
+      "type": "happy_path",
+      "ac_ref": "AC-CART-006",
+      "br_refs": [],
+      "preconditions": [
+        "Customer has multiple items in cart"
+      ],
+      "test_data": [
+        {
+          "field": "cart_items",
+          "value": 3,
+          "notes": "Multiple items"
+        },
+        {
+          "field": "remove_product",
+          "value": "PROD-001",
+          "notes": "Item to remove"
+        }
+      ],
+      "steps": [
+        "Navigate to cart",
+        "Click remove on PROD-001"
+      ],
+      "expected_results": [
+        "Item is immediately removed",
+        "No confirmation dialog shown",
+        "'Undo' option appears temporarily",
+        "Cart total recalculates"
+      ]
+    },
+    {
+      "id": "TC-AC-CART-007-01",
+      "name": "Remove last item shows empty cart state",
+      "type": "happy_path",
+      "ac_ref": "AC-CART-007",
+      "br_refs": [],
+      "preconditions": [
+        "Customer has exactly one item in cart"
+      ],
+      "test_data": [
+        {
+          "field": "cart_items",
+          "value": 1,
+          "notes": "Single item"
+        },
+        {
+          "field": "product_id",
+          "value": "PROD-001",
+          "notes": "Only item"
+        }
+      ],
+      "steps": [
+        "Navigate to cart with single item",
+        "Click remove on the item"
+      ],
+      "expected_results": [
+        "Item is removed",
+        "Empty cart state is displayed",
+        "'Continue Shopping' link is shown"
+      ]
+    },
+    {
+      "id": "TC-AC-CART-008-01",
+      "name": "Cart item goes out of stock",
+      "type": "happy_path",
+      "ac_ref": "AC-CART-008",
+      "br_refs": [],
+      "preconditions": [
+        "Customer has product in cart",
+        "Product subsequently goes out of stock"
+      ],
+      "test_data": [
+        {
+          "field": "product_id",
+          "value": "PROD-001",
+          "notes": "Initially in stock"
+        },
+        {
+          "field": "new_stock",
+          "value": 0,
+          "notes": "Becomes out of stock"
+        }
+      ],
+      "steps": [
+        "Add in-stock product to cart",
+        "Product goes out of stock (inventory updated to 0)",
+        "View cart"
+      ],
+      "expected_results": [
+        "Item remains in cart",
+        "Warning indicator is displayed on item",
+        "Checkout is blocked until resolved"
+      ]
+    },
+    {
+      "id": "TC-AC-CART-009-01",
+      "name": "Price change notification in cart",
+      "type": "happy_path",
+      "ac_ref": "AC-CART-009",
+      "br_refs": [],
+      "preconditions": [
+        "Customer has product in cart",
+        "Product price changes"
+      ],
+      "test_data": [
+        {
+          "field": "product_id",
+          "value": "PROD-001",
+          "notes": "Product in cart"
+        },
+        {
+          "field": "original_price",
+          "value": 29.99,
+          "notes": "Price when added"
+        },
+        {
+          "field": "new_price",
+          "value": 34.99,
+          "notes": "Updated price"
+        }
+      ],
+      "steps": [
+        "Add product at $29.99 to cart",
+        "Product price changes to $34.99",
+        "View cart"
+      ],
+      "expected_results": [
+        "Cart shows current price ($34.99)",
+        "Notification indicates price has changed"
+      ]
+    },
+    {
+      "id": "TC-AC-ORDER-001-01",
+      "name": "Place order as registered customer - success",
+      "type": "happy_path",
+      "ac_ref": "AC-ORDER-001",
+      "br_refs": [],
+      "preconditions": [
+        "Registered customer with verified email",
+        "Items in cart",
+        "Valid shipping address",
+        "Valid payment method"
+      ],
+      "test_data": [
+        {
+          "field": "customer_email",
+          "value": "verified@test.com",
+          "notes": "Verified email"
+        },
+        {
+          "field": "cart_subtotal",
+          "value": 60,
+          "notes": "Before tax"
+        },
+        {
+          "field": "shipping_address",
+          "value": "123 Main St, NY 10001",
+          "notes": "Valid US address"
+        },
+        {
+          "field": "payment_method",
+          "value": "Visa ending 4242",
+          "notes": "Valid card"
+        }
+      ],
+      "steps": [
+        "Log in as registered customer with verified email",
+        "Navigate to checkout with items in cart",
+        "Confirm shipping address",
+        "Confirm payment method",
+        "Submit order"
+      ],
+      "expected_results": [
+        "Payment is authorized",
+        "Inventory is decremented",
+        "Order created with status 'pending'",
+        "Order number format is ORD-YYYY-NNNNN",
+        "Cart is cleared",
+        "Confirmation email is queued"
+      ]
+    },
+    {
+      "id": "TC-AC-ORDER-001-02",
+      "name": "Place order - customer not registered",
+      "type": "error_case",
+      "ac_ref": "AC-ORDER-001",
+      "br_refs": [],
+      "preconditions": [
+        "Guest user with items in cart"
+      ],
+      "test_data": [
+        {
+          "field": "user_type",
+          "value": "guest",
+          "notes": "Not registered"
+        }
+      ],
+      "steps": [
+        "As guest user, add items to cart",
+        "Attempt to proceed to checkout"
+      ],
+      "expected_results": [
+        "REGISTRATION_REQUIRED error is returned",
+        "User is redirected to registration"
+      ]
+    },
+    {
+      "id": "TC-AC-ORDER-001-03",
+      "name": "Place order - email not verified",
+      "type": "error_case",
+      "ac_ref": "AC-ORDER-001",
+      "br_refs": [],
+      "preconditions": [
+        "Registered customer with unverified email",
+        "Items in cart"
+      ],
+      "test_data": [
+        {
+          "field": "customer_email",
+          "value": "unverified@test.com",
+          "notes": "Not verified"
+        },
+        {
+          "field": "email_verified",
+          "value": false,
+          "notes": "Pending verification"
+        }
+      ],
+      "steps": [
+        "Log in as customer with unverified email",
+        "Attempt to place order"
+      ],
+      "expected_results": [
+        "EMAIL_NOT_VERIFIED error is returned",
+        "Prompt to verify email is displayed"
+      ]
+    },
+    {
+      "id": "TC-AC-ORDER-001-04",
+      "name": "Place order - payment authorization fails",
+      "type": "error_case",
+      "ac_ref": "AC-ORDER-001",
+      "br_refs": [],
+      "preconditions": [
+        "Registered customer with verified email",
+        "Items in cart",
+        "Payment method will fail"
+      ],
+      "test_data": [
+        {
+          "field": "payment_method",
+          "value": "Declined card",
+          "notes": "Card will be declined"
+        }
+      ],
+      "steps": [
+        "Proceed to checkout",
+        "Submit order with card that will be declined"
+      ],
+      "expected_results": [
+        "PAYMENT_FAILED error is returned",
+        "Cart is preserved",
+        "Option to retry with different payment is available"
+      ]
+    },
+    {
+      "id": "TC-AC-ORDER-001-05",
+      "name": "Place order - item out of stock at checkout",
+      "type": "error_case",
+      "ac_ref": "AC-ORDER-001",
+      "br_refs": [],
+      "preconditions": [
+        "Customer in checkout",
+        "Item goes out of stock during checkout"
+      ],
+      "test_data": [
+        {
+          "field": "product_id",
+          "value": "PROD-001",
+          "notes": "Becomes out of stock"
+        },
+        {
+          "field": "available_stock",
+          "value": 0,
+          "notes": "Sold out"
+        }
+      ],
+      "steps": [
+        "Proceed to checkout with items",
+        "Item goes out of stock",
+        "Submit order"
+      ],
+      "expected_results": [
+        "INSUFFICIENT_STOCK error for affected items",
+        "User can modify cart"
+      ]
+    },
+    {
+      "id": "TC-AC-ORDER-001-06",
+      "name": "Place order - invalid shipping address",
+      "type": "error_case",
+      "ac_ref": "AC-ORDER-001",
+      "br_refs": [],
+      "preconditions": [
+        "Customer in checkout"
+      ],
+      "test_data": [
+        {
+          "field": "shipping_address",
+          "value": "Invalid address",
+          "notes": "Missing required fields"
+        }
+      ],
+      "steps": [
+        "Proceed to checkout",
+        "Enter invalid shipping address",
+        "Attempt to submit"
+      ],
+      "expected_results": [
+        "ADDRESS_VALIDATION_ERROR is returned",
+        "Invalid fields are highlighted"
+      ]
+    },
+    {
+      "id": "TC-AC-ORDER-002-01",
+      "name": "Free shipping for orders $50 or more",
+      "type": "happy_path",
+      "ac_ref": "AC-ORDER-002",
+      "br_refs": [],
+      "preconditions": [
+        "Customer has items in cart totaling $50 or more"
+      ],
+      "test_data": [
+        {
+          "field": "cart_subtotal",
+          "value": 50,
+          "notes": "Exactly at threshold"
+        },
+        {
+          "field": "discount",
+          "value": 0,
+          "notes": "No discounts applied"
+        }
+      ],
+      "steps": [
+        "Add items totaling $50 to cart",
+        "Proceed to checkout"
+      ],
+      "expected_results": [
+        "Free shipping is automatically applied",
+        "Shipping cost shows $0.00"
+      ]
+    },
+    {
+      "id": "TC-AC-ORDER-002-02",
+      "name": "Free shipping after discount still qualifies",
+      "type": "edge_case",
+      "ac_ref": "AC-ORDER-002",
+      "br_refs": [],
+      "preconditions": [
+        "Customer has items totaling $60 before discount"
+      ],
+      "test_data": [
+        {
+          "field": "cart_subtotal_before_discount",
+          "value": 60,
+          "notes": "Before discount"
+        },
+        {
+          "field": "discount",
+          "value": 5,
+          "notes": "Applied discount"
+        },
+        {
+          "field": "cart_subtotal_after_discount",
+          "value": 55,
+          "notes": "After discount, still \u003e= $50"
+        }
+      ],
+      "steps": [
+        "Add items totaling $60 to cart",
+        "Apply $5 discount",
+        "Proceed to checkout"
+      ],
+      "expected_results": [
+        "Free shipping is applied",
+        "Subtotal after discount ($55) qualifies for free shipping"
+      ]
+    },
+    {
+      "id": "TC-AC-ORDER-003-01",
+      "name": "Standard shipping charge for orders under $50",
+      "type": "happy_path",
+      "ac_ref": "AC-ORDER-003",
+      "br_refs": [],
+      "preconditions": [
+        "Customer has items in cart totaling less than $50"
+      ],
+      "test_data": [
+        {
+          "field": "cart_subtotal",
+          "value": 45,
+          "notes": "Below threshold"
+        }
+      ],
+      "steps": [
+        "Add items totaling $45 to cart",
+        "Proceed to checkout"
+      ],
+      "expected_results": [
+        "Standard shipping fee of $5.99 is applied"
+      ]
+    },
+    {
+      "id": "TC-AC-ORDER-004-01",
+      "name": "Tax calculation for US shipping address",
+      "type": "happy_path",
+      "ac_ref": "AC-ORDER-004",
+      "br_refs": [],
+      "preconditions": [
+        "Customer has items in cart",
+        "US shipping address entered"
+      ],
+      "test_data": [
+        {
+          "field": "shipping_state",
+          "value": "CA",
+          "notes": "California"
+        },
+        {
+          "field": "cart_subtotal",
+          "value": 100,
+          "notes": "Base amount"
+        }
+      ],
+      "steps": [
+        "Add items to cart totaling $100",
+        "Enter California shipping address",
+        "View order total"
+      ],
+      "expected_results": [
+        "State tax is calculated based on California tax rate",
+        "Tax amount is displayed in order summary"
+      ]
+    },
+    {
+      "id": "TC-AC-ORDER-005-01",
+      "name": "View order history with pagination",
+      "type": "happy_path",
+      "ac_ref": "AC-ORDER-005",
+      "br_refs": [],
+      "preconditions": [
+        "Logged-in customer has placed multiple orders"
+      ],
+      "test_data": [
+        {
+          "field": "total_orders",
+          "value": 25,
+          "notes": "Multiple orders"
+        }
+      ],
+      "steps": [
+        "Log in as customer with order history",
+        "Navigate to order history"
+      ],
+      "expected_results": [
+        "Orders are displayed with pagination",
+        "Each order shows: order number, items, quantities, prices, status, shipping address",
+        "Tracking number shown if available"
+      ]
+    },
+    {
+      "id": "TC-AC-ORDER-006-01",
+      "name": "Cancel pending order successfully",
+      "type": "happy_path",
+      "ac_ref": "AC-ORDER-006",
+      "br_refs": [],
+      "preconditions": [
+        "Customer has order with status 'pending'"
+      ],
+      "test_data": [
+        {
+          "field": "order_id",
+          "value": "ORD-2025-00001",
+          "notes": "Pending order"
+        },
+        {
+          "field": "order_status",
+          "value": "pending",
+          "notes": "Cancellable status"
+        },
+        {
+          "field": "cancellation_reason",
+          "value": "Changed my mind",
+          "notes": "Optional reason"
+        }
+      ],
+      "steps": [
+        "Navigate to order details for pending order",
+        "Click cancel order",
+        "Enter optional cancellation reason",
+        "Confirm cancellation"
+      ],
+      "expected_results": [
+        "Order status changes to 'cancelled'",
+        "Payment is refunded to original method",
+        "Inventory is restored",
+        "Cancellation email is sent"
+      ]
+    },
+    {
+      "id": "TC-AC-ORDER-006-02",
+      "name": "Cancel confirmed order successfully",
+      "type": "happy_path",
+      "ac_ref": "AC-ORDER-006",
+      "br_refs": [],
+      "preconditions": [
+        "Customer has order with status 'confirmed'"
+      ],
+      "test_data": [
+        {
+          "field": "order_id",
+          "value": "ORD-2025-00002",
+          "notes": "Confirmed order"
+        },
+        {
+          "field": "order_status",
+          "value": "confirmed",
+          "notes": "Cancellable status"
+        }
+      ],
+      "steps": [
+        "Navigate to order details for confirmed order",
+        "Click cancel order",
+        "Confirm cancellation"
+      ],
+      "expected_results": [
+        "Order status changes to 'cancelled'",
+        "Payment is refunded",
+        "Inventory is restored",
+        "Cancellation email is sent"
+      ]
+    },
+    {
+      "id": "TC-AC-ORDER-006-03",
+      "name": "Cannot cancel shipped order",
+      "type": "error_case",
+      "ac_ref": "AC-ORDER-006",
+      "br_refs": [],
+      "preconditions": [
+        "Customer has order with status 'shipped'"
+      ],
+      "test_data": [
+        {
+          "field": "order_id",
+          "value": "ORD-2025-00003",
+          "notes": "Shipped order"
+        },
+        {
+          "field": "order_status",
+          "value": "shipped",
+          "notes": "Non-cancellable status"
+        }
+      ],
+      "steps": [
+        "Navigate to order details for shipped order",
+        "Attempt to cancel order"
+      ],
+      "expected_results": [
+        "CANCELLATION_NOT_ALLOWED error is returned",
+        "Suggestion to contact support is displayed"
+      ]
+    },
+    {
+      "id": "TC-AC-ORDER-007-01",
+      "name": "Order confirmation email sent successfully",
+      "type": "happy_path",
+      "ac_ref": "AC-ORDER-007",
+      "br_refs": [],
+      "preconditions": [
+        "Order has been successfully placed"
+      ],
+      "test_data": [
+        {
+          "field": "order_id",
+          "value": "ORD-2025-00001",
+          "notes": "New order"
+        },
+        {
+          "field": "customer_email",
+          "value": "customer@test.com",
+          "notes": "Verified email"
+        }
+      ],
+      "steps": [
+        "Place an order successfully"
+      ],
+      "expected_results": [
+        "Confirmation email is queued asynchronously",
+        "Email contains: order number, items, total, shipping address, estimated delivery"
+      ]
+    },
+    {
+      "id": "TC-AC-ORDER-007-02",
+      "name": "Email service unavailable - order not blocked",
+      "type": "error_case",
+      "ac_ref": "AC-ORDER-007",
+      "br_refs": [],
+      "preconditions": [
+        "Email service is unavailable"
+      ],
+      "test_data": [
+        {
+          "field": "email_service_status",
+          "value": "unavailable",
+          "notes": "Service down"
+        }
+      ],
+      "steps": [
+        "Place an order when email service is down"
+      ],
+      "expected_results": [
+        "Order creation is not blocked",
+        "Email is queued for retry",
+        "Failure is logged"
+      ]
+    },
+    {
+      "id": "TC-AC-CUST-001-01",
+      "name": "Customer registration with valid data",
+      "type": "happy_path",
+      "ac_ref": "AC-CUST-001",
+      "br_refs": [],
+      "preconditions": [
+        "Guest user on registration page"
+      ],
+      "test_data": [
+        {
+          "field": "email",
+          "value": "newuser@test.com",
+          "notes": "Valid unique email"
+        },
+        {
+          "field": "password",
+          "value": "SecurePass1",
+          "notes": "8+ chars with number"
+        },
+        {
+          "field": "first_name",
+          "value": "John",
+          "notes": "Required"
+        },
+        {
+          "field": "last_name",
+          "value": "Doe",
+          "notes": "Required"
+        },
+        {
+          "field": "phone",
+          "value": "+1234567890",
+          "notes": "Optional"
+        }
+      ],
+      "steps": [
+        "Navigate to registration page",
+        "Enter valid registration data",
+        "Submit registration form"
+      ],
+      "expected_results": [
+        "Account is created",
+        "Verification email is sent",
+        "User cannot place orders until email is verified"
+      ]
+    },
+    {
+      "id": "TC-AC-CUST-001-02",
+      "name": "Registration - duplicate email",
+      "type": "error_case",
+      "ac_ref": "AC-CUST-001",
+      "br_refs": [],
+      "preconditions": [
+        "Email already registered in system"
+      ],
+      "test_data": [
+        {
+          "field": "email",
+          "value": "existing@test.com",
+          "notes": "Already registered"
+        }
+      ],
+      "steps": [
+        "Navigate to registration page",
+        "Enter email that already exists",
+        "Submit registration form"
+      ],
+      "expected_results": [
+        "DUPLICATE_EMAIL error is returned"
+      ]
+    },
+    {
+      "id": "TC-AC-CUST-001-03",
+      "name": "Registration - password too short",
+      "type": "error_case",
+      "ac_ref": "AC-CUST-001",
+      "br_refs": [],
+      "preconditions": [
+        "Guest user on registration page"
+      ],
+      "test_data": [
+        {
+          "field": "password",
+          "value": "Short1",
+          "notes": "Less than 8 characters"
+        }
+      ],
+      "steps": [
+        "Navigate to registration page",
+        "Enter password with less than 8 characters",
+        "Submit registration form"
+      ],
+      "expected_results": [
+        "PASSWORD_TOO_SHORT error is returned"
+      ]
+    },
+    {
+      "id": "TC-AC-CUST-001-04",
+      "name": "Registration - password missing number",
+      "type": "error_case",
+      "ac_ref": "AC-CUST-001",
+      "br_refs": [],
+      "preconditions": [
+        "Guest user on registration page"
+      ],
+      "test_data": [
+        {
+          "field": "password",
+          "value": "SecurePassword",
+          "notes": "No number included"
+        }
+      ],
+      "steps": [
+        "Navigate to registration page",
+        "Enter password without a number",
+        "Submit registration form"
+      ],
+      "expected_results": [
+        "PASSWORD_MISSING_NUMBER error is returned"
+      ]
+    },
+    {
+      "id": "TC-AC-CUST-001-05",
+      "name": "Registration - invalid email format",
+      "type": "error_case",
+      "ac_ref": "AC-CUST-001",
+      "br_refs": [],
+      "preconditions": [
+        "Guest user on registration page"
+      ],
+      "test_data": [
+        {
+          "field": "email",
+          "value": "invalid-email",
+          "notes": "Not valid email format"
+        }
+      ],
+      "steps": [
+        "Navigate to registration page",
+        "Enter invalid email format",
+        "Submit registration form"
+      ],
+      "expected_results": [
+        "INVALID_EMAIL error is returned"
+      ]
+    },
+    {
+      "id": "TC-AC-CUST-002-01",
+      "name": "Add new shipping address",
+      "type": "happy_path",
+      "ac_ref": "AC-CUST-002",
+      "br_refs": [],
+      "preconditions": [
+        "Registered customer is logged in"
+      ],
+      "test_data": [
+        {
+          "field": "street",
+          "value": "123 Main Street",
+          "notes": "Required"
+        },
+        {
+          "field": "city",
+          "value": "New York",
+          "notes": "Required"
+        },
+        {
+          "field": "state",
+          "value": "NY",
+          "notes": "Required"
+        },
+        {
+          "field": "zip",
+          "value": "10001",
+          "notes": "Required"
+        },
+        {
+          "field": "country",
+          "value": "US",
+          "notes": "Domestic"
+        }
+      ],
+      "steps": [
+        "Navigate to address management",
+        "Click add new address",
+        "Enter all required fields",
+        "Save address"
+      ],
+      "expected_results": [
+        "Address is saved",
+        "Option to set as default is available"
+      ]
+    },
+    {
+      "id": "TC-AC-CUST-002-02",
+      "name": "Add shipping address - missing required field",
+      "type": "error_case",
+      "ac_ref": "AC-CUST-002",
+      "br_refs": [],
+      "preconditions": [
+        "Registered customer is logged in"
+      ],
+      "test_data": [
+        {
+          "field": "street",
+          "value": "",
+          "notes": "Missing required field"
+        },
+        {
+          "field": "city",
+          "value": "New York",
+          "notes": "Provided"
+        }
+      ],
+      "steps": [
+        "Navigate to address management",
+        "Attempt to save address with missing street"
+      ],
+      "expected_results": [
+        "INVALID_ADDRESS error with field specification"
+      ]
+    },
+    {
+      "id": "TC-AC-CUST-002-03",
+      "name": "Add shipping address - unsupported country",
+      "type": "error_case",
+      "ac_ref": "AC-CUST-002",
+      "br_refs": [],
+      "preconditions": [
+        "Registered customer is logged in"
+      ],
+      "test_data": [
+        {
+          "field": "country",
+          "value": "FR",
+          "notes": "Non-domestic country"
+        }
+      ],
+      "steps": [
+        "Navigate to address management",
+        "Attempt to add international address"
+      ],
+      "expected_results": [
+        "UNSUPPORTED_COUNTRY error is returned"
+      ]
+    },
+    {
+      "id": "TC-AC-CUST-003-01",
+      "name": "Add payment method - Visa card",
+      "type": "happy_path",
+      "ac_ref": "AC-CUST-003",
+      "br_refs": [],
+      "preconditions": [
+        "Registered customer is logged in"
+      ],
+      "test_data": [
+        {
+          "field": "card_type",
+          "value": "Visa",
+          "notes": "Supported card type"
+        },
+        {
+          "field": "card_number",
+          "value": "4242424242424242",
+          "notes": "Valid test card"
+        }
+      ],
+      "steps": [
+        "Navigate to payment methods",
+        "Click add new payment method",
+        "Enter Visa card details",
+        "Save payment method"
+      ],
+      "expected_results": [
+        "Payment method is tokenized via Stripe",
+        "Card is stored",
+        "Option to set as default is available"
+      ]
+    },
+    {
+      "id": "TC-AC-CUST-003-02",
+      "name": "Add payment method - PayPal",
+      "type": "happy_path",
+      "ac_ref": "AC-CUST-003",
+      "br_refs": [],
+      "preconditions": [
+        "Registered customer is logged in"
+      ],
+      "test_data": [
+        {
+          "field": "payment_type",
+          "value": "PayPal",
+          "notes": "Supported payment method"
+        }
+      ],
+      "steps": [
+        "Navigate to payment methods",
+        "Select PayPal option",
+        "Complete PayPal authorization"
+      ],
+      "expected_results": [
+        "PayPal account is linked",
+        "Payment method is stored"
+      ]
+    },
+    {
+      "id": "TC-AC-CUST-003-03",
+      "name": "Add payment method - invalid card number",
+      "type": "error_case",
+      "ac_ref": "AC-CUST-003",
+      "br_refs": [],
+      "preconditions": [
+        "Registered customer is logged in"
+      ],
+      "test_data": [
+        {
+          "field": "card_number",
+          "value": "1234567890123456",
+          "notes": "Invalid card number"
+        }
+      ],
+      "steps": [
+        "Navigate to payment methods",
+        "Enter invalid card number",
+        "Attempt to save"
+      ],
+      "expected_results": [
+        "INVALID_CARD error is returned"
+      ]
+    },
+    {
+      "id": "TC-AC-CUST-003-04",
+      "name": "Add payment method - unsupported card type",
+      "type": "error_case",
+      "ac_ref": "AC-CUST-003",
+      "br_refs": [],
+      "preconditions": [
+        "Registered customer is logged in"
+      ],
+      "test_data": [
+        {
+          "field": "card_type",
+          "value": "Discover",
+          "notes": "Not supported"
+        }
+      ],
+      "steps": [
+        "Navigate to payment methods",
+        "Attempt to add Discover card"
+      ],
+      "expected_results": [
+        "UNSUPPORTED_CARD_TYPE error is returned"
+      ]
+    },
+    {
+      "id": "TC-AC-ADMIN-001-01",
+      "name": "Create new product with valid data",
+      "type": "happy_path",
+      "ac_ref": "AC-ADMIN-001",
+      "br_refs": [],
+      "preconditions": [
+        "Admin user is logged in",
+        "On product management page"
+      ],
+      "test_data": [
+        {
+          "field": "name",
+          "value": "New Test Product",
+          "notes": "2-200 chars"
+        },
+        {
+          "field": "price",
+          "value": 29.99,
+          "notes": "\u003e$0.01"
+        },
+        {
+          "field": "category",
+          "value": "Electronics",
+          "notes": "Required"
+        },
+        {
+          "field": "description",
+          "value": "Product description text",
+          "notes": "Up to 5000 chars"
+        },
+        {
+          "field": "images",
+          "value": 3,
+          "notes": "Up to 10 images"
+        }
+      ],
+      "steps": [
+        "Navigate to product management",
+        "Click create new product",
+        "Enter valid product data",
+        "Save product"
+      ],
+      "expected_results": [
+        "Product is created with 'draft' status",
+        "UUID is assigned",
+        "Creator and timestamp are logged"
+      ]
+    },
+    {
+      "id": "TC-AC-ADMIN-001-02",
+      "name": "Create product - name too short",
+      "type": "error_case",
+      "ac_ref": "AC-ADMIN-001",
+      "br_refs": [],
+      "preconditions": [
+        "Admin user is logged in"
+      ],
+      "test_data": [
+        {
+          "field": "name",
+          "value": "A",
+          "notes": "Less than 2 characters"
+        }
+      ],
+      "steps": [
+        "Attempt to create product with single character name"
+      ],
+      "expected_results": [
+        "INVALID_NAME error is returned"
+      ]
+    },
+    {
+      "id": "TC-AC-ADMIN-001-03",
+      "name": "Create product - name too long",
+      "type": "error_case",
+      "ac_ref": "AC-ADMIN-001",
+      "br_refs": [],
+      "preconditions": [
+        "Admin user is logged in"
+      ],
+      "test_data": [
+        {
+          "field": "name",
+          "value": "[201 character string]",
+          "notes": "Exceeds 200 characters"
+        }
+      ],
+      "steps": [
+        "Attempt to create product with name over 200 characters"
+      ],
+      "expected_results": [
+        "NAME_TOO_LONG error is returned"
+      ]
+    },
+    {
+      "id": "TC-AC-ADMIN-001-04",
+      "name": "Create product - price zero or negative",
+      "type": "error_case",
+      "ac_ref": "AC-ADMIN-001",
+      "br_refs": [],
+      "preconditions": [
+        "Admin user is logged in"
+      ],
+      "test_data": [
+        {
+          "field": "price",
+          "value": 0,
+          "notes": "Invalid price"
+        }
+      ],
+      "steps": [
+        "Attempt to create product with price of $0"
+      ],
+      "expected_results": [
+        "INVALID_PRICE error is returned"
+      ]
+    },
+    {
+      "id": "TC-AC-ADMIN-001-05",
+      "name": "Create product - no category selected",
+      "type": "error_case",
+      "ac_ref": "AC-ADMIN-001",
+      "br_refs": [],
+      "preconditions": [
+        "Admin user is logged in"
+      ],
+      "test_data": [
+        {
+          "field": "category",
+          "value": null,
+          "notes": "No category"
+        }
+      ],
+      "steps": [
+        "Attempt to create product without selecting category"
+      ],
+      "expected_results": [
+        "CATEGORY_REQUIRED error is returned"
+      ]
+    },
+    {
+      "id": "TC-AC-ADMIN-001-06",
+      "name": "Create product - duplicate name warning",
+      "type": "edge_case",
+      "ac_ref": "AC-ADMIN-001",
+      "br_refs": [],
+      "preconditions": [
+        "Admin user is logged in",
+        "Product with same name exists"
+      ],
+      "test_data": [
+        {
+          "field": "name",
+          "value": "Existing Product Name",
+          "notes": "Already exists"
+        }
+      ],
+      "steps": [
+        "Attempt to create product with name that already exists"
+      ],
+      "expected_results": [
+        "Warning is displayed",
+        "Creation is not blocked"
+      ]
+    },
+    {
+      "id": "TC-AC-ADMIN-002-01",
+      "name": "Edit product attributes",
+      "type": "happy_path",
+      "ac_ref": "AC-ADMIN-002",
+      "br_refs": [],
+      "preconditions": [
+        "Admin user is logged in",
+        "Product exists"
+      ],
+      "test_data": [
+        {
+          "field": "product_id",
+          "value": "PROD-001",
+          "notes": "Existing product"
+        },
+        {
+          "field": "original_price",
+          "value": 29.99,
+          "notes": "Before edit"
+        },
+        {
+          "field": "new_price",
+          "value": 34.99,
+          "notes": "After edit"
+        }
+      ],
+      "steps": [
+        "Navigate to product edit page",
+        "Modify product price",
+        "Save changes"
+      ],
+      "expected_results": [
+        "Changes are saved",
+        "Last modified by/date is updated",
+        "Price change is logged",
+        "Existing orders retain original price",
+        "Carts get updated price"
+      ]
+    },
+    {
+      "id": "TC-AC-ADMIN-002-02",
+      "name": "Edit product - concurrent edit conflict",
+      "type": "error_case",
+      "ac_ref": "AC-ADMIN-002",
+      "br_refs": [],
+      "preconditions": [
+        "Two admins editing same product"
+      ],
+      "test_data": [
+        {
+          "field": "product_id",
+          "value": "PROD-001",
+          "notes": "Same product"
+        },
+        {
+          "field": "admin_1",
+          "value": "Admin A",
+          "notes": "First editor"
+        },
+        {
+          "field": "admin_2",
+          "value": "Admin B",
+          "notes": "Second editor"
+        }
+      ],
+      "steps": [
+        "Admin A opens product for editing",
+        "Admin B opens same product for editing",
+        "Admin A saves changes",
+        "Admin B saves changes"
+      ],
+      "expected_results": [
+        "Last write wins",
+        "Conflict warning is displayed"
+      ]
+    },
+    {
+      "id": "TC-AC-ADMIN-003-01",
+      "name": "Remove product with soft delete",
+      "type": "happy_path",
+      "ac_ref": "AC-ADMIN-003",
+      "br_refs": [],
+      "preconditions": [
+        "Admin user is logged in",
+        "Product exists"
+      ],
+      "test_data": [
+        {
+          "field": "product_id",
+          "value": "PROD-001",
+          "notes": "Product to remove"
+        }
+      ],
+      "steps": [
+        "Navigate to product management",
+        "Select product to remove",
+        "View impact summary",
+        "Confirm removal"
+      ],
+      "expected_results": [
+        "Product is soft-deleted",
+        "Product removed from all active carts",
+        "Users notified on next cart view",
+        "Product preserved for order history"
+      ]
+    },
+    {
+      "id": "TC-AC-ADMIN-004-01",
+      "name": "View all orders with filters",
+      "type": "happy_path",
+      "ac_ref": "AC-ADMIN-004",
+      "br_refs": [],
+      "preconditions": [
+        "Admin user is logged in",
+        "Orders exist in system"
+      ],
+      "test_data": [
+        {
+          "field": "status_filter",
+          "value": "pending",
+          "notes": "Filter by status"
+        },
+        {
+          "field": "date_range",
+          "value": "last_30_days",
+          "notes": "Date filter"
+        }
+      ],
+      "steps": [
+        "Navigate to order management",
+        "Apply status filter for 'pending'",
+        "Apply date range filter"
+      ],
+      "expected_results": [
+        "Matching orders are displayed",
+        "Shows: order number, date, customer, total, status",
+        "Results are paginated"
+      ]
+    },
+    {
+      "id": "TC-AC-ADMIN-004-02",
+      "name": "Search orders by order number",
+      "type": "happy_path",
+      "ac_ref": "AC-ADMIN-004",
+      "br_refs": [],
+      "preconditions": [
+        "Admin user is logged in",
+        "Order exists"
+      ],
+      "test_data": [
+        {
+          "field": "search_term",
+          "value": "ORD-2025-00001",
+          "notes": "Specific order number"
+        }
+      ],
+      "steps": [
+        "Navigate to order management",
+        "Enter order number in search",
+        "Submit search"
+      ],
+      "expected_results": [
+        "Matching order is displayed"
+      ]
+    },
+    {
+      "id": "TC-AC-ADMIN-005-01",
+      "name": "Update order status from pending to confirmed",
+      "type": "happy_path",
+      "ac_ref": "AC-ADMIN-005",
+      "br_refs": [],
+      "preconditions": [
+        "Admin user is logged in",
+        "Order with status 'pending' exists"
+      ],
+      "test_data": [
+        {
+          "field": "order_id",
+          "value": "ORD-2025-00001",
+          "notes": "Pending order"
+        },
+        {
+          "field": "current_status",
+          "value": "pending",
+          "notes": "Current status"
+        },
+        {
+          "field": "new_status",
+          "value": "confirmed",
+          "notes": "Target status"
+        }
+      ],
+      "steps": [
+        "Navigate to order details",
+        "Update status to 'confirmed'"
+      ],
+      "expected_results": [
+        "Status changes to confirmed",
+        "Customer receives email notification",
+        "Change is logged with admin user and timestamp"
+      ]
+    },
+    {
+      "id": "TC-AC-ADMIN-005-02",
+      "name": "Invalid status transition",
+      "type": "error_case",
+      "ac_ref": "AC-ADMIN-005",
+      "br_refs": [],
+      "preconditions": [
+        "Admin user is logged in",
+        "Order with status 'pending' exists"
+      ],
+      "test_data": [
+        {
+          "field": "order_id",
+          "value": "ORD-2025-00001",
+          "notes": "Pending order"
+        },
+        {
+          "field": "current_status",
+          "value": "pending",
+          "notes": "Current status"
+        },
+        {
+          "field": "new_status",
+          "value": "delivered",
+          "notes": "Invalid target"
+        }
+      ],
+      "steps": [
+        "Navigate to order details",
+        "Attempt to update status from 'pending' directly to 'delivered'"
+      ],
+      "expected_results": [
+        "INVALID_STATUS_TRANSITION error is returned"
+      ]
+    },
+    {
+      "id": "TC-AC-ADMIN-006-01",
+      "name": "Mark order as shipped with tracking",
+      "type": "happy_path",
+      "ac_ref": "AC-ADMIN-006",
+      "br_refs": [],
+      "preconditions": [
+        "Admin user is logged in",
+        "Order with status 'confirmed' exists"
+      ],
+      "test_data": [
+        {
+          "field": "order_id",
+          "value": "ORD-2025-00001",
+          "notes": "Confirmed order"
+        },
+        {
+          "field": "tracking_number",
+          "value": "1Z999AA10123456784",
+          "notes": "UPS tracking"
+        }
+      ],
+      "steps": [
+        "Navigate to order details",
+        "Update status to 'shipped'",
+        "Enter tracking number"
+      ],
+      "expected_results": [
+        "Status changes to shipped",
+        "Tracking number is stored",
+        "Customer receives email with tracking link to carrier website"
+      ]
+    },
+    {
+      "id": "TC-AC-ADMIN-007-01",
+      "name": "Update inventory with absolute adjustment",
+      "type": "happy_path",
+      "ac_ref": "AC-ADMIN-007",
+      "br_refs": [],
+      "preconditions": [
+        "Admin user is logged in",
+        "Product variant exists"
+      ],
+      "test_data": [
+        {
+          "field": "variant_sku",
+          "value": "SKU-001-M",
+          "notes": "Product variant"
+        },
+        {
+          "field": "current_stock",
+          "value": 50,
+          "notes": "Before update"
+        },
+        {
+          "field": "new_stock",
+          "value": 75,
+          "notes": "Absolute value"
+        },
+        {
+          "field": "reason",
+          "value": "Inventory recount",
+          "notes": "Optional reason"
+        }
+      ],
+      "steps": [
+        "Navigate to inventory management",
+        "Select product variant",
+        "Set stock to 75 (absolute)",
+        "Enter reason",
+        "Save changes"
+      ],
+      "expected_results": [
+        "Stock is updated to 75",
+        "Audit trail records before/after values",
+        "Timestamp and admin user logged"
+      ]
+    },
+    {
+      "id": "TC-AC-ADMIN-007-02",
+      "name": "Update inventory with delta adjustment",
+      "type": "happy_path",
+      "ac_ref": "AC-ADMIN-007",
+      "br_refs": [],
+      "preconditions": [
+        "Admin user is logged in",
+        "Product variant exists"
+      ],
+      "test_data": [
+        {
+          "field": "variant_sku",
+          "value": "SKU-001-M",
+          "notes": "Product variant"
+        },
+        {
+          "field": "current_stock",
+          "value": 50,
+          "notes": "Before update"
+        },
+        {
+          "field": "delta",
+          "value": -10,
+          "notes": "Decrement by 10"
+        }
+      ],
+      "steps": [
+        "Navigate to inventory management",
+        "Select product variant",
+        "Apply delta adjustment of -10",
+        "Save changes"
+      ],
+      "expected_results": [
+        "Stock is updated to 40",
+        "Audit trail records change"
+      ]
+    },
+    {
+      "id": "TC-AC-ADMIN-007-03",
+      "name": "Low stock alert triggered",
+      "type": "happy_path",
+      "ac_ref": "AC-ADMIN-007",
+      "br_refs": [],
+      "preconditions": [
+        "Admin user is logged in",
+        "Low stock threshold set to 10"
+      ],
+      "test_data": [
+        {
+          "field": "variant_sku",
+          "value": "SKU-001-M",
+          "notes": "Product variant"
+        },
+        {
+          "field": "current_stock",
+          "value": 15,
+          "notes": "Above threshold"
+        },
+        {
+          "field": "new_stock",
+          "value": 8,
+          "notes": "Below threshold"
+        }
+      ],
+      "steps": [
+        "Update stock from 15 to 8",
+        "Save changes"
+      ],
+      "expected_results": [
+        "Stock is updated",
+        "Low stock alert is triggered"
+      ]
+    },
+    {
+      "id": "TC-AC-ADMIN-007-04",
+      "name": "Update inventory - result would be negative",
+      "type": "error_case",
+      "ac_ref": "AC-ADMIN-007",
+      "br_refs": [],
+      "preconditions": [
+        "Admin user is logged in"
+      ],
+      "test_data": [
+        {
+          "field": "current_stock",
+          "value": 5,
+          "notes": "Current stock"
+        },
+        {
+          "field": "delta",
+          "value": -10,
+          "notes": "Would result in -5"
+        }
+      ],
+      "steps": [
+        "Attempt to apply delta of -10 to stock of 5"
+      ],
+      "expected_results": [
+        "INVALID_STOCK_LEVEL error is returned",
+        "Minimum stock is zero"
+      ]
+    },
+    {
+      "id": "TC-AC-ADMIN-008-01",
+      "name": "Bulk inventory update via CSV",
+      "type": "happy_path",
+      "ac_ref": "AC-ADMIN-008",
+      "br_refs": [],
+      "preconditions": [
+        "Admin user is logged in",
+        "Valid CSV file prepared"
+      ],
+      "test_data": [
+        {
+          "field": "csv_file",
+          "value": "inventory_update.csv",
+          "notes": "SKU and quantity columns"
+        },
+        {
+          "field": "rows",
+          "value": 50,
+          "notes": "Number of records"
+        }
+      ],
+      "steps": [
+        "Navigate to inventory management",
+        "Select bulk update option",
+        "Upload CSV file",
+        "Confirm import"
+      ],
+      "expected_results": [
+        "All valid rows are processed",
+        "Audit trail created for each change",
+        "Summary shows success count"
+      ]
+    },
+    {
+      "id": "TC-AC-ADMIN-008-02",
+      "name": "Bulk inventory update - invalid SKU rows",
+      "type": "error_case",
+      "ac_ref": "AC-ADMIN-008",
+      "br_refs": [],
+      "preconditions": [
+        "Admin user is logged in",
+        "CSV with invalid SKUs"
+      ],
+      "test_data": [
+        {
+          "field": "invalid_sku",
+          "value": "INVALID-SKU",
+          "notes": "Non-existent SKU"
+        }
+      ],
+      "steps": [
+        "Upload CSV with some invalid SKUs"
+      ],
+      "expected_results": [
+        "Invalid SKU rows are skipped",
+        "Summary shows errors for invalid rows",
+        "Valid rows are still processed"
+      ]
+    },
+    {
+      "id": "TC-AC-ADMIN-008-03",
+      "name": "Bulk inventory update - invalid quantity format",
+      "type": "error_case",
+      "ac_ref": "AC-ADMIN-008",
+      "br_refs": [],
+      "preconditions": [
+        "Admin user is logged in"
+      ],
+      "test_data": [
+        {
+          "field": "quantity",
+          "value": "abc",
+          "notes": "Non-numeric value"
+        }
+      ],
+      "steps": [
+        "Upload CSV with non-numeric quantity values"
+      ],
+      "expected_results": [
+        "Rows with invalid quantity are skipped",
+        "Error shown in summary"
+      ]
+    },
+    {
+      "id": "TC-AC-VAR-001-01",
+      "name": "Add product variant with unique SKU",
+      "type": "happy_path",
+      "ac_ref": "AC-VAR-001",
+      "br_refs": [],
+      "preconditions": [
+        "Admin is editing a product"
+      ],
+      "test_data": [
+        {
+          "field": "sku",
+          "value": "PROD-001-RED-M",
+          "notes": "Unique SKU"
+        },
+        {
+          "field": "size",
+          "value": "M",
+          "notes": "Variant attribute"
+        },
+        {
+          "field": "color",
+          "value": "Red",
+          "notes": "Variant attribute"
+        },
+        {
+          "field": "price_override",
+          "value": null,
+          "notes": "Inherits parent price"
+        }
+      ],
+      "steps": [
+        "Navigate to product edit page",
+        "Add new variant",
+        "Enter unique SKU and attributes",
+        "Save variant"
+      ],
+      "expected_results": [
+        "Variant is created with own inventory tracking",
+        "Inherits parent price (no override)"
+      ]
+    },
+    {
+      "id": "TC-AC-VAR-001-02",
+      "name": "Add variant with price override",
+      "type": "happy_path",
+      "ac_ref": "AC-VAR-001",
+      "br_refs": [],
+      "preconditions": [
+        "Admin is editing a product with base price $29.99"
+      ],
+      "test_data": [
+        {
+          "field": "sku",
+          "value": "PROD-001-RED-XL",
+          "notes": "Unique SKU"
+        },
+        {
+          "field": "price_override",
+          "value": 34.99,
+          "notes": "Higher price for XL"
+        }
+      ],
+      "steps": [
+        "Add new variant",
+        "Enter SKU and attributes",
+        "Set price override to $34.99",
+        "Save variant"
+      ],
+      "expected_results": [
+        "Variant created with override price of $34.99"
+      ]
+    },
+    {
+      "id": "TC-AC-VAR-001-03",
+      "name": "Add variant - duplicate SKU",
+      "type": "error_case",
+      "ac_ref": "AC-VAR-001",
+      "br_refs": [],
+      "preconditions": [
+        "SKU already exists in system"
+      ],
+      "test_data": [
+        {
+          "field": "sku",
+          "value": "EXISTING-SKU",
+          "notes": "Already exists"
+        }
+      ],
+      "steps": [
+        "Attempt to create variant with existing SKU"
+      ],
+      "expected_results": [
+        "DUPLICATE_SKU error is returned"
+      ]
+    },
+    {
+      "id": "TC-AC-CAT-001-01",
+      "name": "Create category with all fields",
+      "type": "happy_path",
+      "ac_ref": "AC-CAT-001",
+      "br_refs": [],
+      "preconditions": [
+        "Admin is on category management"
+      ],
+      "test_data": [
+        {
+          "field": "name",
+          "value": "Electronics",
+          "notes": "Category name"
+        },
+        {
+          "field": "description",
+          "value": "Electronic devices",
+          "notes": "Description"
+        },
+        {
+          "field": "display_order",
+          "value": 1,
+          "notes": "Sort order"
+        },
+        {
+          "field": "status",
+          "value": "active",
+          "notes": "Active status"
+        }
+      ],
+      "steps": [
+        "Navigate to category management",
+        "Create new category",
+        "Enter all fields",
+        "Save category"
+      ],
+      "expected_results": [
+        "Category is created with all attributes",
+        "Category is active"
+      ]
+    },
+    {
+      "id": "TC-AC-CAT-001-02",
+      "name": "Create nested category up to 3 levels",
+      "type": "happy_path",
+      "ac_ref": "AC-CAT-001",
+      "br_refs": [],
+      "preconditions": [
+        "Level 1 and Level 2 categories exist"
+      ],
+      "test_data": [
+        {
+          "field": "parent_level_1",
+          "value": "Electronics",
+          "notes": "Top level"
+        },
+        {
+          "field": "parent_level_2",
+          "value": "Phones",
+          "notes": "Level 2"
+        },
+        {
+          "field": "new_category",
+          "value": "Smartphones",
+          "notes": "Level 3"
+        }
+      ],
+      "steps": [
+        "Create category 'Smartphones' under 'Phones'"
+      ],
+      "expected_results": [
+        "Level 3 category is created",
+        "Hierarchy: Electronics \u003e Phones \u003e Smartphones"
+      ]
+    },
+    {
+      "id": "TC-AC-CAT-001-03",
+      "name": "Create category - nesting exceeds 3 levels",
+      "type": "error_case",
+      "ac_ref": "AC-CAT-001",
+      "br_refs": [],
+      "preconditions": [
+        "3 levels of categories already exist"
+      ],
+      "test_data": [
+        {
+          "field": "parent",
+          "value": "Level 3 Category",
+          "notes": "Already at max depth"
+        }
+      ],
+      "steps": [
+        "Attempt to create category under level 3 category"
+      ],
+      "expected_results": [
+        "CATEGORY_DEPTH_EXCEEDED error is returned"
+      ]
+    },
+    {
+      "id": "TC-AC-GDPR-001-01",
+      "name": "Customer data erasure request",
+      "type": "happy_path",
+      "ac_ref": "AC-GDPR-001",
+      "br_refs": [],
+      "preconditions": [
+        "Customer account exists with orders"
+      ],
+      "test_data": [
+        {
+          "field": "customer_id",
+          "value": "CUST-001",
+          "notes": "Customer requesting deletion"
+        },
+        {
+          "field": "orders",
+          "value": 5,
+          "notes": "Historical orders"
+        }
+      ],
+      "steps": [
+        "Customer submits GDPR data deletion request",
+        "Request is processed"
+      ],
+      "expected_results": [
+        "All personal data is erased",
+        "Order history is anonymized",
+        "Business records preserved with anonymized data"
+      ]
+    }
+  ],
+  "tech_specs": [
+    {
+      "id": "TS-BR-AUTH-001",
+      "name": "Registration and email verification for orders",
+      "br_ref": "BR-AUTH-001",
+      "rule": "Only registered customers with verified email addresses can place orders",
+      "implementation": "Validate customer status and email_verified flag at checkout initiation and order submission endpoints. Implement middleware/guard that checks authentication token claims for registration status and email verification.",
+      "validation_points": [
+        "POST /api/checkout/initiate",
+        "POST /api/orders",
+        "Checkout UI component mount"
+      ],
+      "data_requirements": [
+        {
+          "field": "customer_id",
+          "type": "uuid",
+          "constraints": "NOT NULL, valid customer reference",
+          "source": "Authentication token"
+        },
+        {
+          "field": "customer_status",
+          "type": "enum",
+          "constraints": "MUST be 'registered'",
+          "source": "customers.status"
+        },
+        {
+          "field": "email_verified",
+          "type": "boolean",
+          "constraints": "MUST be true",
+          "source": "customers.email_verified"
+        }
+      ],
+      "error_handling": [
+        {
+          "condition": "customer_status != 'registered'",
+          "error_code": "REGISTRATION_REQUIRED",
+          "message": "You must create an account to place orders",
+          "http_status": 403
+        },
+        {
+          "condition": "email_verified == false",
+          "error_code": "EMAIL_NOT_VERIFIED",
+          "message": "Please verify your email address before placing orders",
+          "http_status": 403
+        }
+      ],
+      "related_acs": [
+        "AC-ORDER-001",
+        "AC-CUST-001"
+      ]
+    },
+    {
+      "id": "TS-BR-STOCK-001",
+      "name": "Stock validation for cart addition",
+      "br_ref": "BR-STOCK-001",
+      "rule": "Products must have available stock to be added to cart",
+      "implementation": "Query inventory.available_quantity before cart addition. For products with variants, check variant-specific inventory. Disable add-to-cart button in UI when stock is 0. Re-validate at checkout.",
+      "validation_points": [
+        "POST /api/cart/items",
+        "PUT /api/cart/items/{id}",
+        "Product detail page load",
+        "POST /api/checkout/initiate"
+      ],
+      "data_requirements": [
+        {
+          "field": "product_id",
+          "type": "uuid",
+          "constraints": "NOT NULL, valid product reference",
+          "source": "Request body"
+        },
+        {
+          "field": "variant_id",
+          "type": "uuid",
+          "constraints": "NULL or valid variant reference",
+          "source": "Request body"
+        },
+        {
+          "field": "available_quantity",
+          "type": "integer",
+          "constraints": "\u003e= 0",
+          "source": "inventory.available_quantity"
+        }
+      ],
+      "error_handling": [
+        {
+          "condition": "available_quantity == 0",
+          "error_code": "OUT_OF_STOCK",
+          "message": "This product is currently out of stock",
+          "http_status": 400
+        }
+      ],
+      "related_acs": [
+        "AC-CART-001",
+        "AC-PROD-002"
+      ]
+    },
+    {
+      "id": "TS-BR-STOCK-002",
+      "name": "No backorders validation",
+      "br_ref": "BR-STOCK-002",
+      "rule": "Orders cannot be placed for quantities exceeding available stock",
+      "implementation": "Strict stock validation at checkout. Compare each cart item quantity against current inventory. Cart can temporarily hold excess quantity but checkout is blocked. Use SELECT FOR UPDATE to prevent race conditions during checkout.",
+      "validation_points": [
+        "POST /api/checkout/initiate",
+        "POST /api/orders"
+      ],
+      "data_requirements": [
+        {
+          "field": "cart_item_quantity",
+          "type": "integer",
+          "constraints": "\u003e= 1",
+          "source": "cart_items.quantity"
+        },
+        {
+          "field": "available_quantity",
+          "type": "integer",
+          "constraints": "\u003e= 0",
+          "source": "inventory.available_quantity"
+        },
+        {
+          "field": "product_variant_id",
+          "type": "uuid",
+          "constraints": "NOT NULL",
+          "source": "cart_items.variant_id"
+        }
+      ],
+      "error_handling": [
+        {
+          "condition": "cart_item_quantity \u003e available_quantity",
+          "error_code": "INSUFFICIENT_STOCK",
+          "message": "Requested quantity exceeds available stock for {product_name}. Available: {available_quantity}",
+          "http_status": 400
+        }
+      ],
+      "related_acs": [
+        "AC-ORDER-001",
+        "AC-CART-008"
+      ]
+    },
+    {
+      "id": "TS-BR-STOCK-003",
+      "name": "Non-negative inventory enforcement",
+      "br_ref": "BR-STOCK-003",
+      "rule": "Stock levels must never be negative",
+      "implementation": "Database CHECK constraint on inventory.quantity \u003e= 0. Application-level validation before any inventory adjustment. Use database transaction with row-level locking for concurrent operations.",
+      "validation_points": [
+        "PUT /api/admin/inventory/{id}",
+        "POST /api/admin/inventory/bulk",
+        "Order placement transaction",
+        "Order cancellation transaction"
+      ],
+      "data_requirements": [
+        {
+          "field": "quantity",
+          "type": "integer",
+          "constraints": "\u003e= 0, CHECK constraint",
+          "source": "inventory.quantity"
+        },
+        {
+          "field": "adjustment_delta",
+          "type": "integer",
+          "constraints": "result must be \u003e= 0",
+          "source": "Request body"
+        }
+      ],
+      "error_handling": [
+        {
+          "condition": "resulting_quantity \u003c 0",
+          "error_code": "INVALID_STOCK_LEVEL",
+          "message": "Stock level cannot be negative. Minimum is 0.",
+          "http_status": 400
+        }
+      ],
+      "related_acs": [
+        "AC-ADMIN-007"
+      ]
+    },
+    {
+      "id": "TS-BR-SHIP-001",
+      "name": "Free shipping threshold calculation",
+      "br_ref": "BR-SHIP-001",
+      "rule": "Orders with subtotal of $50 or more (before tax, after discounts) qualify for free shipping",
+      "implementation": "Calculate shipping cost during checkout totals computation. Subtotal = sum(item_price * quantity) - discounts. If subtotal \u003e= 50.00 then shipping_cost = 0, else shipping_cost = 5.99. Display threshold progress in cart UI.",
+      "validation_points": [
+        "GET /api/cart/totals",
+        "POST /api/checkout/initiate",
+        "Cart summary component"
+      ],
+      "data_requirements": [
+        {
+          "field": "subtotal",
+          "type": "decimal(10,2)",
+          "constraints": "\u003e= 0",
+          "source": "Calculated from cart items"
+        },
+        {
+          "field": "discount_total",
+          "type": "decimal(10,2)",
+          "constraints": "\u003e= 0",
+          "source": "Applied discounts"
+        },
+        {
+          "field": "shipping_cost",
+          "type": "decimal(10,2)",
+          "constraints": "0.00 or 5.99",
+          "source": "Calculated"
+        },
+        {
+          "field": "free_shipping_threshold",
+          "type": "decimal(10,2)",
+          "constraints": "= 50.00",
+          "source": "Configuration"
+        }
+      ],
+      "error_handling": [],
+      "related_acs": [
+        "AC-ORDER-002",
+        "AC-ORDER-003"
+      ]
+    },
+    {
+      "id": "TS-BR-CANCEL-001",
+      "name": "Order cancellation window validation",
+      "br_ref": "BR-CANCEL-001",
+      "rule": "Orders can only be cancelled before shipping",
+      "implementation": "Check order status before processing cancellation request. Only allow cancellation if status IN ('pending', 'confirmed'). Hide cancel button in UI for shipped/delivered orders. Return appropriate error for invalid states.",
+      "validation_points": [
+        "POST /api/orders/{id}/cancel",
+        "Order detail page load"
+      ],
+      "data_requirements": [
+        {
+          "field": "order_id",
+          "type": "uuid",
+          "constraints": "NOT NULL, valid order reference",
+          "source": "URL parameter"
+        },
+        {
+          "field": "order_status",
+          "type": "enum",
+          "constraints": "MUST be IN ('pending', 'confirmed')",
+          "source": "orders.status"
+        },
+        {
+          "field": "customer_id",
+          "type": "uuid",
+          "constraints": "MUST match authenticated user",
+          "source": "orders.customer_id"
+        }
+      ],
+      "error_handling": [
+        {
+          "condition": "order_status NOT IN ('pending', 'confirmed')",
+          "error_code": "CANCELLATION_NOT_ALLOWED",
+          "message": "Orders that have been shipped or delivered cannot be cancelled. Please contact support for assistance.",
+          "http_status": 400
+        }
+      ],
+      "related_acs": [
+        "AC-ORDER-006"
+      ]
+    },
+    {
+      "id": "TS-BR-ORDER-001",
+      "name": "Order status state machine",
+      "br_ref": "BR-ORDER-001",
+      "rule": "Orders must follow defined state machine: pending→confirmed→shipped→delivered, with cancelled as terminal state from pending or confirmed only",
+      "implementation": "Implement state machine pattern for order status transitions. Define allowed transitions map: {pending: [confirmed, cancelled], confirmed: [shipped, cancelled], shipped: [delivered]}. Validate every status update against transition rules.",
+      "validation_points": [
+        "PUT /api/admin/orders/{id}/status",
+        "Order status update service"
+      ],
+      "data_requirements": [
+        {
+          "field": "current_status",
+          "type": "enum",
+          "constraints": "IN ('pending', 'confirmed', 'shipped', 'delivered', 'cancelled')",
+          "source": "orders.status"
+        },
+        {
+          "field": "new_status",
+          "type": "enum",
+          "constraints": "Must be valid transition from current_status",
+          "source": "Request body"
+        },
+        {
+          "field": "allowed_transitions",
+          "type": "map",
+          "constraints": "Predefined state machine rules",
+          "source": "Application configuration"
+        }
+      ],
+      "error_handling": [
+        {
+          "condition": "new_status not in allowed_transitions[current_status]",
+          "error_code": "INVALID_STATUS_TRANSITION",
+          "message": "Cannot transition order from '{current_status}' to '{new_status}'",
+          "http_status": 400
+        }
+      ],
+      "related_acs": [
+        "AC-ADMIN-005",
+        "AC-ADMIN-006"
+      ]
+    },
+    {
+      "id": "TS-BR-ORDER-002",
+      "name": "Order immutability enforcement",
+      "br_ref": "BR-ORDER-002",
+      "rule": "Orders cannot be modified after placement; customer must cancel and reorder",
+      "implementation": "Do not expose PUT/PATCH endpoints for order items, quantities, or addresses. Only allow status updates via dedicated endpoint. Order modification requests return error with guidance to cancel and reorder.",
+      "validation_points": [
+        "API route definitions",
+        "Order service layer"
+      ],
+      "data_requirements": [
+        {
+          "field": "order_id",
+          "type": "uuid",
+          "constraints": "NOT NULL",
+          "source": "URL parameter"
+        },
+        {
+          "field": "order_status",
+          "type": "enum",
+          "constraints": "Any non-cart status",
+          "source": "orders.status"
+        }
+      ],
+      "error_handling": [
+        {
+          "condition": "attempt to modify order items/address after placement",
+          "error_code": "ORDER_MODIFICATION_NOT_ALLOWED",
+          "message": "Orders cannot be modified after placement. Please cancel this order and create a new one.",
+          "http_status": 400
+        }
+      ],
+      "related_acs": [
+        "AC-ORDER-001"
+      ]
+    },
+    {
+      "id": "TS-BR-ORDER-003",
+      "name": "Single shipment constraint",
+      "br_ref": "BR-ORDER-003",
+      "rule": "Each order is shipped as a single unit; partial shipments not supported",
+      "implementation": "Database schema enforces one-to-one relationship between orders and shipments. No split shipment functionality in admin UI or API. All order items transition to shipped status together.",
+      "validation_points": [
+        "Database schema design",
+        "Order fulfillment service"
+      ],
+      "data_requirements": [
+        {
+          "field": "order_id",
+          "type": "uuid",
+          "constraints": "UNIQUE in shipments table",
+          "source": "orders.id"
+        },
+        {
+          "field": "shipment_id",
+          "type": "uuid",
+          "constraints": "One per order",
+          "source": "shipments.id"
+        }
+      ],
+      "error_handling": [],
+      "related_acs": [
+        "AC-ADMIN-006"
+      ]
+    },
+    {
+      "id": "TS-BR-ORDER-004",
+      "name": "Price snapshot at order time",
+      "br_ref": "BR-ORDER-004",
+      "rule": "Order items must capture the product price at the time of order placement",
+      "implementation": "Copy product price to order_items.unit_price during order creation. Do not reference products.price for historical orders. Store as immutable field with no update capability.",
+      "validation_points": [
+        "Order creation service",
+        "Order item insertion"
+      ],
+      "data_requirements": [
+        {
+          "field": "unit_price",
+          "type": "decimal(10,2)",
+          "constraints": "\u003e 0, immutable after creation",
+          "source": "products.price at order time"
+        },
+        {
+          "field": "product_id",
+          "type": "uuid",
+          "constraints": "Reference to product",
+          "source": "cart_items.product_id"
+        },
+        {
+          "field": "quantity",
+          "type": "integer",
+          "constraints": "\u003e= 1",
+          "source": "cart_items.quantity"
+        }
+      ],
+      "error_handling": [],
+      "related_acs": [
+        "AC-ORDER-001",
+        "AC-ADMIN-002"
+      ]
+    },
+    {
+      "id": "TS-BR-PRICE-001",
+      "name": "Minimum product price validation",
+      "br_ref": "BR-PRICE-001",
+      "rule": "Product prices must be at least $0.01",
+      "implementation": "Validate price \u003e= 0.01 at product creation and update. Database CHECK constraint for price \u003e= 0.01. Reject zero or negative prices with validation error.",
+      "validation_points": [
+        "POST /api/admin/products",
+        "PUT /api/admin/products/{id}"
+      ],
+      "data_requirements": [
+        {
+          "field": "price",
+          "type": "decimal(10,2)",
+          "constraints": "\u003e= 0.01, CHECK constraint",
+          "source": "Request body"
+        }
+      ],
+      "error_handling": [
+        {
+          "condition": "price \u003c 0.01",
+          "error_code": "INVALID_PRICE",
+          "message": "Product price must be at least $0.01",
+          "http_status": 400
+        }
+      ],
+      "related_acs": [
+        "AC-ADMIN-001"
+      ]
+    },
+    {
+      "id": "TS-BR-PRICE-002",
+      "name": "Cart current price display",
+      "br_ref": "BR-PRICE-002",
+      "rule": "Cart items always reflect current product prices, not historical prices",
+      "implementation": "Join cart_items with products on every cart fetch to get current prices. Compare against cart_items.added_at_price for change detection. Display notification when price differs from when item was added.",
+      "validation_points": [
+        "GET /api/cart",
+        "Cart page component"
+      ],
+      "data_requirements": [
+        {
+          "field": "current_price",
+          "type": "decimal(10,2)",
+          "constraints": "\u003e= 0.01",
+          "source": "products.price"
+        },
+        {
+          "field": "added_at_price",
+          "type": "decimal(10,2)",
+          "constraints": "Stored at add time",
+          "source": "cart_items.added_at_price"
+        },
+        {
+          "field": "price_changed",
+          "type": "boolean",
+          "constraints": "Calculated field",
+          "source": "current_price != added_at_price"
+        }
+      ],
+      "error_handling": [],
+      "related_acs": [
+        "AC-CART-009"
+      ]
+    },
+    {
+      "id": "TS-BR-CART-001",
+      "name": "Cart quantity limits validation",
+      "br_ref": "BR-CART-001",
+      "rule": "Cart item quantity must be between 1 and available stock",
+      "implementation": "Validate quantity \u003e= 1 and \u003c= available_stock at add and update operations. Auto-limit quantity to available stock with notification rather than rejecting. UI quantity selector bounded by stock.",
+      "validation_points": [
+        "POST /api/cart/items",
+        "PUT /api/cart/items/{id}"
+      ],
+      "data_requirements": [
+        {
+          "field": "quantity",
+          "type": "integer",
+          "constraints": "\u003e= 1",
+          "source": "Request body"
+        },
+        {
+          "field": "available_stock",
+          "type": "integer",
+          "constraints": "\u003e= 0",
+          "source": "inventory.available_quantity"
+        },
+        {
+          "field": "quantity_limited",
+          "type": "boolean",
+          "constraints": "Response flag",
+          "source": "Calculated when quantity adjusted"
+        }
+      ],
+      "error_handling": [
+        {
+          "condition": "quantity \u003c 1",
+          "error_code": "INVALID_QUANTITY",
+          "message": "Quantity must be at least 1",
+          "http_status": 400
+        },
+        {
+          "condition": "quantity \u003e available_stock",
+          "error_code": "QUANTITY_EXCEEDS_STOCK",
+          "message": "Quantity limited to available stock ({available_stock})",
+          "http_status": 200
+        }
+      ],
+      "related_acs": [
+        "AC-CART-001",
+        "AC-CART-002",
+        "AC-CART-005"
+      ]
+    },
+    {
+      "id": "TS-BR-CART-002",
+      "name": "Cart expiration cleanup",
+      "br_ref": "BR-CART-002",
+      "rule": "Inactive carts expire after 30 days for logged-in users and 7 days for guests",
+      "implementation": "Scheduled background job runs daily to delete expired carts. Query carts where last_activity \u003c (NOW - expiry_period). Expiry period determined by customer_id presence (NULL = guest = 7 days, NOT NULL = registered = 30 days).",
+      "validation_points": [
+        "Background job scheduler",
+        "Cart cleanup service"
+      ],
+      "data_requirements": [
+        {
+          "field": "last_activity",
+          "type": "timestamp",
+          "constraints": "NOT NULL, updated on cart operations",
+          "source": "carts.last_activity"
+        },
+        {
+          "field": "customer_id",
+          "type": "uuid",
+          "constraints": "NULL for guests",
+          "source": "carts.customer_id"
+        },
+        {
+          "field": "session_id",
+          "type": "string",
+          "constraints": "NOT NULL for guests",
+          "source": "carts.session_id"
+        },
+        {
+          "field": "guest_expiry_days",
+          "type": "integer",
+          "constraints": "= 7",
+          "source": "Configuration"
+        },
+        {
+          "field": "registered_expiry_days",
+          "type": "integer",
+          "constraints": "= 30",
+          "source": "Configuration"
+        }
+      ],
+      "error_handling": [],
+      "related_acs": [
+        "AC-CART-003"
+      ]
+    },
+    {
+      "id": "TS-BR-CUST-001",
+      "name": "Unique customer email enforcement",
+      "br_ref": "BR-CUST-001",
+      "rule": "Customer email addresses must be unique in the system",
+      "implementation": "Database UNIQUE constraint on customers.email. Case-insensitive comparison (store lowercase). Check for existence before insert to provide friendly error message.",
+      "validation_points": [
+        "POST /api/customers/register",
+        "Database constraint"
+      ],
+      "data_requirements": [
+        {
+          "field": "email",
+          "type": "varchar(255)",
+          "constraints": "UNIQUE, NOT NULL, lowercase, valid email format",
+          "source": "Request body"
+        }
+      ],
+      "error_handling": [
+        {
+          "condition": "email already exists",
+          "error_code": "DUPLICATE_EMAIL",
+          "message": "An account with this email address already exists",
+          "http_status": 409
+        }
+      ],
+      "related_acs": [
+        "AC-CUST-001"
+      ]
+    },
+    {
+      "id": "TS-BR-CUST-002",
+      "name": "Password requirements validation",
+      "br_ref": "BR-CUST-002",
+      "rule": "Customer passwords must be at least 8 characters with at least one number",
+      "implementation": "Validate password with regex pattern: ^(?=.*\\d).{8,}$. Check at registration and password change endpoints. Return specific error for each failed requirement.",
+      "validation_points": [
+        "POST /api/customers/register",
+        "PUT /api/customers/password"
+      ],
+      "data_requirements": [
+        {
+          "field": "password",
+          "type": "string",
+          "constraints": "length \u003e= 8, contains at least one digit",
+          "source": "Request body"
+        }
+      ],
+      "error_handling": [
+        {
+          "condition": "password.length \u003c 8",
+          "error_code": "PASSWORD_TOO_SHORT",
+          "message": "Password must be at least 8 characters",
+          "http_status": 400
+        },
+        {
+          "condition": "password does not contain digit",
+          "error_code": "PASSWORD_MISSING_NUMBER",
+          "message": "Password must contain at least one number",
+          "http_status": 400
+        }
+      ],
+      "related_acs": [
+        "AC-CUST-001"
+      ]
+    },
+    {
+      "id": "TS-BR-CUST-003",
+      "name": "Email verification requirement",
+      "br_ref": "BR-CUST-003",
+      "rule": "Customers must verify their email address before placing orders",
+      "implementation": "Set email_verified = false on registration. Send verification email with secure token. Verify token at confirmation endpoint and set email_verified = true. Block checkout if email_verified = false.",
+      "validation_points": [
+        "POST /api/customers/register",
+        "GET /api/customers/verify-email",
+        "POST /api/checkout/initiate"
+      ],
+      "data_requirements": [
+        {
+          "field": "email_verified",
+          "type": "boolean",
+          "constraints": "default false",
+          "source": "customers.email_verified"
+        },
+        {
+          "field": "verification_token",
+          "type": "string",
+          "constraints": "Secure random token, expires in 24h",
+          "source": "email_verifications table"
+        }
+      ],
+      "error_handling": [
+        {
+          "condition": "email_verified == false at checkout",
+          "error_code": "EMAIL_NOT_VERIFIED",
+          "message": "Please verify your email address to complete your order",
+          "http_status": 403
+        }
+      ],
+      "related_acs": [
+        "AC-CUST-001",
+        "AC-ORDER-001"
+      ]
+    },
+    {
+      "id": "TS-BR-SHIP-002",
+      "name": "Domestic shipping only validation",
+      "br_ref": "BR-SHIP-002",
+      "rule": "Shipping is only supported within the domestic country",
+      "implementation": "Validate country code against allowed list (e.g., ['US']). Reject international addresses at address creation and checkout. Display supported countries in UI.",
+      "validation_points": [
+        "POST /api/customers/addresses",
+        "PUT /api/customers/addresses/{id}",
+        "POST /api/checkout/initiate"
+      ],
+      "data_requirements": [
+        {
+          "field": "country",
+          "type": "varchar(2)",
+          "constraints": "ISO country code, IN supported list",
+          "source": "Request body"
+        },
+        {
+          "field": "supported_countries",
+          "type": "array",
+          "constraints": "['US']",
+          "source": "Configuration"
+        }
+      ],
+      "error_handling": [
+        {
+          "condition": "country not in supported_countries",
+          "error_code": "UNSUPPORTED_COUNTRY",
+          "message": "We currently only ship within the United States",
+          "http_status": 400
+        }
+      ],
+      "related_acs": [
+        "AC-CUST-002"
+      ]
+    },
+    {
+      "id": "TS-BR-PAY-001",
+      "name": "Supported payment types validation",
+      "br_ref": "BR-PAY-001",
+      "rule": "Only Visa, Mastercard, American Express credit cards and PayPal are accepted",
+      "implementation": "Validate card type from BIN/IIN lookup or PayPal integration. Stripe/PayPal SDK handles card type detection. Reject unsupported card types before tokenization.",
+      "validation_points": [
+        "POST /api/customers/payment-methods",
+        "Payment method UI component"
+      ],
+      "data_requirements": [
+        {
+          "field": "payment_type",
+          "type": "enum",
+          "constraints": "IN ('visa', 'mastercard', 'amex', 'paypal')",
+          "source": "Payment provider response"
+        },
+        {
+          "field": "card_number",
+          "type": "string",
+          "constraints": "Validated by payment provider",
+          "source": "Request body (not stored)"
+        }
+      ],
+      "error_handling": [
+        {
+          "condition": "card_type not in supported types",
+          "error_code": "UNSUPPORTED_CARD_TYPE",
+          "message": "We accept Visa, Mastercard, American Express, and PayPal",
+          "http_status": 400
+        },
+        {
+          "condition": "invalid card number",
+          "error_code": "INVALID_CARD",
+          "message": "Invalid card number",
+          "http_status": 400
+        }
+      ],
+      "related_acs": [
+        "AC-CUST-003"
+      ]
+    },
+    {
+      "id": "TS-BR-PAY-002",
+      "name": "Payment authorization before order",
+      "br_ref": "BR-PAY-002",
+      "rule": "Full payment must be authorized before an order is created",
+      "implementation": "Transactional order creation: 1) Create payment intent, 2) Authorize payment, 3) If successful create order and decrement inventory, 4) If failed rollback transaction. Use database transaction with payment provider webhook confirmation.",
+      "validation_points": [
+        "POST /api/orders",
+        "Payment service layer"
+      ],
+      "data_requirements": [
+        {
+          "field": "payment_intent_id",
+          "type": "string",
+          "constraints": "From payment provider",
+          "source": "Stripe/PayPal"
+        },
+        {
+          "field": "authorization_status",
+          "type": "enum",
+          "constraints": "MUST be 'succeeded'",
+          "source": "Payment provider response"
+        },
+        {
+          "field": "order_total",
+          "type": "decimal(10,2)",
+          "constraints": "\u003e 0",
+          "source": "Calculated from cart"
+        }
+      ],
+      "error_handling": [
+        {
+          "condition": "payment authorization fails",
+          "error_code": "PAYMENT_FAILED",
+          "message": "Payment could not be processed. Please try again or use a different payment method.",
+          "http_status": 402
+        }
+      ],
+      "related_acs": [
+        "AC-ORDER-001"
+      ]
+    },
+    {
+      "id": "TS-BR-PROD-001",
+      "name": "Product soft deletion",
+      "br_ref": "BR-PROD-001",
+      "rule": "Products with order history must be soft-deleted to preserve historical references",
+      "implementation": "Add deleted_at timestamp column to products. Delete operation sets deleted_at = NOW() instead of removing row. Query filters exclude deleted products by default. Hard delete blocked if order_items reference exists.",
+      "validation_points": [
+        "DELETE /api/admin/products/{id}",
+        "Product queries"
+      ],
+      "data_requirements": [
+        {
+          "field": "deleted_at",
+          "type": "timestamp",
+          "constraints": "NULL for active, NOT NULL for deleted",
+          "source": "products.deleted_at"
+        },
+        {
+          "field": "has_orders",
+          "type": "boolean",
+          "constraints": "Calculated from order_items join",
+          "source": "Existence check"
+        }
+      ],
+      "error_handling": [],
+      "related_acs": [
+        "AC-ADMIN-003"
+      ]
+    },
+    {
+      "id": "TS-BR-PROD-002",
+      "name": "Product name constraints validation",
+      "br_ref": "BR-PROD-002",
+      "rule": "Product names must be between 2 and 200 characters",
+      "implementation": "Validate name length at product creation and update. Trim whitespace before validation. Database VARCHAR(200) with CHECK constraint for minimum length.",
+      "validation_points": [
+        "POST /api/admin/products",
+        "PUT /api/admin/products/{id}"
+      ],
+      "data_requirements": [
+        {
+          "field": "name",
+          "type": "varchar(200)",
+          "constraints": "length \u003e= 2 AND length \u003c= 200, NOT NULL",
+          "source": "Request body"
+        }
+      ],
+      "error_handling": [
+        {
+          "condition": "name.length \u003c 2",
+          "error_code": "INVALID_NAME",
+          "message": "Product name must be at least 2 characters",
+          "http_status": 400
+        },
+        {
+          "condition": "name.length \u003e 200",
+          "error_code": "NAME_TOO_LONG",
+          "message": "Product name cannot exceed 200 characters",
+          "http_status": 400
+        }
+      ],
+      "related_acs": [
+        "AC-ADMIN-001"
+      ]
+    },
+    {
+      "id": "TS-BR-PROD-003",
+      "name": "Product category requirement",
+      "br_ref": "BR-PROD-003",
+      "rule": "Every product must have a primary category assigned",
+      "implementation": "Validate primary_category_id is not null at product creation and update. Foreign key constraint to categories table. UI requires category selection before save.",
+      "validation_points": [
+        "POST /api/admin/products",
+        "PUT /api/admin/products/{id}"
+      ],
+      "data_requirements": [
+        {
+          "field": "primary_category_id",
+          "type": "uuid",
+          "constraints": "NOT NULL, valid category reference",
+          "source": "Request body"
+        }
+      ],
+      "error_handling": [
+        {
+          "condition": "primary_category_id is null",
+          "error_code": "CATEGORY_REQUIRED",
+          "message": "Please select a category for this product",
+          "http_status": 400
+        }
+      ],
+      "related_acs": [
+        "AC-ADMIN-001"
+      ]
+    },
+    {
+      "id": "TS-BR-VAR-001",
+      "name": "Unique variant SKU enforcement",
+      "br_ref": "BR-VAR-001",
+      "rule": "Each product variant must have a unique SKU",
+      "implementation": "Database UNIQUE constraint on product_variants.sku. Check for SKU existence before insert. SKU format validation (alphanumeric with hyphens).",
+      "validation_points": [
+        "POST /api/admin/products/{id}/variants",
+        "PUT /api/admin/variants/{id}"
+      ],
+      "data_requirements": [
+        {
+          "field": "sku",
+          "type": "varchar(50)",
+          "constraints": "UNIQUE, NOT NULL, alphanumeric with hyphens",
+          "source": "Request body"
+        }
+      ],
+      "error_handling": [
+        {
+          "condition": "sku already exists",
+          "error_code": "DUPLICATE_SKU",
+          "message": "SKU '{sku}' is already in use",
+          "http_status": 409
+        }
+      ],
+      "related_acs": [
+        "AC-VAR-001"
+      ]
+    },
+    {
+      "id": "TS-BR-VAR-002",
+      "name": "Variant selection requirement",
+      "br_ref": "BR-VAR-002",
+      "rule": "For products with variants, a specific variant must be selected before adding to cart",
+      "implementation": "Check if product has variants before cart addition. If product.has_variants = true, require variant_id in request. Disable add-to-cart button until variant selected in UI.",
+      "validation_points": [
+        "POST /api/cart/items",
+        "Product detail page component"
+      ],
+      "data_requirements": [
+        {
+          "field": "product_id",
+          "type": "uuid",
+          "constraints": "NOT NULL",
+          "source": "Request body"
+        },
+        {
+          "field": "variant_id",
+          "type": "uuid",
+          "constraints": "Required if product has variants",
+          "source": "Request body"
+        },
+        {
+          "field": "has_variants",
+          "type": "boolean",
+          "constraints": "Calculated from variants count",
+          "source": "products join product_variants"
+        }
+      ],
+      "error_handling": [
+        {
+          "condition": "has_variants == true AND variant_id is null",
+          "error_code": "VARIANT_REQUIRED",
+          "message": "Please select a size/color/option before adding to cart",
+          "http_status": 400
+        }
+      ],
+      "related_acs": [
+        "AC-CART-001"
+      ]
+    },
+    {
+      "id": "TS-BR-CAT-001",
+      "name": "Category nesting depth validation",
+      "br_ref": "BR-CAT-001",
+      "rule": "Categories can only be nested up to 3 levels deep",
+      "implementation": "Calculate depth on category creation by traversing parent chain. Store depth field for efficient queries. Reject category creation if parent.depth \u003e= 3.",
+      "validation_points": [
+        "POST /api/admin/categories",
+        "PUT /api/admin/categories/{id}"
+      ],
+      "data_requirements": [
+        {
+          "field": "parent_id",
+          "type": "uuid",
+          "constraints": "NULL for root categories",
+          "source": "Request body"
+        },
+        {
+          "field": "depth",
+          "type": "integer",
+          "constraints": "\u003c= 3, calculated from parent chain",
+          "source": "categories.depth"
+        }
+      ],
+      "error_handling": [
+        {
+          "condition": "resulting depth \u003e 3",
+          "error_code": "CATEGORY_DEPTH_EXCEEDED",
+          "message": "Categories cannot be nested more than 3 levels deep",
+          "http_status": 400
+        }
+      ],
+      "related_acs": [
+        "AC-CAT-001"
+      ]
+    },
+    {
+      "id": "TS-BR-INV-001",
+      "name": "Inventory restoration on cancellation",
+      "br_ref": "BR-INV-001",
+      "rule": "When an order is cancelled, all reserved inventory must be automatically restored",
+      "implementation": "In order cancellation transaction: for each order_item, UPDATE inventory SET available_quantity = available_quantity + order_item.quantity. Use database transaction to ensure atomicity with status change.",
+      "validation_points": [
+        "POST /api/orders/{id}/cancel",
+        "Order cancellation service"
+      ],
+      "data_requirements": [
+        {
+          "field": "order_items",
+          "type": "array",
+          "constraints": "All items from cancelled order",
+          "source": "order_items table"
+        },
+        {
+          "field": "variant_id",
+          "type": "uuid",
+          "constraints": "NOT NULL",
+          "source": "order_items.variant_id"
+        },
+        {
+          "field": "quantity",
+          "type": "integer",
+          "constraints": "\u003e= 1",
+          "source": "order_items.quantity"
+        }
+      ],
+      "error_handling": [],
+      "related_acs": [
+        "AC-ORDER-006"
+      ]
+    },
+    {
+      "id": "TS-BR-INV-002",
+      "name": "Inventory decrement on payment",
+      "br_ref": "BR-INV-002",
+      "rule": "Inventory is decremented immediately upon successful payment",
+      "implementation": "In order creation transaction: after payment authorization succeeds, UPDATE inventory SET available_quantity = available_quantity - cart_item.quantity for all items. Use SELECT FOR UPDATE to prevent race conditions.",
+      "validation_points": [
+        "POST /api/orders",
+        "Order creation service"
+      ],
+      "data_requirements": [
+        {
+          "field": "cart_items",
+          "type": "array",
+          "constraints": "All items from cart",
+          "source": "cart_items table"
+        },
+        {
+          "field": "variant_id",
+          "type": "uuid",
+          "constraints": "NOT NULL",
+          "source": "cart_items.variant_id"
+        },
+        {
+          "field": "quantity",
+          "type": "integer",
+          "constraints": "\u003e= 1, \u003c= available",
+          "source": "cart_items.quantity"
+        }
+      ],
+      "error_handling": [],
+      "related_acs": [
+        "AC-ORDER-001"
+      ]
+    },
+    {
+      "id": "TS-BR-AUDIT-001",
+      "name": "Order status audit trail",
+      "br_ref": "BR-AUDIT-001",
+      "rule": "All order status changes must be logged with timestamp and actor",
+      "implementation": "Create order_status_history table. On every status update, INSERT record with order_id, old_status, new_status, changed_by (user_id), changed_at (timestamp). Implement via database trigger or service layer interceptor.",
+      "validation_points": [
+        "PUT /api/admin/orders/{id}/status",
+        "Order status update service"
+      ],
+      "data_requirements": [
+        {
+          "field": "order_id",
+          "type": "uuid",
+          "constraints": "NOT NULL, FK to orders",
+          "source": "orders.id"
+        },
+        {
+          "field": "old_status",
+          "type": "enum",
+          "constraints": "Previous status value",
+          "source": "orders.status before update"
+        },
+        {
+          "field": "new_status",
+          "type": "enum",
+          "constraints": "New status value",
+          "source": "Request body"
+        },
+        {
+          "field": "changed_by",
+          "type": "uuid",
+          "constraints": "NOT NULL, FK to users",
+          "source": "Authenticated user"
+        },
+        {
+          "field": "changed_at",
+          "type": "timestamp",
+          "constraints": "NOT NULL, default NOW()",
+          "source": "Database"
+        }
+      ],
+      "error_handling": [],
+      "related_acs": [
+        "AC-ADMIN-005"
+      ]
+    },
+    {
+      "id": "TS-BR-AUDIT-002",
+      "name": "Inventory audit trail",
+      "br_ref": "BR-AUDIT-002",
+      "rule": "All inventory changes must be logged with before/after values, reason, and actor",
+      "implementation": "Create inventory_history table. On every inventory update, INSERT record with variant_id, quantity_before, quantity_after, reason, modified_by, modified_at. Capture reason from request or system action type.",
+      "validation_points": [
+        "PUT /api/admin/inventory/{id}",
+        "POST /api/admin/inventory/bulk",
+        "Order placement",
+        "Order cancellation"
+      ],
+      "data_requirements": [
+        {
+          "field": "variant_id",
+          "type": "uuid",
+          "constraints": "NOT NULL, FK to product_variants",
+          "source": "inventory.variant_id"
+        },
+        {
+          "field": "quantity_before",
+          "type": "integer",
+          "constraints": "\u003e= 0",
+          "source": "inventory.quantity before update"
+        },
+        {
+          "field": "quantity_after",
+          "type": "integer",
+          "constraints": "\u003e= 0",
+          "source": "inventory.quantity after update"
+        },
+        {
+          "field": "reason",
+          "type": "varchar(255)",
+          "constraints": "NULL allowed",
+          "source": "Request body or system action"
+        },
+        {
+          "field": "modified_by",
+          "type": "uuid",
+          "constraints": "NOT NULL",
+          "source": "Authenticated user or system"
+        },
+        {
+          "field": "modified_at",
+          "type": "timestamp",
+          "constraints": "NOT NULL, default NOW()",
+          "source": "Database"
+        }
+      ],
+      "error_handling": [],
+      "related_acs": [
+        "AC-ADMIN-007",
+        "AC-ADMIN-008"
+      ]
+    },
+    {
+      "id": "TS-BR-AUDIT-003",
+      "name": "Price change audit trail",
+      "br_ref": "BR-AUDIT-003",
+      "rule": "Product price changes must be tracked with who modified and when",
+      "implementation": "Create price_history table. On product.price update, INSERT record with product_id, old_price, new_price, modified_by, modified_at. Implement via service layer or database trigger.",
+      "validation_points": [
+        "PUT /api/admin/products/{id}"
+      ],
+      "data_requirements": [
+        {
+          "field": "product_id",
+          "type": "uuid",
+          "constraints": "NOT NULL, FK to products",
+          "source": "products.id"
+        },
+        {
+          "field": "old_price",
+          "type": "decimal(10,2)",
+          "constraints": "\u003e= 0.01",
+          "source": "products.price before update"
+        },
+        {
+          "field": "new_price",
+          "type": "decimal(10,2)",
+          "constraints": "\u003e= 0.01",
+          "source": "Request body"
+        },
+        {
+          "field": "modified_by",
+          "type": "uuid",
+          "constraints": "NOT NULL, FK to users",
+          "source": "Authenticated admin user"
+        },
+        {
+          "field": "modified_at",
+          "type": "timestamp",
+          "constraints": "NOT NULL, default NOW()",
+          "source": "Database"
+        }
+      ],
+      "error_handling": [],
+      "related_acs": [
+        "AC-ADMIN-002"
+      ]
+    }
+  ]
+}

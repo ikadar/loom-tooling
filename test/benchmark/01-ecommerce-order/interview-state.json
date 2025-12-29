@@ -1,0 +1,2781 @@
+{
+  "session_id": "interview-1767003783",
+  "domain_model": {
+    "entities": [
+      {
+        "name": "Product",
+        "mentioned_attributes": [
+          "name",
+          "description",
+          "price",
+          "category"
+        ],
+        "mentioned_operations": [
+          "add",
+          "edit",
+          "remove"
+        ],
+        "mentioned_states": [
+          "in stock",
+          "out of stock"
+        ]
+      },
+      {
+        "name": "ProductVariant",
+        "mentioned_attributes": [
+          "size",
+          "color"
+        ],
+        "mentioned_operations": [],
+        "mentioned_states": []
+      },
+      {
+        "name": "Cart",
+        "mentioned_attributes": [
+          "items",
+          "quantities",
+          "total price"
+        ],
+        "mentioned_operations": [
+          "add item",
+          "update quantity",
+          "remove item"
+        ],
+        "mentioned_states": []
+      },
+      {
+        "name": "CartItem",
+        "mentioned_attributes": [
+          "quantity"
+        ],
+        "mentioned_operations": [
+          "update",
+          "remove"
+        ],
+        "mentioned_states": []
+      },
+      {
+        "name": "Order",
+        "mentioned_attributes": [
+          "status",
+          "shipping address",
+          "payment method"
+        ],
+        "mentioned_operations": [
+          "place",
+          "cancel",
+          "update status"
+        ],
+        "mentioned_states": [
+          "pending",
+          "confirmed",
+          "shipped",
+          "delivered"
+        ]
+      },
+      {
+        "name": "Customer",
+        "mentioned_attributes": [
+          "registration status"
+        ],
+        "mentioned_operations": [
+          "register"
+        ],
+        "mentioned_states": [
+          "registered",
+          "unregistered"
+        ]
+      },
+      {
+        "name": "ShippingAddress",
+        "mentioned_attributes": [],
+        "mentioned_operations": [],
+        "mentioned_states": []
+      },
+      {
+        "name": "PaymentMethod",
+        "mentioned_attributes": [
+          "type"
+        ],
+        "mentioned_operations": [],
+        "mentioned_states": []
+      },
+      {
+        "name": "Category",
+        "mentioned_attributes": [],
+        "mentioned_operations": [],
+        "mentioned_states": []
+      },
+      {
+        "name": "Inventory",
+        "mentioned_attributes": [
+          "stock level"
+        ],
+        "mentioned_operations": [
+          "manage"
+        ],
+        "mentioned_states": []
+      }
+    ],
+    "operations": [
+      {
+        "name": "Browse Products",
+        "actor": "Customer",
+        "trigger": "customer navigates to product listing",
+        "target": "Product",
+        "mentioned_inputs": [],
+        "mentioned_rules": []
+      },
+      {
+        "name": "Add to Cart",
+        "actor": "Customer",
+        "trigger": "customer selects product to add",
+        "target": "Cart",
+        "mentioned_inputs": [
+          "product",
+          "quantity"
+        ],
+        "mentioned_rules": [
+          "Products must be in stock to be added to cart"
+        ]
+      },
+      {
+        "name": "Update Cart Quantity",
+        "actor": "Customer",
+        "trigger": "customer modifies quantity in cart",
+        "target": "CartItem",
+        "mentioned_inputs": [
+          "new quantity"
+        ],
+        "mentioned_rules": []
+      },
+      {
+        "name": "Remove from Cart",
+        "actor": "Customer",
+        "trigger": "customer removes item from cart",
+        "target": "CartItem",
+        "mentioned_inputs": [
+          "item to remove"
+        ],
+        "mentioned_rules": []
+      },
+      {
+        "name": "Place Order",
+        "actor": "Customer",
+        "trigger": "customer submits order from cart",
+        "target": "Order",
+        "mentioned_inputs": [
+          "shipping address",
+          "payment method"
+        ],
+        "mentioned_rules": [
+          "Customers must be registered to place orders",
+          "Orders over $50 qualify for free shipping"
+        ]
+      },
+      {
+        "name": "Track Order Status",
+        "actor": "Customer",
+        "trigger": "customer views order details",
+        "target": "Order",
+        "mentioned_inputs": [],
+        "mentioned_rules": []
+      },
+      {
+        "name": "Cancel Order",
+        "actor": "Customer",
+        "trigger": "customer requests cancellation",
+        "target": "Order",
+        "mentioned_inputs": [],
+        "mentioned_rules": [
+          "Orders can only be cancelled before shipping"
+        ]
+      },
+      {
+        "name": "Add Product",
+        "actor": "Admin",
+        "trigger": "admin creates new product",
+        "target": "Product",
+        "mentioned_inputs": [
+          "name",
+          "description",
+          "price",
+          "category"
+        ],
+        "mentioned_rules": []
+      },
+      {
+        "name": "Edit Product",
+        "actor": "Admin",
+        "trigger": "admin modifies product details",
+        "target": "Product",
+        "mentioned_inputs": [
+          "product attributes"
+        ],
+        "mentioned_rules": []
+      },
+      {
+        "name": "Remove Product",
+        "actor": "Admin",
+        "trigger": "admin deletes product",
+        "target": "Product",
+        "mentioned_inputs": [],
+        "mentioned_rules": []
+      },
+      {
+        "name": "View All Orders",
+        "actor": "Admin",
+        "trigger": "admin navigates to order list",
+        "target": "Order",
+        "mentioned_inputs": [],
+        "mentioned_rules": []
+      },
+      {
+        "name": "Update Order Status",
+        "actor": "Admin",
+        "trigger": "admin changes order status",
+        "target": "Order",
+        "mentioned_inputs": [
+          "new status"
+        ],
+        "mentioned_rules": []
+      },
+      {
+        "name": "Manage Inventory",
+        "actor": "Admin",
+        "trigger": "admin updates stock levels",
+        "target": "Inventory",
+        "mentioned_inputs": [
+          "stock quantity"
+        ],
+        "mentioned_rules": []
+      },
+      {
+        "name": "Send Confirmation Email",
+        "actor": "System",
+        "trigger": "order is placed",
+        "target": "Customer",
+        "mentioned_inputs": [
+          "order details"
+        ],
+        "mentioned_rules": []
+      }
+    ],
+    "relationships": [
+      {
+        "from": "Product",
+        "to": "ProductVariant",
+        "type": "contains",
+        "cardinality": "1:N"
+      },
+      {
+        "from": "Product",
+        "to": "Category",
+        "type": "references",
+        "cardinality": "N:1"
+      },
+      {
+        "from": "Cart",
+        "to": "CartItem",
+        "type": "contains",
+        "cardinality": "1:N"
+      },
+      {
+        "from": "CartItem",
+        "to": "Product",
+        "type": "references",
+        "cardinality": "N:1"
+      },
+      {
+        "from": "Customer",
+        "to": "Cart",
+        "type": "contains",
+        "cardinality": "1:1"
+      },
+      {
+        "from": "Customer",
+        "to": "Order",
+        "type": "contains",
+        "cardinality": "1:N"
+      },
+      {
+        "from": "Order",
+        "to": "CartItem",
+        "type": "contains",
+        "cardinality": "1:N"
+      },
+      {
+        "from": "Order",
+        "to": "ShippingAddress",
+        "type": "references",
+        "cardinality": "N:1"
+      },
+      {
+        "from": "Order",
+        "to": "PaymentMethod",
+        "type": "references",
+        "cardinality": "N:1"
+      },
+      {
+        "from": "Product",
+        "to": "Inventory",
+        "type": "references",
+        "cardinality": "1:1"
+      }
+    ],
+    "business_rules": [
+      "Customers must be registered to place orders",
+      "Products must be in stock to be added to cart",
+      "Orders over $50 qualify for free shipping",
+      "Orders can only be cancelled before shipping"
+    ],
+    "ui_mentions": [
+      "Product listing/browse page",
+      "Shopping cart view with items, quantities, and total price",
+      "Quantity update controls",
+      "Remove item button",
+      "Shipping address input form",
+      "Payment method selection (credit card or PayPal)",
+      "Order confirmation email",
+      "Order status display",
+      "Order cancellation option",
+      "Admin product management interface (add/edit/remove)",
+      "Admin order list view",
+      "Admin order status update controls",
+      "Admin inventory management interface"
+    ]
+  },
+  "questions": [
+    {
+      "id": "AMB-ENT-001",
+      "category": "entity",
+      "subject": "Product",
+      "question": "What is the unique identifier format for products?",
+      "severity": "critical",
+      "suggested_answer": "Auto-generated UUID or sequential ID",
+      "options": [
+        "UUID",
+        "Sequential numeric ID",
+        "SKU-based alphanumeric code",
+        "Slug derived from name"
+      ],
+      "checklist_item": "IDENTITY"
+    },
+    {
+      "id": "AMB-ENT-002",
+      "category": "entity",
+      "subject": "Product",
+      "question": "What is the data type and constraints for product price?",
+      "severity": "critical",
+      "suggested_answer": "Decimal with 2 decimal places, minimum 0.01",
+      "options": [
+        "Integer (cents)",
+        "Decimal (2 places)",
+        "Decimal (4 places for precision)"
+      ],
+      "checklist_item": "VALIDATION"
+    },
+    {
+      "id": "AMB-ENT-003",
+      "category": "entity",
+      "subject": "Product",
+      "question": "What is the maximum length for product name and description?",
+      "severity": "important",
+      "suggested_answer": "Name: 200 chars, Description: 5000 chars",
+      "options": [
+        "Name 100/Desc 1000",
+        "Name 200/Desc 5000",
+        "Name 255/Desc unlimited"
+      ],
+      "checklist_item": "VALIDATION"
+    },
+    {
+      "id": "AMB-ENT-004",
+      "category": "entity",
+      "subject": "Product",
+      "question": "Should products support multiple images? How many?",
+      "severity": "important",
+      "suggested_answer": "Yes, up to 10 images with one primary",
+      "options": [
+        "Single image only",
+        "Multiple images (up to 5)",
+        "Multiple images (up to 10)",
+        "Unlimited images"
+      ],
+      "checklist_item": "ATTRIBUTES"
+    },
+    {
+      "id": "AMB-ENT-005",
+      "category": "entity",
+      "subject": "Product",
+      "question": "Should removed products be soft-deleted or permanently deleted?",
+      "severity": "critical",
+      "suggested_answer": "Soft delete to preserve order history references",
+      "options": [
+        "Permanent delete",
+        "Soft delete",
+        "Archive to separate table"
+      ],
+      "checklist_item": "SOFT DELETE"
+    },
+    {
+      "id": "AMB-ENT-006",
+      "category": "entity",
+      "subject": "Product",
+      "question": "Can a product belong to multiple categories?",
+      "severity": "important",
+      "suggested_answer": "Single primary category with optional secondary categories",
+      "options": [
+        "Single category only",
+        "Multiple categories allowed",
+        "Primary + secondary categories"
+      ],
+      "checklist_item": "RELATIONSHIPS"
+    },
+    {
+      "id": "AMB-ENT-007",
+      "category": "entity",
+      "subject": "Product",
+      "question": "Is product change history/audit trail required?",
+      "severity": "minor",
+      "suggested_answer": "Track price changes and who modified",
+      "options": [
+        "No audit trail",
+        "Basic timestamps only",
+        "Full audit trail with user and changes"
+      ],
+      "checklist_item": "HISTORY"
+    },
+    {
+      "id": "AMB-ENT-008",
+      "category": "entity",
+      "subject": "ProductVariant",
+      "question": "Does each variant have its own price, or inherit from parent product?",
+      "severity": "critical",
+      "suggested_answer": "Variants can have price override (optional, defaults to parent)",
+      "options": [
+        "Always inherit parent price",
+        "Each variant has own price",
+        "Optional override with default to parent"
+      ],
+      "checklist_item": "ATTRIBUTES"
+    },
+    {
+      "id": "AMB-ENT-009",
+      "category": "entity",
+      "subject": "ProductVariant",
+      "question": "Does each variant have its own inventory/stock level?",
+      "severity": "critical",
+      "suggested_answer": "Yes, inventory tracked per variant",
+      "options": [
+        "Inventory at product level only",
+        "Inventory per variant",
+        "Both product and variant level"
+      ],
+      "checklist_item": "ATTRIBUTES"
+    },
+    {
+      "id": "AMB-ENT-010",
+      "category": "entity",
+      "subject": "ProductVariant",
+      "question": "What variant types are supported beyond size and color?",
+      "severity": "important",
+      "suggested_answer": "Configurable variant types per product",
+      "options": [
+        "Only size and color",
+        "Fixed set: size, color, material",
+        "Configurable variant types"
+      ],
+      "checklist_item": "ATTRIBUTES"
+    },
+    {
+      "id": "AMB-ENT-011",
+      "category": "entity",
+      "subject": "ProductVariant",
+      "question": "Does each variant have its own SKU/identifier?",
+      "severity": "critical",
+      "suggested_answer": "Yes, unique SKU per variant",
+      "options": [
+        "No separate identifier",
+        "Auto-generated variant ID",
+        "Unique SKU per variant"
+      ],
+      "checklist_item": "IDENTITY"
+    },
+    {
+      "id": "AMB-ENT-012",
+      "category": "entity",
+      "subject": "Cart",
+      "question": "How long should an inactive cart persist before expiration?",
+      "severity": "important",
+      "suggested_answer": "30 days for logged-in users, 7 days for guests",
+      "options": [
+        "Never expire",
+        "7 days",
+        "30 days",
+        "Different for guests vs logged-in"
+      ],
+      "checklist_item": "LIFECYCLE"
+    },
+    {
+      "id": "AMB-ENT-013",
+      "category": "entity",
+      "subject": "Cart",
+      "question": "Should guest users (not logged in) be able to have a cart?",
+      "severity": "critical",
+      "suggested_answer": "Yes, with cart merge on login",
+      "options": [
+        "No, must be logged in",
+        "Yes, session-based cart",
+        "Yes, with merge on login"
+      ],
+      "checklist_item": "LIFECYCLE"
+    },
+    {
+      "id": "AMB-ENT-014",
+      "category": "entity",
+      "subject": "Cart",
+      "question": "What happens when an item in cart goes out of stock?",
+      "severity": "critical",
+      "suggested_answer": "Item remains with warning, blocked at checkout",
+      "options": [
+        "Automatically remove item",
+        "Keep item with warning",
+        "Keep item, block at checkout"
+      ],
+      "checklist_item": "STATES"
+    },
+    {
+      "id": "AMB-ENT-015",
+      "category": "entity",
+      "subject": "CartItem",
+      "question": "Is there a maximum quantity limit per item?",
+      "severity": "important",
+      "suggested_answer": "Limited by available stock",
+      "options": [
+        "No limit",
+        "Fixed max (e.g., 99)",
+        "Limited by stock",
+        "Configurable per product"
+      ],
+      "checklist_item": "VALIDATION"
+    },
+    {
+      "id": "AMB-ENT-016",
+      "category": "entity",
+      "subject": "CartItem",
+      "question": "Should cart items store the price at time of adding, or always use current price?",
+      "severity": "important",
+      "suggested_answer": "Always use current price, notify on price changes",
+      "options": [
+        "Lock price when added",
+        "Always current price",
+        "Current price with change notification"
+      ],
+      "checklist_item": "ATTRIBUTES"
+    },
+    {
+      "id": "AMB-ENT-017",
+      "category": "entity",
+      "subject": "Order",
+      "question": "What is the order number format?",
+      "severity": "important",
+      "suggested_answer": "Year prefix + sequential number (e.g., ORD-2024-00001)",
+      "options": [
+        "Sequential number only",
+        "UUID",
+        "Year + sequential (ORD-2024-00001)",
+        "Random alphanumeric"
+      ],
+      "checklist_item": "IDENTITY"
+    },
+    {
+      "id": "AMB-ENT-018",
+      "category": "entity",
+      "subject": "Order",
+      "question": "What are the valid state transitions for orders?",
+      "severity": "critical",
+      "suggested_answer": "pending→confirmed→shipped→delivered, with cancelled possible from pending/confirmed",
+      "options": [
+        "Linear only (no skipping)",
+        "Allow skip states",
+        "Linear with cancellation branch"
+      ],
+      "checklist_item": "STATES"
+    },
+    {
+      "id": "AMB-ENT-019",
+      "category": "entity",
+      "subject": "Order",
+      "question": "Should orders track item prices at time of purchase?",
+      "severity": "critical",
+      "suggested_answer": "Yes, snapshot prices at order time",
+      "options": [
+        "Reference current prices",
+        "Snapshot prices at order time"
+      ],
+      "checklist_item": "ATTRIBUTES"
+    },
+    {
+      "id": "AMB-ENT-020",
+      "category": "entity",
+      "subject": "Order",
+      "question": "Is order modification allowed after placement (before shipping)?",
+      "severity": "important",
+      "suggested_answer": "No modification, must cancel and reorder",
+      "options": [
+        "No modifications allowed",
+        "Allow quantity changes",
+        "Allow full modifications before confirmed"
+      ],
+      "checklist_item": "LIFECYCLE"
+    },
+    {
+      "id": "AMB-ENT-021",
+      "category": "entity",
+      "subject": "Order",
+      "question": "Are partial shipments supported (splitting an order)?",
+      "severity": "important",
+      "suggested_answer": "No, single shipment per order",
+      "options": [
+        "No, single shipment only",
+        "Yes, support split shipments"
+      ],
+      "checklist_item": "ATTRIBUTES"
+    },
+    {
+      "id": "AMB-ENT-022",
+      "category": "entity",
+      "subject": "Order",
+      "question": "Is order history/audit trail required for status changes?",
+      "severity": "important",
+      "suggested_answer": "Yes, track all status changes with timestamps",
+      "options": [
+        "No audit trail",
+        "Track status changes only",
+        "Full audit with timestamps and actor"
+      ],
+      "checklist_item": "HISTORY"
+    },
+    {
+      "id": "AMB-ENT-023",
+      "category": "entity",
+      "subject": "Order",
+      "question": "What additional order attributes are needed (notes, gift message, etc.)?",
+      "severity": "minor",
+      "suggested_answer": "Optional order notes field",
+      "options": [
+        "No additional fields",
+        "Order notes only",
+        "Notes + gift message + delivery instructions"
+      ],
+      "checklist_item": "ATTRIBUTES"
+    },
+    {
+      "id": "AMB-ENT-024",
+      "category": "entity",
+      "subject": "Customer",
+      "question": "What customer profile attributes are required?",
+      "severity": "critical",
+      "suggested_answer": "Email, password, first name, last name, phone (optional)",
+      "options": [
+        "Email + password only",
+        "Email, password, name",
+        "Full profile with phone, DOB, preferences"
+      ],
+      "checklist_item": "ATTRIBUTES"
+    },
+    {
+      "id": "AMB-ENT-025",
+      "category": "entity",
+      "subject": "Customer",
+      "question": "What is the unique identifier for customers?",
+      "severity": "critical",
+      "suggested_answer": "Email address as unique identifier",
+      "options": [
+        "Auto-generated ID",
+        "Email address",
+        "Username",
+        "Phone number"
+      ],
+      "checklist_item": "IDENTITY"
+    },
+    {
+      "id": "AMB-ENT-026",
+      "category": "entity",
+      "subject": "Customer",
+      "question": "What are the password requirements?",
+      "severity": "critical",
+      "suggested_answer": "Minimum 8 chars with at least one number",
+      "options": [
+        "Minimum 6 chars",
+        "Minimum 8 chars",
+        "8 chars + number + special char"
+      ],
+      "checklist_item": "VALIDATION"
+    },
+    {
+      "id": "AMB-ENT-027",
+      "category": "entity",
+      "subject": "Customer",
+      "question": "Can customers save multiple shipping addresses?",
+      "severity": "important",
+      "suggested_answer": "Yes, with one default address",
+      "options": [
+        "Single address only",
+        "Multiple addresses",
+        "Multiple with default"
+      ],
+      "checklist_item": "RELATIONSHIPS"
+    },
+    {
+      "id": "AMB-ENT-028",
+      "category": "entity",
+      "subject": "Customer",
+      "question": "Can customers save multiple payment methods?",
+      "severity": "important",
+      "suggested_answer": "Yes, with one default payment method",
+      "options": [
+        "No saved payment methods",
+        "Single saved method",
+        "Multiple with default"
+      ],
+      "checklist_item": "RELATIONSHIPS"
+    },
+    {
+      "id": "AMB-ENT-029",
+      "category": "entity",
+      "subject": "Customer",
+      "question": "Should customer accounts be soft-deleted or allow permanent deletion (GDPR)?",
+      "severity": "critical",
+      "suggested_answer": "Support both soft delete and full data erasure for GDPR",
+      "options": [
+        "Permanent delete only",
+        "Soft delete only",
+        "Both options (GDPR compliant)"
+      ],
+      "checklist_item": "SOFT DELETE"
+    },
+    {
+      "id": "AMB-ENT-030",
+      "category": "entity",
+      "subject": "Customer",
+      "question": "Is email verification required for registration?",
+      "severity": "important",
+      "suggested_answer": "Yes, email verification required before placing orders",
+      "options": [
+        "No verification",
+        "Optional verification",
+        "Required before ordering"
+      ],
+      "checklist_item": "LIFECYCLE"
+    },
+    {
+      "id": "AMB-ENT-031",
+      "category": "entity",
+      "subject": "ShippingAddress",
+      "question": "What fields are required for a shipping address?",
+      "severity": "critical",
+      "suggested_answer": "Street, city, state/province, postal code, country, recipient name",
+      "options": [
+        "Basic (street, city, postal, country)",
+        "Standard (+ state, recipient)",
+        "Full (+ phone, company, apt)"
+      ],
+      "checklist_item": "ATTRIBUTES"
+    },
+    {
+      "id": "AMB-ENT-032",
+      "category": "entity",
+      "subject": "ShippingAddress",
+      "question": "Which countries/regions are supported for shipping?",
+      "severity": "critical",
+      "suggested_answer": "Domestic only (single country)",
+      "options": [
+        "Domestic only",
+        "Specific country list",
+        "International (worldwide)"
+      ],
+      "checklist_item": "VALIDATION"
+    },
+    {
+      "id": "AMB-ENT-033",
+      "category": "entity",
+      "subject": "ShippingAddress",
+      "question": "Should address validation be performed?",
+      "severity": "important",
+      "suggested_answer": "Basic format validation, no external service",
+      "options": [
+        "No validation",
+        "Format validation only",
+        "External address verification service"
+      ],
+      "checklist_item": "VALIDATION"
+    },
+    {
+      "id": "AMB-ENT-034",
+      "category": "entity",
+      "subject": "PaymentMethod",
+      "question": "What credit card types are accepted?",
+      "severity": "critical",
+      "suggested_answer": "Visa, Mastercard, American Express",
+      "options": [
+        "Visa/MC only",
+        "Visa/MC/Amex",
+        "All major cards including Discover"
+      ],
+      "checklist_item": "VALIDATION"
+    },
+    {
+      "id": "AMB-ENT-035",
+      "category": "entity",
+      "subject": "PaymentMethod",
+      "question": "What payment gateway/processor will be used?",
+      "severity": "critical",
+      "suggested_answer": "Stripe for credit cards, PayPal integration",
+      "options": [
+        "Stripe",
+        "PayPal only",
+        "Stripe + PayPal",
+        "Other (specify)"
+      ],
+      "checklist_item": "ATTRIBUTES"
+    },
+    {
+      "id": "AMB-ENT-036",
+      "category": "entity",
+      "subject": "PaymentMethod",
+      "question": "Should payment details be stored for future purchases?",
+      "severity": "important",
+      "suggested_answer": "Store tokenized payment methods via payment gateway",
+      "options": [
+        "No storage (re-enter each time)",
+        "Store tokens only",
+        "Store last 4 digits + token"
+      ],
+      "checklist_item": "ATTRIBUTES"
+    },
+    {
+      "id": "AMB-ENT-037",
+      "category": "entity",
+      "subject": "Category",
+      "question": "Should categories support hierarchical nesting (subcategories)?",
+      "severity": "important",
+      "suggested_answer": "Yes, support 2-3 levels of nesting",
+      "options": [
+        "Flat categories only",
+        "Single level nesting",
+        "Unlimited nesting depth"
+      ],
+      "checklist_item": "RELATIONSHIPS"
+    },
+    {
+      "id": "AMB-ENT-038",
+      "category": "entity",
+      "subject": "Category",
+      "question": "What attributes does a category have?",
+      "severity": "important",
+      "suggested_answer": "Name, description, image, display order",
+      "options": [
+        "Name only",
+        "Name + description",
+        "Name, description, image, order"
+      ],
+      "checklist_item": "ATTRIBUTES"
+    },
+    {
+      "id": "AMB-ENT-039",
+      "category": "entity",
+      "subject": "Category",
+      "question": "Can categories be deactivated/hidden without deletion?",
+      "severity": "minor",
+      "suggested_answer": "Yes, support active/inactive status",
+      "options": [
+        "No, delete only",
+        "Yes, active/inactive status"
+      ],
+      "checklist_item": "STATES"
+    },
+    {
+      "id": "AMB-ENT-040",
+      "category": "entity",
+      "subject": "Inventory",
+      "question": "Should inventory support reserved stock (items in carts/pending orders)?",
+      "severity": "critical",
+      "suggested_answer": "Yes, track available vs reserved stock",
+      "options": [
+        "No reservation",
+        "Reserve on add to cart",
+        "Reserve on checkout only"
+      ],
+      "checklist_item": "ATTRIBUTES"
+    },
+    {
+      "id": "AMB-ENT-041",
+      "category": "entity",
+      "subject": "Inventory",
+      "question": "Should low stock alerts be supported?",
+      "severity": "important",
+      "suggested_answer": "Yes, configurable threshold per product",
+      "options": [
+        "No alerts",
+        "Global threshold",
+        "Per-product threshold"
+      ],
+      "checklist_item": "ATTRIBUTES"
+    },
+    {
+      "id": "AMB-ENT-042",
+      "category": "entity",
+      "subject": "Inventory",
+      "question": "Is inventory history/audit trail needed?",
+      "severity": "minor",
+      "suggested_answer": "Yes, track all stock changes with reason",
+      "options": [
+        "No history",
+        "Track quantity changes only",
+        "Full audit with reasons"
+      ],
+      "checklist_item": "HISTORY"
+    },
+    {
+      "id": "AMB-ENT-043",
+      "category": "entity",
+      "subject": "Inventory",
+      "question": "Should backorders be supported when out of stock?",
+      "severity": "important",
+      "suggested_answer": "No, strict stock enforcement",
+      "options": [
+        "No backorders",
+        "Allow backorders",
+        "Configurable per product"
+      ],
+      "checklist_item": "CONSTRAINTS"
+    },
+    {
+      "id": "AMB-ENT-044",
+      "category": "entity",
+      "subject": "Order",
+      "question": "What happens to inventory when an order is cancelled?",
+      "severity": "critical",
+      "suggested_answer": "Automatically restore stock on cancellation",
+      "options": [
+        "Manual stock adjustment",
+        "Automatic restore",
+        "Automatic with admin review"
+      ],
+      "checklist_item": "LIFECYCLE"
+    },
+    {
+      "id": "AMB-ENT-045",
+      "category": "entity",
+      "subject": "Order",
+      "question": "Is a refund/return process needed?",
+      "severity": "important",
+      "suggested_answer": "Out of scope for MVP, add later",
+      "options": [
+        "Not needed",
+        "Basic refund only",
+        "Full return/refund workflow"
+      ],
+      "checklist_item": "LIFECYCLE"
+    },
+    {
+      "id": "AMB-OP-001",
+      "category": "operation",
+      "subject": "Browse Products",
+      "question": "What filtering and search capabilities are required for browsing products?",
+      "severity": "important",
+      "suggested_answer": "Filter by category, price range, and availability; basic keyword search",
+      "options": [
+        "No filtering, show all",
+        "Category filter only",
+        "Full filtering (category, price, availability) + search"
+      ],
+      "checklist_item": "INPUTS"
+    },
+    {
+      "id": "AMB-OP-002",
+      "category": "operation",
+      "subject": "Browse Products",
+      "question": "What sorting options are available for product listings?",
+      "severity": "important",
+      "suggested_answer": "Sort by name, price (asc/desc), newest first",
+      "options": [
+        "No sorting",
+        "Price only",
+        "Name, price, date",
+        "Name, price, date, popularity"
+      ],
+      "checklist_item": "INPUTS"
+    },
+    {
+      "id": "AMB-OP-003",
+      "category": "operation",
+      "subject": "Browse Products",
+      "question": "How should product listing be paginated?",
+      "severity": "important",
+      "suggested_answer": "20 products per page with pagination controls",
+      "options": [
+        "No pagination (load all)",
+        "Fixed 20 per page",
+        "Infinite scroll",
+        "User-configurable page size"
+      ],
+      "checklist_item": "PERFORMANCE"
+    },
+    {
+      "id": "AMB-OP-004",
+      "category": "operation",
+      "subject": "Browse Products",
+      "question": "Should out-of-stock products be visible in listings?",
+      "severity": "important",
+      "suggested_answer": "Show with 'out of stock' indicator, not purchasable",
+      "options": [
+        "Hide out-of-stock",
+        "Show with indicator",
+        "Show at end of list"
+      ],
+      "checklist_item": "OUTPUTS"
+    },
+    {
+      "id": "AMB-OP-005",
+      "category": "operation",
+      "subject": "Add to Cart",
+      "question": "What happens when adding an item already in the cart?",
+      "severity": "critical",
+      "suggested_answer": "Increment quantity of existing cart item",
+      "options": [
+        "Add as new line item",
+        "Increment existing quantity",
+        "Show error/warning",
+        "Ask user preference"
+      ],
+      "checklist_item": "CONCURRENCY"
+    },
+    {
+      "id": "AMB-OP-006",
+      "category": "operation",
+      "subject": "Add to Cart",
+      "question": "What is the minimum and maximum quantity that can be added?",
+      "severity": "important",
+      "suggested_answer": "Minimum 1, maximum limited by available stock",
+      "options": [
+        "1-99 fixed range",
+        "1 to available stock",
+        "Configurable per product"
+      ],
+      "checklist_item": "VALIDATION"
+    },
+    {
+      "id": "AMB-OP-007",
+      "category": "operation",
+      "subject": "Add to Cart",
+      "question": "Can guest (non-authenticated) users add items to cart?",
+      "severity": "critical",
+      "suggested_answer": "Yes, with session-based cart",
+      "options": [
+        "No, must be logged in",
+        "Yes, session-based",
+        "Yes, with prompt to login"
+      ],
+      "checklist_item": "AUTHORIZATION"
+    },
+    {
+      "id": "AMB-OP-008",
+      "category": "operation",
+      "subject": "Add to Cart",
+      "question": "How should the system handle concurrent stock claims (race condition)?",
+      "severity": "critical",
+      "suggested_answer": "Allow add, validate stock at checkout",
+      "options": [
+        "Reserve stock immediately",
+        "Allow add, check at checkout",
+        "Optimistic locking with retry"
+      ],
+      "checklist_item": "CONCURRENCY"
+    },
+    {
+      "id": "AMB-OP-009",
+      "category": "operation",
+      "subject": "Add to Cart",
+      "question": "What feedback should the user receive after adding to cart?",
+      "severity": "minor",
+      "suggested_answer": "Toast notification with view cart option",
+      "options": [
+        "Redirect to cart",
+        "Toast notification",
+        "Mini cart dropdown",
+        "Modal confirmation"
+      ],
+      "checklist_item": "OUTPUTS"
+    },
+    {
+      "id": "AMB-OP-010",
+      "category": "operation",
+      "subject": "Add to Cart",
+      "question": "If product has variants, how is variant selection handled?",
+      "severity": "critical",
+      "suggested_answer": "Variant must be selected before add to cart is enabled",
+      "options": [
+        "Default to first variant",
+        "Require explicit selection",
+        "Add base product, select variant in cart"
+      ],
+      "checklist_item": "VALIDATION"
+    },
+    {
+      "id": "AMB-OP-011",
+      "category": "operation",
+      "subject": "Update Cart Quantity",
+      "question": "What happens when quantity is updated to exceed available stock?",
+      "severity": "critical",
+      "suggested_answer": "Limit to available stock and show notification",
+      "options": [
+        "Reject update with error",
+        "Auto-limit to available stock",
+        "Allow with warning"
+      ],
+      "checklist_item": "VALIDATION"
+    },
+    {
+      "id": "AMB-OP-012",
+      "category": "operation",
+      "subject": "Update Cart Quantity",
+      "question": "What happens when quantity is set to zero?",
+      "severity": "important",
+      "suggested_answer": "Treat as remove from cart",
+      "options": [
+        "Reject (use remove instead)",
+        "Auto-remove item",
+        "Show confirmation then remove"
+      ],
+      "checklist_item": "SIDE EFFECTS"
+    },
+    {
+      "id": "AMB-OP-013",
+      "category": "operation",
+      "subject": "Update Cart Quantity",
+      "question": "Is this operation idempotent with the same quantity value?",
+      "severity": "minor",
+      "suggested_answer": "Yes, setting same quantity is a no-op",
+      "options": [
+        "Yes, idempotent",
+        "Recalculate prices each time"
+      ],
+      "checklist_item": "IDEMPOTENCY"
+    },
+    {
+      "id": "AMB-OP-014",
+      "category": "operation",
+      "subject": "Remove from Cart",
+      "question": "Should removal require confirmation?",
+      "severity": "minor",
+      "suggested_answer": "No confirmation, but provide undo option",
+      "options": [
+        "No confirmation",
+        "Confirmation modal",
+        "No confirmation with undo"
+      ],
+      "checklist_item": "OUTPUTS"
+    },
+    {
+      "id": "AMB-OP-015",
+      "category": "operation",
+      "subject": "Remove from Cart",
+      "question": "What happens when removing the last item from cart?",
+      "severity": "minor",
+      "suggested_answer": "Show empty cart state with continue shopping link",
+      "options": [
+        "Show empty cart message",
+        "Redirect to products",
+        "Show recommendations"
+      ],
+      "checklist_item": "POSTCONDITIONS"
+    },
+    {
+      "id": "AMB-OP-016",
+      "category": "operation",
+      "subject": "Place Order",
+      "question": "What payment validation occurs before order is placed?",
+      "severity": "critical",
+      "suggested_answer": "Full payment authorization before creating order",
+      "options": [
+        "Validate card format only",
+        "Authorization hold",
+        "Full charge immediately"
+      ],
+      "checklist_item": "VALIDATION"
+    },
+    {
+      "id": "AMB-OP-017",
+      "category": "operation",
+      "subject": "Place Order",
+      "question": "What happens if payment fails?",
+      "severity": "critical",
+      "suggested_answer": "Show error, keep cart intact, allow retry",
+      "options": [
+        "Clear cart, show error",
+        "Keep cart, show error",
+        "Keep cart, offer alternative payment"
+      ],
+      "checklist_item": "ERROR HANDLING"
+    },
+    {
+      "id": "AMB-OP-018",
+      "category": "operation",
+      "subject": "Place Order",
+      "question": "What happens if stock becomes unavailable during checkout?",
+      "severity": "critical",
+      "suggested_answer": "Show error for affected items, allow order modification",
+      "options": [
+        "Fail entire order",
+        "Remove unavailable items automatically",
+        "Notify and allow modification"
+      ],
+      "checklist_item": "CONCURRENCY"
+    },
+    {
+      "id": "AMB-OP-019",
+      "category": "operation",
+      "subject": "Place Order",
+      "question": "When is inventory decremented for ordered items?",
+      "severity": "critical",
+      "suggested_answer": "Immediately upon successful payment",
+      "options": [
+        "On add to cart",
+        "On checkout start",
+        "On successful payment",
+        "On order confirmation by admin"
+      ],
+      "checklist_item": "SIDE EFFECTS"
+    },
+    {
+      "id": "AMB-OP-020",
+      "category": "operation",
+      "subject": "Place Order",
+      "question": "How is the free shipping threshold ($50) calculated?",
+      "severity": "important",
+      "suggested_answer": "Based on subtotal before tax, after discounts",
+      "options": [
+        "Subtotal before tax/discount",
+        "Subtotal after discounts",
+        "Total including tax"
+      ],
+      "checklist_item": "VALIDATION"
+    },
+    {
+      "id": "AMB-OP-021",
+      "category": "operation",
+      "subject": "Place Order",
+      "question": "What shipping options and costs are available below $50?",
+      "severity": "critical",
+      "suggested_answer": "Standard shipping at flat rate (e.g., $5.99)",
+      "options": [
+        "Single flat rate",
+        "Multiple options (standard/express)",
+        "Calculated by weight/distance"
+      ],
+      "checklist_item": "INPUTS"
+    },
+    {
+      "id": "AMB-OP-022",
+      "category": "operation",
+      "subject": "Place Order",
+      "question": "Is tax calculation required? How is it determined?",
+      "severity": "critical",
+      "suggested_answer": "Calculate based on shipping address (US state tax)",
+      "options": [
+        "No tax",
+        "Flat tax rate",
+        "Tax by shipping address",
+        "External tax service"
+      ],
+      "checklist_item": "VALIDATION"
+    },
+    {
+      "id": "AMB-OP-023",
+      "category": "operation",
+      "subject": "Place Order",
+      "question": "Are discount codes/coupons supported?",
+      "severity": "important",
+      "suggested_answer": "Out of scope for MVP",
+      "options": [
+        "Not supported",
+        "Percentage discounts",
+        "Fixed amount discounts",
+        "Full coupon system"
+      ],
+      "checklist_item": "INPUTS"
+    },
+    {
+      "id": "AMB-OP-024",
+      "category": "operation",
+      "subject": "Place Order",
+      "question": "Should order placement be logged for audit?",
+      "severity": "important",
+      "suggested_answer": "Yes, log all order events with timestamp",
+      "options": [
+        "No logging",
+        "Basic logging",
+        "Full audit trail"
+      ],
+      "checklist_item": "AUDIT"
+    },
+    {
+      "id": "AMB-OP-025",
+      "category": "operation",
+      "subject": "Track Order Status",
+      "question": "Can customers view all their past orders or only recent ones?",
+      "severity": "minor",
+      "suggested_answer": "All orders with pagination",
+      "options": [
+        "Last 10 orders",
+        "Last 12 months",
+        "All orders"
+      ],
+      "checklist_item": "OUTPUTS"
+    },
+    {
+      "id": "AMB-OP-026",
+      "category": "operation",
+      "subject": "Track Order Status",
+      "question": "What order details are visible to customers?",
+      "severity": "important",
+      "suggested_answer": "Items, quantities, prices, status, shipping address, tracking number",
+      "options": [
+        "Basic (items + status)",
+        "Standard (+ address, tracking)",
+        "Full (+ payment details)"
+      ],
+      "checklist_item": "OUTPUTS"
+    },
+    {
+      "id": "AMB-OP-027",
+      "category": "operation",
+      "subject": "Track Order Status",
+      "question": "Is shipment tracking integration required?",
+      "severity": "important",
+      "suggested_answer": "Store tracking number, link to carrier website",
+      "options": [
+        "No tracking",
+        "Manual tracking number entry",
+        "Carrier API integration"
+      ],
+      "checklist_item": "OUTPUTS"
+    },
+    {
+      "id": "AMB-OP-028",
+      "category": "operation",
+      "subject": "Cancel Order",
+      "question": "What statuses allow order cancellation?",
+      "severity": "critical",
+      "suggested_answer": "Only 'pending' and 'confirmed' statuses",
+      "options": [
+        "Pending only",
+        "Pending and confirmed",
+        "Any status before delivered"
+      ],
+      "checklist_item": "PRECONDITIONS"
+    },
+    {
+      "id": "AMB-OP-029",
+      "category": "operation",
+      "subject": "Cancel Order",
+      "question": "Is a cancellation reason required?",
+      "severity": "minor",
+      "suggested_answer": "Optional with predefined options",
+      "options": [
+        "Not required",
+        "Optional free text",
+        "Required from predefined list"
+      ],
+      "checklist_item": "INPUTS"
+    },
+    {
+      "id": "AMB-OP-030",
+      "category": "operation",
+      "subject": "Cancel Order",
+      "question": "How is payment refunded on cancellation?",
+      "severity": "critical",
+      "suggested_answer": "Automatic refund to original payment method",
+      "options": [
+        "Manual refund by admin",
+        "Automatic refund",
+        "Store credit option"
+      ],
+      "checklist_item": "SIDE EFFECTS"
+    },
+    {
+      "id": "AMB-OP-031",
+      "category": "operation",
+      "subject": "Cancel Order",
+      "question": "Is inventory automatically restored on cancellation?",
+      "severity": "critical",
+      "suggested_answer": "Yes, automatically restore stock",
+      "options": [
+        "Manual restoration",
+        "Automatic restoration"
+      ],
+      "checklist_item": "SIDE EFFECTS"
+    },
+    {
+      "id": "AMB-OP-032",
+      "category": "operation",
+      "subject": "Cancel Order",
+      "question": "Should cancellation send a confirmation email?",
+      "severity": "important",
+      "suggested_answer": "Yes, email with cancellation details and refund info",
+      "options": [
+        "No email",
+        "Basic confirmation",
+        "Detailed with refund timeline"
+      ],
+      "checklist_item": "SIDE EFFECTS"
+    },
+    {
+      "id": "AMB-OP-033",
+      "category": "operation",
+      "subject": "Add Product",
+      "question": "What validations are required for product data?",
+      "severity": "critical",
+      "suggested_answer": "Name required (2-200 chars), price \u003e 0, category required",
+      "options": [
+        "Minimal (name, price)",
+        "Standard (+ description, category)",
+        "Strict (all validations)"
+      ],
+      "checklist_item": "VALIDATION"
+    },
+    {
+      "id": "AMB-OP-034",
+      "category": "operation",
+      "subject": "Add Product",
+      "question": "Should product names be unique?",
+      "severity": "important",
+      "suggested_answer": "No, but warn if duplicate name exists",
+      "options": [
+        "Must be unique",
+        "Unique within category",
+        "Not required to be unique"
+      ],
+      "checklist_item": "VALIDATION"
+    },
+    {
+      "id": "AMB-OP-035",
+      "category": "operation",
+      "subject": "Add Product",
+      "question": "What is the initial state/status of a new product?",
+      "severity": "important",
+      "suggested_answer": "Draft status, requires explicit publish",
+      "options": [
+        "Active immediately",
+        "Draft (needs publish)",
+        "Scheduled activation"
+      ],
+      "checklist_item": "POSTCONDITIONS"
+    },
+    {
+      "id": "AMB-OP-036",
+      "category": "operation",
+      "subject": "Add Product",
+      "question": "How are product images uploaded and stored?",
+      "severity": "important",
+      "suggested_answer": "Upload to cloud storage (S3), store URL reference",
+      "options": [
+        "Local file system",
+        "Cloud storage (S3/GCS)",
+        "CDN with upload"
+      ],
+      "checklist_item": "SIDE EFFECTS"
+    },
+    {
+      "id": "AMB-OP-037",
+      "category": "operation",
+      "subject": "Add Product",
+      "question": "Should product creation be audited?",
+      "severity": "minor",
+      "suggested_answer": "Yes, log creator and timestamp",
+      "options": [
+        "No audit",
+        "Basic (who, when)",
+        "Full (all field values)"
+      ],
+      "checklist_item": "AUDIT"
+    },
+    {
+      "id": "AMB-OP-038",
+      "category": "operation",
+      "subject": "Edit Product",
+      "question": "Can product price be changed if it's in active orders or carts?",
+      "severity": "critical",
+      "suggested_answer": "Yes, existing orders keep original price, carts get updated price",
+      "options": [
+        "Block price changes",
+        "Update everywhere",
+        "Orders keep old, carts update"
+      ],
+      "checklist_item": "SIDE EFFECTS"
+    },
+    {
+      "id": "AMB-OP-039",
+      "category": "operation",
+      "subject": "Edit Product",
+      "question": "Is concurrent editing by multiple admins handled?",
+      "severity": "important",
+      "suggested_answer": "Last write wins with conflict warning",
+      "options": [
+        "No handling (last write wins)",
+        "Optimistic locking",
+        "Lock while editing"
+      ],
+      "checklist_item": "CONCURRENCY"
+    },
+    {
+      "id": "AMB-OP-040",
+      "category": "operation",
+      "subject": "Edit Product",
+      "question": "Should product edit history be maintained?",
+      "severity": "minor",
+      "suggested_answer": "Track last modified by/date, not full history",
+      "options": [
+        "No history",
+        "Last modified only",
+        "Full version history"
+      ],
+      "checklist_item": "AUDIT"
+    },
+    {
+      "id": "AMB-OP-041",
+      "category": "operation",
+      "subject": "Remove Product",
+      "question": "What happens to cart items referencing a removed product?",
+      "severity": "critical",
+      "suggested_answer": "Remove from carts with notification on next cart view",
+      "options": [
+        "Leave in cart (error on checkout)",
+        "Remove immediately",
+        "Remove with notification"
+      ],
+      "checklist_item": "SIDE EFFECTS"
+    },
+    {
+      "id": "AMB-OP-042",
+      "category": "operation",
+      "subject": "Remove Product",
+      "question": "Can products with order history be removed?",
+      "severity": "critical",
+      "suggested_answer": "Soft delete only to preserve order history",
+      "options": [
+        "Block deletion",
+        "Soft delete",
+        "Allow with warning"
+      ],
+      "checklist_item": "PRECONDITIONS"
+    },
+    {
+      "id": "AMB-OP-043",
+      "category": "operation",
+      "subject": "Remove Product",
+      "question": "Should product removal require confirmation?",
+      "severity": "minor",
+      "suggested_answer": "Yes, confirmation with impact summary",
+      "options": [
+        "No confirmation",
+        "Simple confirmation",
+        "Confirmation with impact summary"
+      ],
+      "checklist_item": "VALIDATION"
+    },
+    {
+      "id": "AMB-OP-044",
+      "category": "operation",
+      "subject": "View All Orders",
+      "question": "What filtering and search options are available for admin order list?",
+      "severity": "important",
+      "suggested_answer": "Filter by status, date range, customer; search by order number",
+      "options": [
+        "No filtering",
+        "Status filter only",
+        "Full filtering and search"
+      ],
+      "checklist_item": "INPUTS"
+    },
+    {
+      "id": "AMB-OP-045",
+      "category": "operation",
+      "subject": "View All Orders",
+      "question": "What order information is shown in the admin list view?",
+      "severity": "minor",
+      "suggested_answer": "Order number, date, customer, total, status",
+      "options": [
+        "Minimal (ID, status)",
+        "Standard (+ date, total)",
+        "Detailed (+ items preview)"
+      ],
+      "checklist_item": "OUTPUTS"
+    },
+    {
+      "id": "AMB-OP-046",
+      "category": "operation",
+      "subject": "View All Orders",
+      "question": "Can orders be exported (CSV, PDF)?",
+      "severity": "minor",
+      "suggested_answer": "CSV export for reporting",
+      "options": [
+        "No export",
+        "CSV only",
+        "CSV and PDF"
+      ],
+      "checklist_item": "OUTPUTS"
+    },
+    {
+      "id": "AMB-OP-047",
+      "category": "operation",
+      "subject": "Update Order Status",
+      "question": "What are the allowed status transitions?",
+      "severity": "critical",
+      "suggested_answer": "pending→confirmed→shipped→delivered (with cancelled as terminal from pending/confirmed)",
+      "options": [
+        "Any transition allowed",
+        "Sequential only",
+        "Sequential with cancellation branch"
+      ],
+      "checklist_item": "VALIDATION"
+    },
+    {
+      "id": "AMB-OP-048",
+      "category": "operation",
+      "subject": "Update Order Status",
+      "question": "Should status changes trigger customer notifications?",
+      "severity": "important",
+      "suggested_answer": "Email notification on confirmed, shipped, delivered",
+      "options": [
+        "No notifications",
+        "Shipped only",
+        "All status changes"
+      ],
+      "checklist_item": "SIDE EFFECTS"
+    },
+    {
+      "id": "AMB-OP-049",
+      "category": "operation",
+      "subject": "Update Order Status",
+      "question": "Can tracking number be added when marking as shipped?",
+      "severity": "important",
+      "suggested_answer": "Yes, optional tracking number field when setting shipped",
+      "options": [
+        "No tracking support",
+        "Required when shipping",
+        "Optional when shipping"
+      ],
+      "checklist_item": "INPUTS"
+    },
+    {
+      "id": "AMB-OP-050",
+      "category": "operation",
+      "subject": "Update Order Status",
+      "question": "Should status change history be recorded?",
+      "severity": "important",
+      "suggested_answer": "Yes, log all changes with admin user and timestamp",
+      "options": [
+        "Current status only",
+        "Status history",
+        "Full audit trail"
+      ],
+      "checklist_item": "AUDIT"
+    },
+    {
+      "id": "AMB-OP-051",
+      "category": "operation",
+      "subject": "Manage Inventory",
+      "question": "What inventory adjustment types are supported?",
+      "severity": "important",
+      "suggested_answer": "Set absolute quantity, or adjust by delta (+/-)",
+      "options": [
+        "Set quantity only",
+        "Adjust delta only",
+        "Both set and adjust"
+      ],
+      "checklist_item": "INPUTS"
+    },
+    {
+      "id": "AMB-OP-052",
+      "category": "operation",
+      "subject": "Manage Inventory",
+      "question": "Is a reason required for inventory adjustments?",
+      "severity": "minor",
+      "suggested_answer": "Optional reason with predefined options",
+      "options": [
+        "Not required",
+        "Required free text",
+        "Required from predefined list"
+      ],
+      "checklist_item": "INPUTS"
+    },
+    {
+      "id": "AMB-OP-053",
+      "category": "operation",
+      "subject": "Manage Inventory",
+      "question": "Can inventory go negative?",
+      "severity": "important",
+      "suggested_answer": "No, minimum is zero",
+      "options": [
+        "Allow negative",
+        "Minimum zero",
+        "Zero with backorder flag"
+      ],
+      "checklist_item": "VALIDATION"
+    },
+    {
+      "id": "AMB-OP-054",
+      "category": "operation",
+      "subject": "Manage Inventory",
+      "question": "Should bulk inventory updates be supported?",
+      "severity": "minor",
+      "suggested_answer": "Yes, CSV import for bulk updates",
+      "options": [
+        "Individual only",
+        "CSV import",
+        "CSV import/export"
+      ],
+      "checklist_item": "INPUTS"
+    },
+    {
+      "id": "AMB-OP-055",
+      "category": "operation",
+      "subject": "Manage Inventory",
+      "question": "Should inventory changes be audited?",
+      "severity": "important",
+      "suggested_answer": "Yes, full audit trail with before/after values",
+      "options": [
+        "No audit",
+        "Log changes only",
+        "Full audit with values"
+      ],
+      "checklist_item": "AUDIT"
+    },
+    {
+      "id": "AMB-OP-056",
+      "category": "operation",
+      "subject": "Send Confirmation Email",
+      "question": "What information is included in the confirmation email?",
+      "severity": "important",
+      "suggested_answer": "Order number, items, total, shipping address, estimated delivery",
+      "options": [
+        "Order number only",
+        "Order summary",
+        "Full details + receipt"
+      ],
+      "checklist_item": "OUTPUTS"
+    },
+    {
+      "id": "AMB-OP-057",
+      "category": "operation",
+      "subject": "Send Confirmation Email",
+      "question": "What happens if email sending fails?",
+      "severity": "important",
+      "suggested_answer": "Queue for retry, log failure, don't block order",
+      "options": [
+        "Fail silently",
+        "Retry then fail silently",
+        "Retry with admin alert"
+      ],
+      "checklist_item": "ERROR HANDLING"
+    },
+    {
+      "id": "AMB-OP-058",
+      "category": "operation",
+      "subject": "Send Confirmation Email",
+      "question": "Is this operation idempotent (can it be safely retried)?",
+      "severity": "minor",
+      "suggested_answer": "Yes with deduplication to prevent duplicate emails",
+      "options": [
+        "No (may send duplicates)",
+        "Yes (idempotent)",
+        "Track sent status"
+      ],
+      "checklist_item": "IDEMPOTENCY"
+    },
+    {
+      "id": "AMB-OP-059",
+      "category": "operation",
+      "subject": "Send Confirmation Email",
+      "question": "What email service/provider will be used?",
+      "severity": "important",
+      "suggested_answer": "Transactional email service (SendGrid, AWS SES)",
+      "options": [
+        "SMTP direct",
+        "SendGrid",
+        "AWS SES",
+        "Configurable provider"
+      ],
+      "checklist_item": "SIDE EFFECTS"
+    },
+    {
+      "id": "AMB-OP-060",
+      "category": "operation",
+      "subject": "Send Confirmation Email",
+      "question": "Should email sending be synchronous or asynchronous?",
+      "severity": "important",
+      "suggested_answer": "Asynchronous via message queue",
+      "options": [
+        "Synchronous (blocking)",
+        "Asynchronous (queue)",
+        "Async with timeout fallback"
+      ],
+      "checklist_item": "PERFORMANCE"
+    }
+  ],
+  "decisions": [
+    {
+      "id": "AMB-ENT-001",
+      "question": "What is the unique identifier format for products?",
+      "answer": "UUID",
+      "decided_at": "2025-12-29T11:23:16.214002+01:00",
+      "source": "user",
+      "category": "entity",
+      "subject": "Product"
+    },
+    {
+      "id": "AMB-ENT-002",
+      "question": "What is the data type and constraints for product price?",
+      "answer": "Decimal with 2 decimal places, minimum 0.01",
+      "decided_at": "2025-12-29T11:26:11.112647+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "Product"
+    },
+    {
+      "id": "AMB-ENT-003",
+      "question": "What is the maximum length for product name and description?",
+      "answer": "Name: 200 chars, Description: 5000 chars",
+      "decided_at": "2025-12-29T11:26:11.134136+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "Product"
+    },
+    {
+      "id": "AMB-ENT-004",
+      "question": "Should products support multiple images? How many?",
+      "answer": "Yes, up to 10 images with one primary",
+      "decided_at": "2025-12-29T11:26:11.156736+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "Product"
+    },
+    {
+      "id": "AMB-ENT-005",
+      "question": "Should removed products be soft-deleted or permanently deleted?",
+      "answer": "Soft delete to preserve order history references",
+      "decided_at": "2025-12-29T11:26:11.177013+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "Product"
+    },
+    {
+      "id": "AMB-ENT-006",
+      "question": "Can a product belong to multiple categories?",
+      "answer": "Single primary category with optional secondary categories",
+      "decided_at": "2025-12-29T11:26:11.197431+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "Product"
+    },
+    {
+      "id": "AMB-ENT-007",
+      "question": "Is product change history/audit trail required?",
+      "answer": "Track price changes and who modified",
+      "decided_at": "2025-12-29T11:26:11.216411+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "Product"
+    },
+    {
+      "id": "AMB-ENT-008",
+      "question": "Does each variant have its own price, or inherit from parent product?",
+      "answer": "Variants can have price override (optional, defaults to parent)",
+      "decided_at": "2025-12-29T11:26:11.237528+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "ProductVariant"
+    },
+    {
+      "id": "AMB-ENT-009",
+      "question": "Does each variant have its own inventory/stock level?",
+      "answer": "Yes, inventory tracked per variant",
+      "decided_at": "2025-12-29T11:26:11.257874+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "ProductVariant"
+    },
+    {
+      "id": "AMB-ENT-010",
+      "question": "What variant types are supported beyond size and color?",
+      "answer": "Configurable variant types per product",
+      "decided_at": "2025-12-29T11:26:11.27943+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "ProductVariant"
+    },
+    {
+      "id": "AMB-ENT-011",
+      "question": "Does each variant have its own SKU/identifier?",
+      "answer": "Yes, unique SKU per variant",
+      "decided_at": "2025-12-29T11:26:11.301202+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "ProductVariant"
+    },
+    {
+      "id": "AMB-ENT-012",
+      "question": "How long should an inactive cart persist before expiration?",
+      "answer": "30 days for logged-in users, 7 days for guests",
+      "decided_at": "2025-12-29T11:26:11.321357+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "Cart"
+    },
+    {
+      "id": "AMB-ENT-013",
+      "question": "Should guest users (not logged in) be able to have a cart?",
+      "answer": "Yes, with cart merge on login",
+      "decided_at": "2025-12-29T11:26:11.341229+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "Cart"
+    },
+    {
+      "id": "AMB-ENT-014",
+      "question": "What happens when an item in cart goes out of stock?",
+      "answer": "Item remains with warning, blocked at checkout",
+      "decided_at": "2025-12-29T11:26:11.36593+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "Cart"
+    },
+    {
+      "id": "AMB-ENT-015",
+      "question": "Is there a maximum quantity limit per item?",
+      "answer": "Limited by available stock",
+      "decided_at": "2025-12-29T11:26:11.388587+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "CartItem"
+    },
+    {
+      "id": "AMB-ENT-016",
+      "question": "Should cart items store the price at time of adding, or always use current price?",
+      "answer": "Always use current price, notify on price changes",
+      "decided_at": "2025-12-29T11:26:11.410048+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "CartItem"
+    },
+    {
+      "id": "AMB-ENT-017",
+      "question": "What is the order number format?",
+      "answer": "Year prefix + sequential number (e.g., ORD-2024-00001)",
+      "decided_at": "2025-12-29T11:26:11.431278+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "Order"
+    },
+    {
+      "id": "AMB-ENT-018",
+      "question": "What are the valid state transitions for orders?",
+      "answer": "pending→confirmed→shipped→delivered, with cancelled possible from pending/confirmed",
+      "decided_at": "2025-12-29T11:26:11.454049+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "Order"
+    },
+    {
+      "id": "AMB-ENT-019",
+      "question": "Should orders track item prices at time of purchase?",
+      "answer": "Yes, snapshot prices at order time",
+      "decided_at": "2025-12-29T11:26:11.476453+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "Order"
+    },
+    {
+      "id": "AMB-ENT-020",
+      "question": "Is order modification allowed after placement (before shipping)?",
+      "answer": "No modification, must cancel and reorder",
+      "decided_at": "2025-12-29T11:26:11.499171+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "Order"
+    },
+    {
+      "id": "AMB-ENT-021",
+      "question": "Are partial shipments supported (splitting an order)?",
+      "answer": "No, single shipment per order",
+      "decided_at": "2025-12-29T11:26:11.518285+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "Order"
+    },
+    {
+      "id": "AMB-ENT-022",
+      "question": "Is order history/audit trail required for status changes?",
+      "answer": "Yes, track all status changes with timestamps",
+      "decided_at": "2025-12-29T11:26:11.537945+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "Order"
+    },
+    {
+      "id": "AMB-ENT-023",
+      "question": "What additional order attributes are needed (notes, gift message, etc.)?",
+      "answer": "Optional order notes field",
+      "decided_at": "2025-12-29T11:26:11.558093+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "Order"
+    },
+    {
+      "id": "AMB-ENT-024",
+      "question": "What customer profile attributes are required?",
+      "answer": "Email, password, first name, last name, phone (optional)",
+      "decided_at": "2025-12-29T11:26:11.581142+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "Customer"
+    },
+    {
+      "id": "AMB-ENT-025",
+      "question": "What is the unique identifier for customers?",
+      "answer": "Email address as unique identifier",
+      "decided_at": "2025-12-29T11:26:11.602582+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "Customer"
+    },
+    {
+      "id": "AMB-ENT-026",
+      "question": "What are the password requirements?",
+      "answer": "Minimum 8 chars with at least one number",
+      "decided_at": "2025-12-29T11:26:11.622642+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "Customer"
+    },
+    {
+      "id": "AMB-ENT-027",
+      "question": "Can customers save multiple shipping addresses?",
+      "answer": "Yes, with one default address",
+      "decided_at": "2025-12-29T11:26:11.646018+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "Customer"
+    },
+    {
+      "id": "AMB-ENT-028",
+      "question": "Can customers save multiple payment methods?",
+      "answer": "Yes, with one default payment method",
+      "decided_at": "2025-12-29T11:26:11.66878+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "Customer"
+    },
+    {
+      "id": "AMB-ENT-029",
+      "question": "Should customer accounts be soft-deleted or allow permanent deletion (GDPR)?",
+      "answer": "Support both soft delete and full data erasure for GDPR",
+      "decided_at": "2025-12-29T11:26:11.690561+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "Customer"
+    },
+    {
+      "id": "AMB-ENT-030",
+      "question": "Is email verification required for registration?",
+      "answer": "Yes, email verification required before placing orders",
+      "decided_at": "2025-12-29T11:26:11.713498+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "Customer"
+    },
+    {
+      "id": "AMB-ENT-031",
+      "question": "What fields are required for a shipping address?",
+      "answer": "Street, city, state/province, postal code, country, recipient name",
+      "decided_at": "2025-12-29T11:26:11.734374+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "ShippingAddress"
+    },
+    {
+      "id": "AMB-ENT-032",
+      "question": "Which countries/regions are supported for shipping?",
+      "answer": "Domestic only (single country)",
+      "decided_at": "2025-12-29T11:26:11.756328+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "ShippingAddress"
+    },
+    {
+      "id": "AMB-ENT-033",
+      "question": "Should address validation be performed?",
+      "answer": "Basic format validation, no external service",
+      "decided_at": "2025-12-29T11:26:11.778452+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "ShippingAddress"
+    },
+    {
+      "id": "AMB-ENT-034",
+      "question": "What credit card types are accepted?",
+      "answer": "Visa, Mastercard, American Express",
+      "decided_at": "2025-12-29T11:26:11.801722+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "PaymentMethod"
+    },
+    {
+      "id": "AMB-ENT-035",
+      "question": "What payment gateway/processor will be used?",
+      "answer": "Stripe for credit cards, PayPal integration",
+      "decided_at": "2025-12-29T11:26:11.825338+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "PaymentMethod"
+    },
+    {
+      "id": "AMB-ENT-036",
+      "question": "Should payment details be stored for future purchases?",
+      "answer": "Store tokenized payment methods via payment gateway",
+      "decided_at": "2025-12-29T11:26:11.846438+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "PaymentMethod"
+    },
+    {
+      "id": "AMB-ENT-037",
+      "question": "Should categories support hierarchical nesting (subcategories)?",
+      "answer": "Yes, support 2-3 levels of nesting",
+      "decided_at": "2025-12-29T11:26:11.870667+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "Category"
+    },
+    {
+      "id": "AMB-ENT-038",
+      "question": "What attributes does a category have?",
+      "answer": "Name, description, image, display order",
+      "decided_at": "2025-12-29T11:26:11.895453+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "Category"
+    },
+    {
+      "id": "AMB-ENT-039",
+      "question": "Can categories be deactivated/hidden without deletion?",
+      "answer": "Yes, support active/inactive status",
+      "decided_at": "2025-12-29T11:26:11.919069+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "Category"
+    },
+    {
+      "id": "AMB-ENT-040",
+      "question": "Should inventory support reserved stock (items in carts/pending orders)?",
+      "answer": "Yes, track available vs reserved stock",
+      "decided_at": "2025-12-29T11:26:11.94054+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "Inventory"
+    },
+    {
+      "id": "AMB-ENT-041",
+      "question": "Should low stock alerts be supported?",
+      "answer": "Yes, configurable threshold per product",
+      "decided_at": "2025-12-29T11:26:11.963947+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "Inventory"
+    },
+    {
+      "id": "AMB-ENT-042",
+      "question": "Is inventory history/audit trail needed?",
+      "answer": "Yes, track all stock changes with reason",
+      "decided_at": "2025-12-29T11:26:11.988185+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "Inventory"
+    },
+    {
+      "id": "AMB-ENT-043",
+      "question": "Should backorders be supported when out of stock?",
+      "answer": "No, strict stock enforcement",
+      "decided_at": "2025-12-29T11:26:12.012086+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "Inventory"
+    },
+    {
+      "id": "AMB-ENT-044",
+      "question": "What happens to inventory when an order is cancelled?",
+      "answer": "Automatically restore stock on cancellation",
+      "decided_at": "2025-12-29T11:26:12.035327+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "Order"
+    },
+    {
+      "id": "AMB-ENT-045",
+      "question": "Is a refund/return process needed?",
+      "answer": "Out of scope for MVP, add later",
+      "decided_at": "2025-12-29T11:26:12.056942+01:00",
+      "source": "auto",
+      "category": "entity",
+      "subject": "Order"
+    },
+    {
+      "id": "AMB-OP-001",
+      "question": "What filtering and search capabilities are required for browsing products?",
+      "answer": "Filter by category, price range, and availability; basic keyword search",
+      "decided_at": "2025-12-29T11:26:12.081345+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Browse Products"
+    },
+    {
+      "id": "AMB-OP-002",
+      "question": "What sorting options are available for product listings?",
+      "answer": "Sort by name, price (asc/desc), newest first",
+      "decided_at": "2025-12-29T11:26:12.103005+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Browse Products"
+    },
+    {
+      "id": "AMB-OP-003",
+      "question": "How should product listing be paginated?",
+      "answer": "20 products per page with pagination controls",
+      "decided_at": "2025-12-29T11:26:12.127774+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Browse Products"
+    },
+    {
+      "id": "AMB-OP-004",
+      "question": "Should out-of-stock products be visible in listings?",
+      "answer": "Show with 'out of stock' indicator, not purchasable",
+      "decided_at": "2025-12-29T11:26:12.151865+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Browse Products"
+    },
+    {
+      "id": "AMB-OP-005",
+      "question": "What happens when adding an item already in the cart?",
+      "answer": "Increment quantity of existing cart item",
+      "decided_at": "2025-12-29T11:26:12.17538+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Add to Cart"
+    },
+    {
+      "id": "AMB-OP-006",
+      "question": "What is the minimum and maximum quantity that can be added?",
+      "answer": "Minimum 1, maximum limited by available stock",
+      "decided_at": "2025-12-29T11:26:12.199792+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Add to Cart"
+    },
+    {
+      "id": "AMB-OP-007",
+      "question": "Can guest (non-authenticated) users add items to cart?",
+      "answer": "Yes, with session-based cart",
+      "decided_at": "2025-12-29T11:26:12.222899+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Add to Cart"
+    },
+    {
+      "id": "AMB-OP-008",
+      "question": "How should the system handle concurrent stock claims (race condition)?",
+      "answer": "Allow add, validate stock at checkout",
+      "decided_at": "2025-12-29T11:26:12.248117+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Add to Cart"
+    },
+    {
+      "id": "AMB-OP-009",
+      "question": "What feedback should the user receive after adding to cart?",
+      "answer": "Toast notification with view cart option",
+      "decided_at": "2025-12-29T11:26:12.272922+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Add to Cart"
+    },
+    {
+      "id": "AMB-OP-010",
+      "question": "If product has variants, how is variant selection handled?",
+      "answer": "Variant must be selected before add to cart is enabled",
+      "decided_at": "2025-12-29T11:26:12.29882+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Add to Cart"
+    },
+    {
+      "id": "AMB-OP-011",
+      "question": "What happens when quantity is updated to exceed available stock?",
+      "answer": "Limit to available stock and show notification",
+      "decided_at": "2025-12-29T11:26:12.323744+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Update Cart Quantity"
+    },
+    {
+      "id": "AMB-OP-012",
+      "question": "What happens when quantity is set to zero?",
+      "answer": "Treat as remove from cart",
+      "decided_at": "2025-12-29T11:26:12.347991+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Update Cart Quantity"
+    },
+    {
+      "id": "AMB-OP-013",
+      "question": "Is this operation idempotent with the same quantity value?",
+      "answer": "Yes, setting same quantity is a no-op",
+      "decided_at": "2025-12-29T11:26:12.370046+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Update Cart Quantity"
+    },
+    {
+      "id": "AMB-OP-014",
+      "question": "Should removal require confirmation?",
+      "answer": "No confirmation, but provide undo option",
+      "decided_at": "2025-12-29T11:26:12.394424+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Remove from Cart"
+    },
+    {
+      "id": "AMB-OP-015",
+      "question": "What happens when removing the last item from cart?",
+      "answer": "Show empty cart state with continue shopping link",
+      "decided_at": "2025-12-29T11:26:12.418661+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Remove from Cart"
+    },
+    {
+      "id": "AMB-OP-016",
+      "question": "What payment validation occurs before order is placed?",
+      "answer": "Full payment authorization before creating order",
+      "decided_at": "2025-12-29T11:26:12.443528+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Place Order"
+    },
+    {
+      "id": "AMB-OP-017",
+      "question": "What happens if payment fails?",
+      "answer": "Show error, keep cart intact, allow retry",
+      "decided_at": "2025-12-29T11:26:12.465959+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Place Order"
+    },
+    {
+      "id": "AMB-OP-018",
+      "question": "What happens if stock becomes unavailable during checkout?",
+      "answer": "Show error for affected items, allow order modification",
+      "decided_at": "2025-12-29T11:26:12.487707+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Place Order"
+    },
+    {
+      "id": "AMB-OP-019",
+      "question": "When is inventory decremented for ordered items?",
+      "answer": "Immediately upon successful payment",
+      "decided_at": "2025-12-29T11:26:12.510251+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Place Order"
+    },
+    {
+      "id": "AMB-OP-020",
+      "question": "How is the free shipping threshold ($50) calculated?",
+      "answer": "Based on subtotal before tax, after discounts",
+      "decided_at": "2025-12-29T11:26:12.535718+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Place Order"
+    },
+    {
+      "id": "AMB-OP-021",
+      "question": "What shipping options and costs are available below $50?",
+      "answer": "Standard shipping at flat rate (e.g., $5.99)",
+      "decided_at": "2025-12-29T11:26:12.561429+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Place Order"
+    },
+    {
+      "id": "AMB-OP-022",
+      "question": "Is tax calculation required? How is it determined?",
+      "answer": "Calculate based on shipping address (US state tax)",
+      "decided_at": "2025-12-29T11:26:12.587015+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Place Order"
+    },
+    {
+      "id": "AMB-OP-023",
+      "question": "Are discount codes/coupons supported?",
+      "answer": "Out of scope for MVP",
+      "decided_at": "2025-12-29T11:26:12.611756+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Place Order"
+    },
+    {
+      "id": "AMB-OP-024",
+      "question": "Should order placement be logged for audit?",
+      "answer": "Yes, log all order events with timestamp",
+      "decided_at": "2025-12-29T11:26:12.634886+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Place Order"
+    },
+    {
+      "id": "AMB-OP-025",
+      "question": "Can customers view all their past orders or only recent ones?",
+      "answer": "All orders with pagination",
+      "decided_at": "2025-12-29T11:26:12.658929+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Track Order Status"
+    },
+    {
+      "id": "AMB-OP-026",
+      "question": "What order details are visible to customers?",
+      "answer": "Items, quantities, prices, status, shipping address, tracking number",
+      "decided_at": "2025-12-29T11:26:12.681385+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Track Order Status"
+    },
+    {
+      "id": "AMB-OP-027",
+      "question": "Is shipment tracking integration required?",
+      "answer": "Store tracking number, link to carrier website",
+      "decided_at": "2025-12-29T11:26:12.70518+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Track Order Status"
+    },
+    {
+      "id": "AMB-OP-028",
+      "question": "What statuses allow order cancellation?",
+      "answer": "Only 'pending' and 'confirmed' statuses",
+      "decided_at": "2025-12-29T11:26:12.728301+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Cancel Order"
+    },
+    {
+      "id": "AMB-OP-029",
+      "question": "Is a cancellation reason required?",
+      "answer": "Optional with predefined options",
+      "decided_at": "2025-12-29T11:26:12.749039+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Cancel Order"
+    },
+    {
+      "id": "AMB-OP-030",
+      "question": "How is payment refunded on cancellation?",
+      "answer": "Automatic refund to original payment method",
+      "decided_at": "2025-12-29T11:26:12.774511+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Cancel Order"
+    },
+    {
+      "id": "AMB-OP-031",
+      "question": "Is inventory automatically restored on cancellation?",
+      "answer": "Yes, automatically restore stock",
+      "decided_at": "2025-12-29T11:26:12.797895+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Cancel Order"
+    },
+    {
+      "id": "AMB-OP-032",
+      "question": "Should cancellation send a confirmation email?",
+      "answer": "Yes, email with cancellation details and refund info",
+      "decided_at": "2025-12-29T11:26:12.824196+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Cancel Order"
+    },
+    {
+      "id": "AMB-OP-033",
+      "question": "What validations are required for product data?",
+      "answer": "Name required (2-200 chars), price \u003e 0, category required",
+      "decided_at": "2025-12-29T11:26:12.850038+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Add Product"
+    },
+    {
+      "id": "AMB-OP-034",
+      "question": "Should product names be unique?",
+      "answer": "No, but warn if duplicate name exists",
+      "decided_at": "2025-12-29T11:26:12.875317+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Add Product"
+    },
+    {
+      "id": "AMB-OP-035",
+      "question": "What is the initial state/status of a new product?",
+      "answer": "Draft status, requires explicit publish",
+      "decided_at": "2025-12-29T11:26:12.900869+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Add Product"
+    },
+    {
+      "id": "AMB-OP-036",
+      "question": "How are product images uploaded and stored?",
+      "answer": "Upload to cloud storage (S3), store URL reference",
+      "decided_at": "2025-12-29T11:26:12.926765+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Add Product"
+    },
+    {
+      "id": "AMB-OP-037",
+      "question": "Should product creation be audited?",
+      "answer": "Yes, log creator and timestamp",
+      "decided_at": "2025-12-29T11:26:12.953778+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Add Product"
+    },
+    {
+      "id": "AMB-OP-038",
+      "question": "Can product price be changed if it's in active orders or carts?",
+      "answer": "Yes, existing orders keep original price, carts get updated price",
+      "decided_at": "2025-12-29T11:26:12.978384+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Edit Product"
+    },
+    {
+      "id": "AMB-OP-039",
+      "question": "Is concurrent editing by multiple admins handled?",
+      "answer": "Last write wins with conflict warning",
+      "decided_at": "2025-12-29T11:26:12.999491+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Edit Product"
+    },
+    {
+      "id": "AMB-OP-040",
+      "question": "Should product edit history be maintained?",
+      "answer": "Track last modified by/date, not full history",
+      "decided_at": "2025-12-29T11:26:13.024875+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Edit Product"
+    },
+    {
+      "id": "AMB-OP-041",
+      "question": "What happens to cart items referencing a removed product?",
+      "answer": "Remove from carts with notification on next cart view",
+      "decided_at": "2025-12-29T11:26:13.049088+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Remove Product"
+    },
+    {
+      "id": "AMB-OP-042",
+      "question": "Can products with order history be removed?",
+      "answer": "Soft delete only to preserve order history",
+      "decided_at": "2025-12-29T11:26:13.074744+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Remove Product"
+    },
+    {
+      "id": "AMB-OP-043",
+      "question": "Should product removal require confirmation?",
+      "answer": "Yes, confirmation with impact summary",
+      "decided_at": "2025-12-29T11:26:13.098162+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Remove Product"
+    },
+    {
+      "id": "AMB-OP-044",
+      "question": "What filtering and search options are available for admin order list?",
+      "answer": "Filter by status, date range, customer; search by order number",
+      "decided_at": "2025-12-29T11:26:13.121939+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "View All Orders"
+    },
+    {
+      "id": "AMB-OP-045",
+      "question": "What order information is shown in the admin list view?",
+      "answer": "Order number, date, customer, total, status",
+      "decided_at": "2025-12-29T11:26:13.14477+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "View All Orders"
+    },
+    {
+      "id": "AMB-OP-046",
+      "question": "Can orders be exported (CSV, PDF)?",
+      "answer": "CSV export for reporting",
+      "decided_at": "2025-12-29T11:26:13.169641+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "View All Orders"
+    },
+    {
+      "id": "AMB-OP-047",
+      "question": "What are the allowed status transitions?",
+      "answer": "pending→confirmed→shipped→delivered (with cancelled as terminal from pending/confirmed)",
+      "decided_at": "2025-12-29T11:26:13.192802+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Update Order Status"
+    },
+    {
+      "id": "AMB-OP-048",
+      "question": "Should status changes trigger customer notifications?",
+      "answer": "Email notification on confirmed, shipped, delivered",
+      "decided_at": "2025-12-29T11:26:13.216479+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Update Order Status"
+    },
+    {
+      "id": "AMB-OP-049",
+      "question": "Can tracking number be added when marking as shipped?",
+      "answer": "Yes, optional tracking number field when setting shipped",
+      "decided_at": "2025-12-29T11:26:13.242661+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Update Order Status"
+    },
+    {
+      "id": "AMB-OP-050",
+      "question": "Should status change history be recorded?",
+      "answer": "Yes, log all changes with admin user and timestamp",
+      "decided_at": "2025-12-29T11:26:13.269032+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Update Order Status"
+    },
+    {
+      "id": "AMB-OP-051",
+      "question": "What inventory adjustment types are supported?",
+      "answer": "Set absolute quantity, or adjust by delta (+/-)",
+      "decided_at": "2025-12-29T11:26:13.295245+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Manage Inventory"
+    },
+    {
+      "id": "AMB-OP-052",
+      "question": "Is a reason required for inventory adjustments?",
+      "answer": "Optional reason with predefined options",
+      "decided_at": "2025-12-29T11:26:13.320215+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Manage Inventory"
+    },
+    {
+      "id": "AMB-OP-053",
+      "question": "Can inventory go negative?",
+      "answer": "No, minimum is zero",
+      "decided_at": "2025-12-29T11:26:13.346323+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Manage Inventory"
+    },
+    {
+      "id": "AMB-OP-054",
+      "question": "Should bulk inventory updates be supported?",
+      "answer": "Yes, CSV import for bulk updates",
+      "decided_at": "2025-12-29T11:26:13.372673+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Manage Inventory"
+    },
+    {
+      "id": "AMB-OP-055",
+      "question": "Should inventory changes be audited?",
+      "answer": "Yes, full audit trail with before/after values",
+      "decided_at": "2025-12-29T11:26:13.398747+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Manage Inventory"
+    },
+    {
+      "id": "AMB-OP-056",
+      "question": "What information is included in the confirmation email?",
+      "answer": "Order number, items, total, shipping address, estimated delivery",
+      "decided_at": "2025-12-29T11:26:13.425279+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Send Confirmation Email"
+    },
+    {
+      "id": "AMB-OP-057",
+      "question": "What happens if email sending fails?",
+      "answer": "Queue for retry, log failure, don't block order",
+      "decided_at": "2025-12-29T11:26:13.450671+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Send Confirmation Email"
+    },
+    {
+      "id": "AMB-OP-058",
+      "question": "Is this operation idempotent (can it be safely retried)?",
+      "answer": "Yes with deduplication to prevent duplicate emails",
+      "decided_at": "2025-12-29T11:26:13.475588+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Send Confirmation Email"
+    },
+    {
+      "id": "AMB-OP-059",
+      "question": "What email service/provider will be used?",
+      "answer": "Transactional email service (SendGrid, AWS SES)",
+      "decided_at": "2025-12-29T11:26:13.503008+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Send Confirmation Email"
+    },
+    {
+      "id": "AMB-OP-060",
+      "question": "Should email sending be synchronous or asynchronous?",
+      "answer": "Asynchronous via message queue",
+      "decided_at": "2025-12-29T11:26:13.527716+01:00",
+      "source": "auto",
+      "category": "operation",
+      "subject": "Send Confirmation Email"
+    }
+  ],
+  "current_index": 105,
+  "skipped": [],
+  "input_content": "# E-Commerce Order System\n\n## Overview\n\nA simple online store where customers can browse products, add them to cart, and place orders.\n\n## User Stories\n\n### US-001: Browse Products\nAs a customer, I want to browse available products so that I can decide what to buy.\n\nProducts have a name, description, price, and category. Some products may have variants (like size or color).\n\n### US-002: Add to Cart\nAs a customer, I want to add products to my shopping cart so that I can purchase multiple items at once.\n\nThe cart should show the items, quantities, and total price. Customers can update quantities or remove items.\n\n### US-003: Place Order\nAs a customer, I want to place an order for the items in my cart so that I can receive the products.\n\nWhen placing an order, the customer provides:\n- Shipping address\n- Payment method (credit card or PayPal)\n\nAfter the order is placed, the customer receives a confirmation email.\n\n### US-004: Track Order Status\nAs a customer, I want to see the status of my orders so that I know when they will arrive.\n\nOrder statuses include: pending, confirmed, shipped, delivered.\n\n### US-005: Cancel Order\nAs a customer, I want to cancel my order if I change my mind.\n\n## Business Rules\n\n- Customers must be registered to place orders\n- Products must be in stock to be added to cart\n- Orders over $50 qualify for free shipping\n- Orders can only be cancelled before shipping\n\n## Admin Features\n\n- Add/edit/remove products\n- View all orders\n- Update order status\n- Manage inventory\n",
+  "complete": true
+}
