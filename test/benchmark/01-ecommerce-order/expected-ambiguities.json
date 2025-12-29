@@ -1,0 +1,121 @@
+{
+  "description": "Minimum ambiguities that MUST be detected from ecommerce-order L0 document",
+  "minimum_ambiguities": [
+    {
+      "id_pattern": "AMB-ENT-*",
+      "subject": "Order",
+      "aspect_contains": "deletion",
+      "severity": "critical",
+      "rationale": "What happens to order when deleted? Soft delete? Hard delete? What about order items?"
+    },
+    {
+      "id_pattern": "AMB-ENT-*",
+      "subject": "Order",
+      "aspect_contains": "status.transition",
+      "severity": "critical",
+      "rationale": "What are valid status transitions? Can order go from shipped back to pending?"
+    },
+    {
+      "id_pattern": "AMB-ENT-*",
+      "subject": "Order",
+      "aspect_contains": "cancel.condition",
+      "severity": "critical",
+      "rationale": "'Before shipping' - what if order is 'confirmed' but not yet 'shipped'?"
+    },
+    {
+      "id_pattern": "AMB-ENT-*",
+      "subject": "Cart",
+      "aspect_contains": "expiration",
+      "severity": "important",
+      "rationale": "Does cart expire? After how long? What happens to reserved stock?"
+    },
+    {
+      "id_pattern": "AMB-ENT-*",
+      "subject": "Cart",
+      "aspect_contains": "stock.reservation",
+      "severity": "critical",
+      "rationale": "'Products must be in stock' - is stock reserved when added to cart or only at checkout?"
+    },
+    {
+      "id_pattern": "AMB-ENT-*",
+      "subject": "Product",
+      "aspect_contains": "deletion",
+      "severity": "critical",
+      "rationale": "What happens to product in existing orders if product is deleted?"
+    },
+    {
+      "id_pattern": "AMB-ENT-*",
+      "subject": "Product",
+      "aspect_contains": "price.change",
+      "severity": "critical",
+      "rationale": "If product price changes, what happens to items in cart? Existing orders?"
+    },
+    {
+      "id_pattern": "AMB-ENT-*",
+      "subject": "ProductVariant",
+      "aspect_contains": "stock",
+      "severity": "important",
+      "rationale": "Is stock tracked per product or per variant?"
+    },
+    {
+      "id_pattern": "AMB-ENT-*",
+      "subject": "Customer",
+      "aspect_contains": "deletion",
+      "severity": "critical",
+      "rationale": "Can customer be deleted? What happens to their orders?"
+    },
+    {
+      "id_pattern": "AMB-ENT-*",
+      "subject": "OrderItem",
+      "aspect_contains": "price.snapshot",
+      "severity": "critical",
+      "rationale": "Is price stored on OrderItem or referenced from Product?"
+    },
+    {
+      "id_pattern": "AMB-ENT-*",
+      "subject": "ShippingAddress",
+      "aspect_contains": "entity_vs_value",
+      "severity": "important",
+      "rationale": "Is ShippingAddress an entity (reusable, stored) or value object (embedded in order)?"
+    },
+    {
+      "id_pattern": "AMB-OP-*",
+      "subject": "PlaceOrder",
+      "aspect_contains": "payment.failure",
+      "severity": "critical",
+      "rationale": "What happens if payment fails after order created?"
+    },
+    {
+      "id_pattern": "AMB-OP-*",
+      "subject": "CancelOrder",
+      "aspect_contains": "refund",
+      "severity": "critical",
+      "rationale": "Is refund automatic? Partial or full? What about shipping costs?"
+    },
+    {
+      "id_pattern": "AMB-OP-*",
+      "subject": "UpdateQuantity",
+      "aspect_contains": "out_of_stock",
+      "severity": "important",
+      "rationale": "What if customer increases quantity but stock insufficient?"
+    }
+  ],
+  "minimum_count": {
+    "critical": 8,
+    "important": 6,
+    "minor": 4
+  },
+  "edge_case_categories": {
+    "must_generate": [
+      "boundary_values",
+      "null_handling",
+      "concurrent_access",
+      "cascade_behavior"
+    ],
+    "should_generate": [
+      "whitespace_handling",
+      "unicode_handling",
+      "max_length"
+    ]
+  }
+}

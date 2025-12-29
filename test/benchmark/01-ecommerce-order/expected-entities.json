@@ -1,0 +1,83 @@
+{
+  "description": "Expected entities to be detected from ecommerce-order L0 document",
+  "entities": [
+    {
+      "name": "Customer",
+      "type": "entity",
+      "confidence": "high",
+      "attributes_expected": ["id", "email", "name"],
+      "relationships_expected": ["Order", "Cart"],
+      "notes": "Implied by 'Customers must be registered'"
+    },
+    {
+      "name": "Product",
+      "type": "entity",
+      "confidence": "high",
+      "attributes_expected": ["id", "name", "description", "price", "category"],
+      "relationships_expected": ["ProductVariant", "Category", "CartItem", "OrderItem"],
+      "notes": "Explicitly mentioned with attributes"
+    },
+    {
+      "name": "ProductVariant",
+      "type": "entity",
+      "confidence": "medium",
+      "attributes_expected": ["id", "productId", "variantType", "variantValue"],
+      "relationships_expected": ["Product"],
+      "notes": "Mentioned as 'variants (like size or color)'"
+    },
+    {
+      "name": "Category",
+      "type": "entity",
+      "confidence": "medium",
+      "attributes_expected": ["id", "name"],
+      "relationships_expected": ["Product"],
+      "notes": "Mentioned as product attribute"
+    },
+    {
+      "name": "Cart",
+      "type": "entity",
+      "confidence": "high",
+      "attributes_expected": ["id", "customerId", "totalPrice"],
+      "relationships_expected": ["Customer", "CartItem"],
+      "notes": "Explicitly mentioned in US-002"
+    },
+    {
+      "name": "CartItem",
+      "type": "entity",
+      "confidence": "high",
+      "attributes_expected": ["id", "cartId", "productId", "quantity"],
+      "relationships_expected": ["Cart", "Product"],
+      "notes": "Implied by cart showing items and quantities"
+    },
+    {
+      "name": "Order",
+      "type": "entity",
+      "confidence": "high",
+      "attributes_expected": ["id", "customerId", "status", "shippingAddress", "paymentMethod", "totalPrice"],
+      "relationships_expected": ["Customer", "OrderItem", "ShippingAddress"],
+      "notes": "Central entity, explicitly mentioned"
+    },
+    {
+      "name": "OrderItem",
+      "type": "entity",
+      "confidence": "high",
+      "attributes_expected": ["id", "orderId", "productId", "quantity", "price"],
+      "relationships_expected": ["Order", "Product"],
+      "notes": "Implied by order containing items from cart"
+    },
+    {
+      "name": "ShippingAddress",
+      "type": "entity_or_value_object",
+      "confidence": "medium",
+      "attributes_expected": ["street", "city", "postalCode", "country"],
+      "relationships_expected": ["Order"],
+      "notes": "Mentioned but unclear if entity or value object"
+    }
+  ],
+  "minimum_entity_count": 6,
+  "validation_rules": {
+    "must_detect": ["Customer", "Product", "Cart", "Order", "OrderItem"],
+    "should_detect": ["CartItem", "ProductVariant", "Category"],
+    "may_detect": ["ShippingAddress", "PaymentMethod", "Inventory"]
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "description": "Expected severity distribution for ecommerce-order benchmark",
+  "severity_distribution": {
+    "critical_min": 8,
+    "critical_max": 20,
+    "important_min": 6,
+    "important_max": 25,
+    "minor_min": 4,
+    "minor_max": 15
+  },
+  "severity_classification_rules": {
+    "critical": {
+      "description": "Blocks implementation - can't write code without knowing",
+      "examples": [
+        "Data types for attributes",
+        "Required vs optional fields",
+        "Deletion/cascade behavior",
+        "State transition rules",
+        "Stock reservation strategy",
+        "Price snapshot vs reference"
+      ]
+    },
+    "important": {
+      "description": "Affects behavior - code would work but might be wrong",
+      "examples": [
+        "Validation rules",
+        "Default values",
+        "Audit requirements",
+        "Cart expiration policy",
+        "Entity vs Value Object classification"
+      ]
+    },
+    "minor": {
+      "description": "Has sensible default - can propose and confirm",
+      "examples": [
+        "Field length limits",
+        "Specific error messages",
+        "History retention period",
+        "Pagination defaults"
+      ]
+    }
+  },
+  "total_ambiguity_range": {
+    "minimum": 18,
+    "maximum": 60
+  }
+}
