@@ -1,0 +1,228 @@
+{
+  "bounded_contexts": [
+    {
+      "id": "BC-CATALOG",
+      "name": "Product Catalog",
+      "purpose": "Manages product information, categorization, and browsing capabilities for customers and administrators",
+      "core_entities": [
+        "Product",
+        "ProductVariant",
+        "Category"
+      ],
+      "aggregates": [
+        "Product",
+        "Category"
+      ],
+      "capabilities": [
+        "Create and manage products",
+        "Organize products into categories",
+        "Manage product variants (size, color)",
+        "Activate and deactivate products",
+        "Browse and search product catalog"
+      ],
+      "ubiquitous_language": {
+        "Active Product": "A product available for purchase",
+        "Category": "A logical grouping of related products for browsing",
+        "Product": "A purchasable item with name, description, and price",
+        "SKU": "Stock Keeping Unit - unique identifier for a product variant",
+        "Variant": "A specific configuration of a product (e.g., size/color combination)"
+      }
+    },
+    {
+      "id": "BC-INVENTORY",
+      "name": "Inventory Management",
+      "purpose": "Tracks stock levels, manages availability, and handles stock reservations for order fulfillment",
+      "core_entities": [
+        "Inventory"
+      ],
+      "aggregates": [
+        "Inventory"
+      ],
+      "capabilities": [
+        "Track stock levels per product",
+        "Reserve inventory for pending orders",
+        "Release reserved inventory on cancellation",
+        "Deduct inventory on order fulfillment",
+        "Restock products",
+        "Notify when products go out of stock"
+      ],
+      "ubiquitous_language": {
+        "Available Quantity": "Stock available for new orders (stock level minus reserved)",
+        "Reservation": "Temporary hold on inventory for a pending order",
+        "Reserved Quantity": "Stock allocated to pending orders but not yet shipped",
+        "Restock": "Adding new inventory to increase stock level",
+        "Stock Level": "Total quantity of a product in warehouse"
+      }
+    },
+    {
+      "id": "BC-SHOPPING",
+      "name": "Shopping Cart",
+      "purpose": "Manages the shopping experience including cart operations and checkout preparation",
+      "core_entities": [
+        "Cart",
+        "CartItem"
+      ],
+      "aggregates": [
+        "Cart"
+      ],
+      "capabilities": [
+        "Add products to cart",
+        "Update item quantities",
+        "Remove items from cart",
+        "Calculate cart totals",
+        "Validate product availability",
+        "Clear cart after checkout"
+      ],
+      "ubiquitous_language": {
+        "Cart": "A temporary collection of products a customer intends to purchase",
+        "Cart Item": "A product with specified quantity in the cart",
+        "Checkout": "Process of converting cart contents to an order",
+        "Total Price": "Sum of all cart item subtotals"
+      }
+    },
+    {
+      "id": "BC-ORDERS",
+      "name": "Order Management",
+      "purpose": "Handles the complete order lifecycle from placement through delivery or cancellation",
+      "core_entities": [
+        "Order",
+        "OrderLineItem"
+      ],
+      "aggregates": [
+        "Order"
+      ],
+      "capabilities": [
+        "Place orders from cart contents",
+        "Track order status progression",
+        "Process order confirmation",
+        "Handle order shipping",
+        "Record order delivery",
+        "Process order cancellations",
+        "Calculate shipping costs",
+        "Apply free shipping rules"
+      ],
+      "ubiquitous_language": {
+        "Fulfillment": "Process of preparing and shipping an order",
+        "Line Item": "An immutable snapshot of a product at order time",
+        "Order": "A confirmed customer purchase with shipping and payment details",
+        "Order Status": "Current state in the order lifecycle (pending, confirmed, shipped, delivered, cancelled)",
+        "Shipping Cost": "Delivery fee (free for orders over $50)"
+      }
+    },
+    {
+      "id": "BC-CUSTOMERS",
+      "name": "Customer Management",
+      "purpose": "Manages customer registration, authentication, and customer-related operations",
+      "core_entities": [
+        "Customer"
+      ],
+      "aggregates": [
+        "Customer"
+      ],
+      "capabilities": [
+        "Register new customers",
+        "Manage customer profiles",
+        "Authenticate customers",
+        "Associate customers with carts and orders"
+      ],
+      "ubiquitous_language": {
+        "Customer": "A registered user who can browse and purchase products",
+        "Registered Customer": "A customer who has completed registration and can place orders",
+        "Registration": "Process of creating a customer account"
+      }
+    }
+  ],
+  "context_relationships": [
+    {
+      "upstream": "BC-CATALOG",
+      "downstream": "BC-SHOPPING",
+      "relationship_type": "customer_supplier",
+      "description": "Shopping Cart consumes product information (id, name, price) from Catalog when adding items to cart",
+      "integration_pattern": "Open Host Service",
+      "shared_data": [
+        "productId",
+        "productName",
+        "price",
+        "isActive"
+      ]
+    },
+    {
+      "upstream": "BC-CATALOG",
+      "downstream": "BC-INVENTORY",
+      "relationship_type": "customer_supplier",
+      "description": "Inventory tracks stock for products defined in Catalog",
+      "integration_pattern": "Domain Events",
+      "shared_data": [
+        "productId"
+      ]
+    },
+    {
+      "upstream": "BC-INVENTORY",
+      "downstream": "BC-SHOPPING",
+      "relationship_type": "customer_supplier",
+      "description": "Shopping Cart checks product availability from Inventory before adding items",
+      "integration_pattern": "Open Host Service",
+      "shared_data": [
+        "productId",
+        "availableQuantity"
+      ]
+    },
+    {
+      "upstream": "BC-SHOPPING",
+      "downstream": "BC-ORDERS",
+      "relationship_type": "customer_supplier",
+      "description": "Order Management receives cart contents during checkout to create orders",
+      "integration_pattern": "Domain Events",
+      "shared_data": [
+        "cartItems",
+        "productId",
+        "productName",
+        "unitPrice",
+        "quantity"
+      ]
+    },
+    {
+      "upstream": "BC-CUSTOMERS",
+      "downstream": "BC-SHOPPING",
+      "relationship_type": "customer_supplier",
+      "description": "Shopping Cart is associated with a Customer; each customer has one cart",
+      "integration_pattern": "Shared Kernel",
+      "shared_data": [
+        "customerId"
+      ]
+    },
+    {
+      "upstream": "BC-CUSTOMERS",
+      "downstream": "BC-ORDERS",
+      "relationship_type": "customer_supplier",
+      "description": "Orders belong to Customers; registration status is validated before order placement",
+      "integration_pattern": "Shared Kernel",
+      "shared_data": [
+        "customerId",
+        "registrationStatus"
+      ]
+    },
+    {
+      "upstream": "BC-ORDERS",
+      "downstream": "BC-INVENTORY",
+      "relationship_type": "customer_supplier",
+      "description": "Inventory reserves stock when order is placed and releases on cancellation",
+      "integration_pattern": "Domain Events",
+      "shared_data": [
+        "productId",
+        "quantity",
+        "orderId"
+      ]
+    }
+  ],
+  "context_map_diagram": "",
+  "summary": {
+    "total_contexts": 5,
+    "total_relationships": 7,
+    "integration_patterns_used": [
+      "Open Host Service",
+      "Domain Events",
+      "Shared Kernel"
+    ]
+  }
+}

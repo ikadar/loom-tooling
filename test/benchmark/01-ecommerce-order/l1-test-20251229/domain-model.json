@@ -1,0 +1,1094 @@
+{
+  "domain_model": {
+    "name": "E-Commerce Order System",
+    "description": "Domain model for an online store supporting product browsing, shopping cart, order placement, and order tracking",
+    "bounded_contexts": [
+      "Catalog",
+      "Shopping",
+      "Orders",
+      "Customers",
+      "Inventory"
+    ]
+  },
+  "entities": [
+    {
+      "id": "ENT-CUSTOMER-001",
+      "name": "Customer",
+      "type": "aggregate_root",
+      "purpose": "Represents a registered user who can browse products, manage a cart, and place orders",
+      "attributes": [
+        {
+          "name": "customerId",
+          "type": "CustomerId (UUID)",
+          "constraints": "Required, immutable after creation"
+        },
+        {
+          "name": "email",
+          "type": "Email",
+          "constraints": "Required, unique, valid email format"
+        },
+        {
+          "name": "registrationStatus",
+          "type": "RegistrationStatus (enum)",
+          "constraints": "Required, values: registered, unregistered"
+        },
+        {
+          "name": "cart",
+          "type": "Cart",
+          "constraints": "One per customer"
+        }
+      ],
+      "invariants": [
+        "Customer must be registered to place orders",
+        "Email must be unique across all customers",
+        "Customer always has exactly one cart"
+      ],
+      "operations": [
+        {
+          "name": "register",
+          "signature": "register(email: Email, password: Password): void",
+          "preconditions": [
+            "Email not already registered"
+          ],
+          "postconditions": [
+            "Status set to 'registered'",
+            "CustomerRegistered event emitted"
+          ]
+        },
+        {
+          "name": "placeOrder",
+          "signature": "placeOrder(shippingAddress: Address, paymentMethod: PaymentMethod): Order",
+          "preconditions": [
+            "Customer is registered",
+            "Cart has items",
+            "All cart items in stock"
+          ],
+          "postconditions": [
+            "Order created",
+            "Cart cleared",
+            "OrderPlaced event emitted"
+          ]
+        }
+      ],
+      "events": [
+        {
+          "name": "CustomerRegistered",
+          "trigger": "register() called successfully",
+          "payload": [
+            "customerId",
+            "email",
+            "timestamp"
+          ]
+        }
+      ],
+      "relationships": [
+        {
+          "target": "ENT-CART-001",
+          "type": "contains",
+          "cardinality": "one-to-one"
+        },
+        {
+          "target": "ENT-ORDER-001",
+          "type": "contains",
+          "cardinality": "one-to-many"
+        }
+      ]
+    },
+    {
+      "id": "ENT-CART-001",
+      "name": "Cart",
+      "type": "aggregate_root",
+      "purpose": "Holds products a customer intends to purchase before checkout",
+      "attributes": [
+        {
+          "name": "cartId",
+          "type": "CartId (UUID)",
+          "constraints": "Required, immutable after creation"
+        },
+        {
+          "name": "customerId",
+          "type": "CustomerId",
+          "constraints": "Required, references owning customer"
+        },
+        {
+          "name": "items",
+          "type": "List\u003cCartItem\u003e",
+          "constraints": "Can be empty"
+        },
+        {
+          "name": "totalPrice",
+          "type": "Money",
+          "constraints": "Calculated, \u003e= 0"
+        }
+      ],
+      "invariants": [
+        "Total price must equal sum of all cart item subtotals",
+        "Each product can appear only once (quantity adjusted instead)",
+        "Only in-stock products can be added"
+      ],
+      "operations": [
+        {
+          "name": "addItem",
+          "signature": "addItem(product: Product, quantity: Quantity): void",
+          "preconditions": [
+            "Product is in stock",
+            "Quantity \u003e 0"
+          ],
+          "postconditions": [
+            "Item added or quantity updated",
+            "Total recalculated",
+            "ItemAddedToCart event emitted"
+          ]
+        },
+        {
+          "name": "updateQuantity",
+          "signature": "updateQuantity(productId: ProductId, quantity: Quantity): void",
+          "preconditions": [
+            "Product exists in cart",
+            "Quantity \u003e 0",
+            "Requested quantity in stock"
+          ],
+          "postconditions": [
+            "Quantity updated",
+            "Total recalculated",
+            "CartItemQuantityUpdated event emitted"
+          ]
+        },
+        {
+          "name": "removeItem",
+          "signature": "removeItem(productId: ProductId): void",
+          "preconditions": [
+            "Product exists in cart"
+          ],
+          "postconditions": [
+            "Item removed",
+            "Total recalculated",
+            "ItemRemovedFromCart event emitted"
+          ]
+        },
+        {
+          "name": "clear",
+          "signature": "clear(): void",
+          "preconditions": [],
+          "postconditions": [
+            "All items removed",
+            "Total set to zero",
+            "CartCleared event emitted"
+          ]
+        }
+      ],
+      "events": [
+        {
+          "name": "ItemAddedToCart",
+          "trigger": "addItem() called",
+          "payload": [
+            "cartId",
+            "productId",
+            "quantity",
+            "timestamp"
+          ]
+        },
+        {
+          "name": "CartItemQuantityUpdated",
+          "trigger": "updateQuantity() called",
+          "payload": [
+            "cartId",
+            "productId",
+            "oldQuantity",
+            "newQuantity",
+            "timestamp"
+          ]
+        },
+        {
+          "name": "ItemRemovedFromCart",
+          "trigger": "removeItem() called",
+          "payload": [
+            "cartId",
+            "productId",
+            "timestamp"
+          ]
+        },
+        {
+          "name": "CartCleared",
+          "trigger": "clear() called or order placed",
+          "payload": [
+            "cartId",
+            "timestamp"
+          ]
+        }
+      ],
+      "relationships": [
+        {
+          "target": "ENT-CARTITEM-001",
+          "type": "contains",
+          "cardinality": "one-to-many"
+        },
+        {
+          "target": "ENT-CUSTOMER-001",
+          "type": "belongs_to",
+          "cardinality": "many-to-one"
+        }
+      ]
+    },
+    {
+      "id": "ENT-CARTITEM-001",
+      "name": "CartItem",
+      "type": "entity",
+      "purpose": "Represents a product and its quantity within a shopping cart",
+      "attributes": [
+        {
+          "name": "cartItemId",
+          "type": "CartItemId (UUID)",
+          "constraints": "Required, immutable"
+        },
+        {
+          "name": "productId",
+          "type": "ProductId",
+          "constraints": "Required, references Product"
+        },
+        {
+          "name": "productName",
+          "type": "string",
+          "constraints": "Required, snapshot at time of adding"
+        },
+        {
+          "name": "unitPrice",
+          "type": "Money",
+          "constraints": "Required, snapshot at time of adding"
+        },
+        {
+          "name": "quantity",
+          "type": "Quantity",
+          "constraints": "Required, \u003e 0"
+        },
+        {
+          "name": "subtotal",
+          "type": "Money",
+          "constraints": "Calculated: unitPrice * quantity"
+        }
+      ],
+      "invariants": [
+        "Quantity must be greater than zero",
+        "Subtotal must equal unitPrice * quantity"
+      ],
+      "operations": [
+        {
+          "name": "updateQuantity",
+          "signature": "updateQuantity(newQuantity: Quantity): void",
+          "preconditions": [
+            "newQuantity \u003e 0"
+          ],
+          "postconditions": [
+            "Quantity updated",
+            "Subtotal recalculated"
+          ]
+        }
+      ],
+      "events": [],
+      "relationships": [
+        {
+          "target": "ENT-CART-001",
+          "type": "belongs_to",
+          "cardinality": "many-to-one"
+        },
+        {
+          "target": "ENT-PRODUCT-001",
+          "type": "references",
+          "cardinality": "many-to-one"
+        }
+      ]
+    },
+    {
+      "id": "ENT-ORDER-001",
+      "name": "Order",
+      "type": "aggregate_root",
+      "purpose": "Represents a customer's purchase transaction with shipping and payment details",
+      "attributes": [
+        {
+          "name": "orderId",
+          "type": "OrderId (UUID)",
+          "constraints": "Required, immutable after creation"
+        },
+        {
+          "name": "customerId",
+          "type": "CustomerId",
+          "constraints": "Required, references Customer"
+        },
+        {
+          "name": "status",
+          "type": "OrderStatus (enum)",
+          "constraints": "Required, values: pending, confirmed, shipped, delivered, cancelled"
+        },
+        {
+          "name": "lineItems",
+          "type": "List\u003cOrderLineItem\u003e",
+          "constraints": "Required, at least one item"
+        },
+        {
+          "name": "shippingAddress",
+          "type": "Address",
+          "constraints": "Required"
+        },
+        {
+          "name": "paymentMethod",
+          "type": "PaymentMethod",
+          "constraints": "Required"
+        },
+        {
+          "name": "subtotal",
+          "type": "Money",
+          "constraints": "Calculated, sum of line items"
+        },
+        {
+          "name": "shippingCost",
+          "type": "Money",
+          "constraints": "Calculated based on subtotal (free if \u003e $50)"
+        },
+        {
+          "name": "totalAmount",
+          "type": "Money",
+          "constraints": "Calculated: subtotal + shippingCost"
+        },
+        {
+          "name": "createdAt",
+          "type": "DateTime",
+          "constraints": "Required, immutable"
+        }
+      ],
+      "invariants": [
+        "Order must have at least one line item",
+        "Total amount must equal subtotal plus shipping cost",
+        "Shipping is free when subtotal exceeds $50",
+        "Cannot modify order after status is 'shipped' or 'delivered'",
+        "Can only cancel before status is 'shipped'",
+        "Status transitions: pending → confirmed → shipped → delivered (or cancelled from pending/confirmed)"
+      ],
+      "operations": [
+        {
+          "name": "confirm",
+          "signature": "confirm(): void",
+          "preconditions": [
+            "Status is 'pending'"
+          ],
+          "postconditions": [
+            "Status set to 'confirmed'",
+            "OrderConfirmed event emitted"
+          ]
+        },
+        {
+          "name": "ship",
+          "signature": "ship(): void",
+          "preconditions": [
+            "Status is 'confirmed'"
+          ],
+          "postconditions": [
+            "Status set to 'shipped'",
+            "OrderShipped event emitted"
+          ]
+        },
+        {
+          "name": "deliver",
+          "signature": "deliver(): void",
+          "preconditions": [
+            "Status is 'shipped'"
+          ],
+          "postconditions": [
+            "Status set to 'delivered'",
+            "OrderDelivered event emitted"
+          ]
+        },
+        {
+          "name": "cancel",
+          "signature": "cancel(): void",
+          "preconditions": [
+            "Status is 'pending' or 'confirmed'"
+          ],
+          "postconditions": [
+            "Status set to 'cancelled'",
+            "OrderCancelled event emitted",
+            "Inventory restored"
+          ]
+        }
+      ],
+      "events": [
+        {
+          "name": "OrderPlaced",
+          "trigger": "Order created from cart",
+          "payload": [
+            "orderId",
+            "customerId",
+            "totalAmount",
+            "lineItems",
+            "shippingAddress",
+            "timestamp"
+          ]
+        },
+        {
+          "name": "OrderConfirmed",
+          "trigger": "confirm() called",
+          "payload": [
+            "orderId",
+            "timestamp"
+          ]
+        },
+        {
+          "name": "OrderShipped",
+          "trigger": "ship() called",
+          "payload": [
+            "orderId",
+            "timestamp"
+          ]
+        },
+        {
+          "name": "OrderDelivered",
+          "trigger": "deliver() called",
+          "payload": [
+            "orderId",
+            "timestamp"
+          ]
+        },
+        {
+          "name": "OrderCancelled",
+          "trigger": "cancel() called",
+          "payload": [
+            "orderId",
+            "reason",
+            "timestamp"
+          ]
+        }
+      ],
+      "relationships": [
+        {
+          "target": "ENT-CUSTOMER-001",
+          "type": "belongs_to",
+          "cardinality": "many-to-one"
+        },
+        {
+          "target": "ENT-ORDERLINEITEM-001",
+          "type": "contains",
+          "cardinality": "one-to-many"
+        }
+      ]
+    },
+    {
+      "id": "ENT-ORDERLINEITEM-001",
+      "name": "OrderLineItem",
+      "type": "entity",
+      "purpose": "Immutable snapshot of a product at the time of order, with quantity and price",
+      "attributes": [
+        {
+          "name": "lineItemId",
+          "type": "LineItemId (UUID)",
+          "constraints": "Required, immutable"
+        },
+        {
+          "name": "productId",
+          "type": "ProductId",
+          "constraints": "Required, reference to original product"
+        },
+        {
+          "name": "productName",
+          "type": "string",
+          "constraints": "Required, snapshot"
+        },
+        {
+          "name": "unitPrice",
+          "type": "Money",
+          "constraints": "Required, snapshot at order time"
+        },
+        {
+          "name": "quantity",
+          "type": "Quantity",
+          "constraints": "Required, \u003e 0"
+        },
+        {
+          "name": "subtotal",
+          "type": "Money",
+          "constraints": "Calculated: unitPrice * quantity"
+        }
+      ],
+      "invariants": [
+        "All attributes are immutable after creation",
+        "Quantity must be greater than zero",
+        "Subtotal must equal unitPrice * quantity"
+      ],
+      "operations": [],
+      "events": [],
+      "relationships": [
+        {
+          "target": "ENT-ORDER-001",
+          "type": "belongs_to",
+          "cardinality": "many-to-one"
+        },
+        {
+          "target": "ENT-PRODUCT-001",
+          "type": "references",
+          "cardinality": "many-to-one"
+        }
+      ]
+    },
+    {
+      "id": "ENT-PRODUCT-001",
+      "name": "Product",
+      "type": "aggregate_root",
+      "purpose": "Represents a purchasable item in the catalog with its details and variants",
+      "attributes": [
+        {
+          "name": "productId",
+          "type": "ProductId (UUID)",
+          "constraints": "Required, immutable"
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "constraints": "Required, 1-200 characters"
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "constraints": "Optional, max 2000 characters"
+        },
+        {
+          "name": "price",
+          "type": "Money",
+          "constraints": "Required, \u003e 0"
+        },
+        {
+          "name": "categoryId",
+          "type": "CategoryId",
+          "constraints": "Required, references Category"
+        },
+        {
+          "name": "variants",
+          "type": "List\u003cProductVariant\u003e",
+          "constraints": "Optional"
+        },
+        {
+          "name": "isActive",
+          "type": "boolean",
+          "constraints": "Required, default true"
+        }
+      ],
+      "invariants": [
+        "Price must be greater than zero",
+        "Product must belong to a category",
+        "Inactive products cannot be added to cart"
+      ],
+      "operations": [
+        {
+          "name": "create",
+          "signature": "create(name: string, description: string, price: Money, categoryId: CategoryId): Product",
+          "preconditions": [
+            "Name is not empty",
+            "Price \u003e 0",
+            "Category exists"
+          ],
+          "postconditions": [
+            "Product created",
+            "ProductCreated event emitted"
+          ]
+        },
+        {
+          "name": "update",
+          "signature": "update(name?: string, description?: string, price?: Money, categoryId?: CategoryId): void",
+          "preconditions": [
+            "Product exists"
+          ],
+          "postconditions": [
+            "Attributes updated",
+            "ProductUpdated event emitted"
+          ]
+        },
+        {
+          "name": "deactivate",
+          "signature": "deactivate(): void",
+          "preconditions": [
+            "Product is active"
+          ],
+          "postconditions": [
+            "isActive set to false",
+            "ProductDeactivated event emitted"
+          ]
+        },
+        {
+          "name": "addVariant",
+          "signature": "addVariant(variant: ProductVariant): void",
+          "preconditions": [
+            "Variant combination is unique"
+          ],
+          "postconditions": [
+            "Variant added",
+            "ProductVariantAdded event emitted"
+          ]
+        }
+      ],
+      "events": [
+        {
+          "name": "ProductCreated",
+          "trigger": "create() called",
+          "payload": [
+            "productId",
+            "name",
+            "price",
+            "categoryId",
+            "timestamp"
+          ]
+        },
+        {
+          "name": "ProductUpdated",
+          "trigger": "update() called",
+          "payload": [
+            "productId",
+            "changedFields",
+            "timestamp"
+          ]
+        },
+        {
+          "name": "ProductDeactivated",
+          "trigger": "deactivate() called",
+          "payload": [
+            "productId",
+            "timestamp"
+          ]
+        },
+        {
+          "name": "ProductVariantAdded",
+          "trigger": "addVariant() called",
+          "payload": [
+            "productId",
+            "variantId",
+            "timestamp"
+          ]
+        }
+      ],
+      "relationships": [
+        {
+          "target": "ENT-CATEGORY-001",
+          "type": "belongs_to",
+          "cardinality": "many-to-one"
+        },
+        {
+          "target": "ENT-PRODUCTVARIANT-001",
+          "type": "contains",
+          "cardinality": "one-to-many"
+        },
+        {
+          "target": "ENT-INVENTORY-001",
+          "type": "references",
+          "cardinality": "one-to-one"
+        }
+      ]
+    },
+    {
+      "id": "ENT-PRODUCTVARIANT-001",
+      "name": "ProductVariant",
+      "type": "entity",
+      "purpose": "Represents a specific variation of a product (e.g., size, color combination)",
+      "attributes": [
+        {
+          "name": "variantId",
+          "type": "VariantId (UUID)",
+          "constraints": "Required, immutable"
+        },
+        {
+          "name": "size",
+          "type": "string",
+          "constraints": "Optional"
+        },
+        {
+          "name": "color",
+          "type": "string",
+          "constraints": "Optional"
+        },
+        {
+          "name": "sku",
+          "type": "SKU",
+          "constraints": "Required, unique"
+        },
+        {
+          "name": "priceAdjustment",
+          "type": "Money",
+          "constraints": "Optional, can be positive or negative"
+        }
+      ],
+      "invariants": [
+        "SKU must be unique across all variants",
+        "At least one variant attribute (size or color) must be specified",
+        "Variant combination must be unique within product"
+      ],
+      "operations": [],
+      "events": [],
+      "relationships": [
+        {
+          "target": "ENT-PRODUCT-001",
+          "type": "belongs_to",
+          "cardinality": "many-to-one"
+        }
+      ]
+    },
+    {
+      "id": "ENT-CATEGORY-001",
+      "name": "Category",
+      "type": "aggregate_root",
+      "purpose": "Organizes products into logical groups for browsing",
+      "attributes": [
+        {
+          "name": "categoryId",
+          "type": "CategoryId (UUID)",
+          "constraints": "Required, immutable"
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "constraints": "Required, unique, 1-100 characters"
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "constraints": "Optional"
+        },
+        {
+          "name": "parentCategoryId",
+          "type": "CategoryId",
+          "constraints": "Optional, for hierarchical categories"
+        }
+      ],
+      "invariants": [
+        "Category name must be unique",
+        "Cannot be its own parent (no circular references)"
+      ],
+      "operations": [
+        {
+          "name": "create",
+          "signature": "create(name: string, description?: string, parentId?: CategoryId): Category",
+          "preconditions": [
+            "Name is unique"
+          ],
+          "postconditions": [
+            "Category created",
+            "CategoryCreated event emitted"
+          ]
+        }
+      ],
+      "events": [
+        {
+          "name": "CategoryCreated",
+          "trigger": "create() called",
+          "payload": [
+            "categoryId",
+            "name",
+            "timestamp"
+          ]
+        }
+      ],
+      "relationships": [
+        {
+          "target": "ENT-PRODUCT-001",
+          "type": "contains",
+          "cardinality": "one-to-many"
+        }
+      ]
+    },
+    {
+      "id": "ENT-INVENTORY-001",
+      "name": "Inventory",
+      "type": "aggregate_root",
+      "purpose": "Tracks stock levels for products and manages availability",
+      "attributes": [
+        {
+          "name": "inventoryId",
+          "type": "InventoryId (UUID)",
+          "constraints": "Required, immutable"
+        },
+        {
+          "name": "productId",
+          "type": "ProductId",
+          "constraints": "Required, unique, references Product"
+        },
+        {
+          "name": "stockLevel",
+          "type": "integer",
+          "constraints": "Required, \u003e= 0"
+        },
+        {
+          "name": "reservedQuantity",
+          "type": "integer",
+          "constraints": "Required, \u003e= 0, \u003c= stockLevel"
+        },
+        {
+          "name": "availableQuantity",
+          "type": "integer",
+          "constraints": "Calculated: stockLevel - reservedQuantity"
+        }
+      ],
+      "invariants": [
+        "Stock level cannot be negative",
+        "Reserved quantity cannot exceed stock level",
+        "Available quantity must equal stock level minus reserved"
+      ],
+      "operations": [
+        {
+          "name": "reserve",
+          "signature": "reserve(quantity: integer): void",
+          "preconditions": [
+            "quantity \u003c= availableQuantity"
+          ],
+          "postconditions": [
+            "reservedQuantity increased",
+            "InventoryReserved event emitted"
+          ]
+        },
+        {
+          "name": "release",
+          "signature": "release(quantity: integer): void",
+          "preconditions": [
+            "quantity \u003c= reservedQuantity"
+          ],
+          "postconditions": [
+            "reservedQuantity decreased",
+            "InventoryReleased event emitted"
+          ]
+        },
+        {
+          "name": "deduct",
+          "signature": "deduct(quantity: integer): void",
+          "preconditions": [
+            "quantity \u003c= reservedQuantity"
+          ],
+          "postconditions": [
+            "stockLevel and reservedQuantity decreased",
+            "InventoryDeducted event emitted"
+          ]
+        },
+        {
+          "name": "restock",
+          "signature": "restock(quantity: integer): void",
+          "preconditions": [
+            "quantity \u003e 0"
+          ],
+          "postconditions": [
+            "stockLevel increased",
+            "InventoryRestocked event emitted"
+          ]
+        }
+      ],
+      "events": [
+        {
+          "name": "InventoryReserved",
+          "trigger": "reserve() called",
+          "payload": [
+            "productId",
+            "quantity",
+            "remainingAvailable",
+            "timestamp"
+          ]
+        },
+        {
+          "name": "InventoryReleased",
+          "trigger": "release() called",
+          "payload": [
+            "productId",
+            "quantity",
+            "timestamp"
+          ]
+        },
+        {
+          "name": "InventoryDeducted",
+          "trigger": "deduct() called",
+          "payload": [
+            "productId",
+            "quantity",
+            "newStockLevel",
+            "timestamp"
+          ]
+        },
+        {
+          "name": "InventoryRestocked",
+          "trigger": "restock() called",
+          "payload": [
+            "productId",
+            "quantity",
+            "newStockLevel",
+            "timestamp"
+          ]
+        },
+        {
+          "name": "OutOfStock",
+          "trigger": "availableQuantity reaches 0",
+          "payload": [
+            "productId",
+            "timestamp"
+          ]
+        }
+      ],
+      "relationships": [
+        {
+          "target": "ENT-PRODUCT-001",
+          "type": "belongs_to",
+          "cardinality": "one-to-one"
+        }
+      ]
+    }
+  ],
+  "value_objects": [
+    {
+      "id": "VO-MONEY-001",
+      "name": "Money",
+      "purpose": "Represents a monetary amount with currency for price calculations",
+      "attributes": [
+        {
+          "name": "amount",
+          "type": "decimal",
+          "constraints": "\u003e= 0, precision 2"
+        },
+        {
+          "name": "currency",
+          "type": "string",
+          "constraints": "ISO 4217 code (default: USD)"
+        }
+      ],
+      "operations": [
+        "add",
+        "subtract",
+        "multiply",
+        "equals",
+        "greaterThan",
+        "lessThan"
+      ]
+    },
+    {
+      "id": "VO-ADDRESS-001",
+      "name": "Address",
+      "purpose": "Represents a shipping address for order delivery",
+      "attributes": [
+        {
+          "name": "street",
+          "type": "string",
+          "constraints": "Required, 1-200 characters"
+        },
+        {
+          "name": "city",
+          "type": "string",
+          "constraints": "Required, 1-100 characters"
+        },
+        {
+          "name": "state",
+          "type": "string",
+          "constraints": "Required"
+        },
+        {
+          "name": "postalCode",
+          "type": "string",
+          "constraints": "Required, valid format"
+        },
+        {
+          "name": "country",
+          "type": "string",
+          "constraints": "Required, ISO 3166-1"
+        }
+      ],
+      "operations": [
+        "equals",
+        "format"
+      ]
+    },
+    {
+      "id": "VO-PAYMENTMETHOD-001",
+      "name": "PaymentMethod",
+      "purpose": "Represents the payment method chosen for an order",
+      "attributes": [
+        {
+          "name": "type",
+          "type": "PaymentType (enum)",
+          "constraints": "Required, values: credit_card, paypal"
+        },
+        {
+          "name": "lastFourDigits",
+          "type": "string",
+          "constraints": "Optional, for credit card display"
+        },
+        {
+          "name": "paypalEmail",
+          "type": "string",
+          "constraints": "Optional, for PayPal identification"
+        }
+      ],
+      "operations": [
+        "equals",
+        "displayName"
+      ]
+    },
+    {
+      "id": "VO-QUANTITY-001",
+      "name": "Quantity",
+      "purpose": "Represents a positive quantity of items",
+      "attributes": [
+        {
+          "name": "value",
+          "type": "integer",
+          "constraints": "\u003e 0"
+        }
+      ],
+      "operations": [
+        "add",
+        "subtract",
+        "equals",
+        "greaterThan"
+      ]
+    },
+    {
+      "id": "VO-EMAIL-001",
+      "name": "Email",
+      "purpose": "Represents a validated email address",
+      "attributes": [
+        {
+          "name": "value",
+          "type": "string",
+          "constraints": "Required, valid email format (RFC 5322)"
+        }
+      ],
+      "operations": [
+        "equals",
+        "domain"
+      ]
+    },
+    {
+      "id": "VO-SKU-001",
+      "name": "SKU",
+      "purpose": "Stock Keeping Unit identifier for products and variants",
+      "attributes": [
+        {
+          "name": "value",
+          "type": "string",
+          "constraints": "Required, alphanumeric, unique"
+        }
+      ],
+      "operations": [
+        "equals"
+      ]
+    },
+    {
+      "id": "VO-ORDERSTATUS-001",
+      "name": "OrderStatus",
+      "purpose": "Represents the current state of an order in its lifecycle",
+      "attributes": [
+        {
+          "name": "value",
+          "type": "enum",
+          "constraints": "Values: pending, confirmed, shipped, delivered, cancelled"
+        }
+      ],
+      "operations": [
+        "canTransitionTo",
+        "equals"
+      ]
+    }
+  ],
+  "summary": {
+    "aggregate_roots": 5,
+    "entities": 4,
+    "value_objects": 7,
+    "total_operations": 24,
+    "total_events": 18
+  }
+}

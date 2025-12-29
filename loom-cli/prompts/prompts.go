@@ -33,3 +33,9 @@ var DeriveTechSpecs string
 
 //go:embed derive-l3.md
 var DeriveL3 string
+
+//go:embed derive-domain-model.md
+var DeriveDomainModel string
+
+//go:embed derive-bounded-context.md
+var DeriveBoundedContext string

@@ -106,7 +106,15 @@ func (c *Client) CallJSON(prompt string, result interface{}) error {
 		codeBlockEnd := strings.Index(response[codeBlockStart:], "```")
 		if codeBlockEnd != -1 {
 			jsonStr := strings.TrimSpace(response[codeBlockStart : codeBlockStart+codeBlockEnd])
-			return json.Unmarshal([]byte(jsonStr), result)
+			if err := json.Unmarshal([]byte(jsonStr), result); err != nil {
+				// Show debug info on parse error
+				preview := jsonStr
+				if len(preview) > 500 {
+					preview = preview[:250] + "\n...[truncated]...\n" + preview[len(preview)-250:]
+				}
+				return fmt.Errorf("JSON parse error from code block: %w\nJSON preview:\n%s", err, preview)
+			}
+			return nil
 		}
 	}
 
@@ -121,9 +129,21 @@ func (c *Client) CallJSON(prompt string, result interface{}) error {
 	}
 
 	if jsonStart == -1 || jsonEnd == -1 {
-		return fmt.Errorf("no JSON found in response: %s", response)
+		preview := response
+		if len(preview) > 500 {
+			preview = preview[:500] + "..."
+		}
+		return fmt.Errorf("no JSON found in response: %s", preview)
 	}
 
 	jsonStr := response[jsonStart : jsonEnd+1]
-	return json.Unmarshal([]byte(jsonStr), result)
+	if err := json.Unmarshal([]byte(jsonStr), result); err != nil {
+		// Show debug info on parse error
+		preview := jsonStr
+		if len(preview) > 500 {
+			preview = preview[:250] + "\n...[truncated]...\n" + preview[len(preview)-250:]
+		}
+		return fmt.Errorf("JSON parse error: %w\nJSON preview:\n%s", err, preview)
+	}
+	return nil
 }

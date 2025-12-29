@@ -15,9 +15,103 @@ import (
 
 // DeriveInput is the expected input for the derive command
 type DeriveInput struct {
-	DomainModel  *domain.Domain     `json:"domain_model"`
-	Decisions    []domain.Decision  `json:"decisions"`
-	InputContent string             `json:"input_content"`
+	DomainModel  *domain.Domain    `json:"domain_model"`
+	Decisions    []domain.Decision `json:"decisions"`
+	InputContent string            `json:"input_content"`
+}
+
+// DomainModelDoc represents the domain-model.md document structure
+type DomainModelDoc struct {
+	DomainModel struct {
+		Name            string   `json:"name"`
+		Description     string   `json:"description"`
+		BoundedContexts []string `json:"bounded_contexts"`
+	} `json:"domain_model"`
+	Entities     []DomainEntity     `json:"entities"`
+	ValueObjects []DomainValueObject `json:"value_objects"`
+	Summary      struct {
+		AggregateRoots  int `json:"aggregate_roots"`
+		Entities        int `json:"entities"`
+		ValueObjects    int `json:"value_objects"`
+		TotalOperations int `json:"total_operations"`
+		TotalEvents     int `json:"total_events"`
+	} `json:"summary"`
+}
+
+type DomainEntity struct {
+	ID            string              `json:"id"`
+	Name          string              `json:"name"`
+	Type          string              `json:"type"`
+	Purpose       string              `json:"purpose"`
+	Attributes    []EntityAttribute   `json:"attributes"`
+	Invariants    []string            `json:"invariants"`
+	Operations    []EntityOperation   `json:"operations"`
+	Events        []EntityEvent       `json:"events"`
+	Relationships []EntityRelationship `json:"relationships"`
+}
+
+type EntityAttribute struct {
+	Name        string `json:"name"`
+	Type        string `json:"type"`
+	Constraints string `json:"constraints"`
+}
+
+type EntityOperation struct {
+	Name           string   `json:"name"`
+	Signature      string   `json:"signature"`
+	Preconditions  []string `json:"preconditions"`
+	Postconditions []string `json:"postconditions"`
+}
+
+type EntityEvent struct {
+	Name    string   `json:"name"`
+	Trigger string   `json:"trigger"`
+	Payload []string `json:"payload"`
+}
+
+type EntityRelationship struct {
+	Target      string `json:"target"`
+	Type        string `json:"type"`
+	Cardinality string `json:"cardinality"`
+}
+
+type DomainValueObject struct {
+	ID         string            `json:"id"`
+	Name       string            `json:"name"`
+	Purpose    string            `json:"purpose"`
+	Attributes []EntityAttribute `json:"attributes"`
+	Operations []string          `json:"operations"`
+}
+
+// BoundedContextMap represents the bounded-context-map.md document structure
+type BoundedContextMap struct {
+	BoundedContexts      []BoundedContext      `json:"bounded_contexts"`
+	ContextRelationships []ContextRelationship `json:"context_relationships"`
+	ContextMapDiagram    string                `json:"context_map_diagram"`
+	Summary              struct {
+		TotalContexts            int      `json:"total_contexts"`
+		TotalRelationships       int      `json:"total_relationships"`
+		IntegrationPatternsUsed []string `json:"integration_patterns_used"`
+	} `json:"summary"`
+}
+
+type BoundedContext struct {
+	ID                 string            `json:"id"`
+	Name               string            `json:"name"`
+	Purpose            string            `json:"purpose"`
+	CoreEntities       []string          `json:"core_entities"`
+	Aggregates         []string          `json:"aggregates"`
+	Capabilities       []string          `json:"capabilities"`
+	UbiquitousLanguage map[string]string `json:"ubiquitous_language"`
+}
+
+type ContextRelationship struct {
+	Upstream           string   `json:"upstream"`
+	Downstream         string   `json:"downstream"`
+	RelationshipType   string   `json:"relationship_type"`
+	Description        string   `json:"description"`
+	IntegrationPattern string   `json:"integration_pattern"`
+	SharedData         []string `json:"shared_data"`
 }
 
 func runDeriveNew() error {
@@ -55,8 +149,28 @@ func runDeriveNew() error {
 	// Create Claude client
 	client := claude.NewClient()
 
-	// === PHASE 5: Derivation ===
-	fmt.Fprintln(os.Stderr, "Phase 5: Deriving L1 documents...")
+	// === PHASE 5a: Derive Domain Model Document ===
+	fmt.Fprintln(os.Stderr, "Phase 5a: Deriving domain-model.md...")
+
+	domainModelDoc, err := deriveDomainModelDoc(client, input.DomainModel, input.InputContent)
+	if err != nil {
+		return fmt.Errorf("domain model derivation failed: %w", err)
+	}
+	fmt.Fprintf(os.Stderr, "  Generated: %d entities, %d value objects\n",
+		len(domainModelDoc.Entities), len(domainModelDoc.ValueObjects))
+
+	// === PHASE 5b: Derive Bounded Context Map ===
+	fmt.Fprintln(os.Stderr, "\nPhase 5b: Deriving bounded-context-map.md...")
+
+	boundedContextMap, err := deriveBoundedContextMap(client, domainModelDoc)
+	if err != nil {
+		return fmt.Errorf("bounded context map derivation failed: %w", err)
+	}
+	fmt.Fprintf(os.Stderr, "  Generated: %d contexts, %d relationships\n",
+		len(boundedContextMap.BoundedContexts), len(boundedContextMap.ContextRelationships))
+
+	// === PHASE 5c: Derive AC and BR ===
+	fmt.Fprintln(os.Stderr, "\nPhase 5c: Deriving acceptance-criteria.md and business-rules.md...")
 
 	result, err := deriveDocuments(client, input.DomainModel, input.Decisions, input.InputContent)
 	if err != nil {
@@ -78,17 +192,45 @@ func runDeriveNew() error {
 		}
 	}
 
-	if err := writeOutputFiles(cfg, result, newDecisions); err != nil {
+	if err := writeOutputFiles(cfg, result, domainModelDoc, boundedContextMap, newDecisions); err != nil {
 		return fmt.Errorf("failed to write output: %w", err)
 	}
 
 	// Print summary
-	printDeriveSummary(cfg, input.DomainModel, input.Decisions, result)
+	printDeriveSummary(cfg, input.DomainModel, input.Decisions, result, domainModelDoc, boundedContextMap)
 
 	return nil
 }
 
-// Phase 5: Derive AC and BR
+// Phase 5a: Derive Domain Model document
+func deriveDomainModelDoc(client *claude.Client, dm *domain.Domain, input string) (*DomainModelDoc, error) {
+	domainJSON, _ := json.MarshalIndent(dm, "", "  ")
+
+	prompt := prompts.DeriveDomainModel + "\n" + input + "\n\nEXISTING DOMAIN ANALYSIS:\n" + string(domainJSON)
+
+	var result DomainModelDoc
+	if err := client.CallJSON(prompt, &result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+// Phase 5b: Derive Bounded Context Map
+func deriveBoundedContextMap(client *claude.Client, domainModelDoc *DomainModelDoc) (*BoundedContextMap, error) {
+	domainJSON, _ := json.MarshalIndent(domainModelDoc, "", "  ")
+
+	prompt := prompts.DeriveBoundedContext + "\n" + string(domainJSON)
+
+	var result BoundedContextMap
+	if err := client.CallJSON(prompt, &result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+// Phase 5c: Derive AC and BR
 func deriveDocuments(client *claude.Client, dm *domain.Domain, decisions []domain.Decision, input string) (*domain.DerivationResult, error) {
 	domainJSON, _ := json.MarshalIndent(dm, "", "  ")
 	decisionsJSON, _ := json.MarshalIndent(decisions, "", "  ")
@@ -112,11 +254,27 @@ func deriveDocuments(client *claude.Client, dm *domain.Domain, decisions []domai
 }
 
 // Phase 6: Write output files
-func writeOutputFiles(cfg *config.Config, result *domain.DerivationResult, newDecisions []domain.Decision) error {
+func writeOutputFiles(cfg *config.Config, result *domain.DerivationResult, domainModelDoc *DomainModelDoc, boundedContextMap *BoundedContextMap, newDecisions []domain.Decision) error {
 	// Create output directory
 	if err := os.MkdirAll(cfg.OutputDir, 0755); err != nil {
 		return err
 	}
+
+	// Write domain-model.md
+	dmPath := cfg.OutputDir + "/domain-model.md"
+	dmContent := formatDomainModel(domainModelDoc)
+	if err := os.WriteFile(dmPath, []byte(dmContent), 0644); err != nil {
+		return err
+	}
+	fmt.Fprintf(os.Stderr, "  Written: %s\n", dmPath)
+
+	// Write bounded-context-map.md
+	bcPath := cfg.OutputDir + "/bounded-context-map.md"
+	bcContent := formatBoundedContextMap(boundedContextMap)
+	if err := os.WriteFile(bcPath, []byte(bcContent), 0644); err != nil {
+		return err
+	}
+	fmt.Fprintf(os.Stderr, "  Written: %s\n", bcPath)
 
 	// Write acceptance-criteria.md
 	acPath := cfg.OutputDir + "/acceptance-criteria.md"
@@ -133,6 +291,21 @@ func writeOutputFiles(cfg *config.Config, result *domain.DerivationResult, newDe
 		return err
 	}
 	fmt.Fprintf(os.Stderr, "  Written: %s\n", brPath)
+
+	// Write JSON outputs for further processing
+	dmJSONPath := cfg.OutputDir + "/domain-model.json"
+	dmJSON, _ := json.MarshalIndent(domainModelDoc, "", "  ")
+	if err := os.WriteFile(dmJSONPath, dmJSON, 0644); err != nil {
+		return err
+	}
+	fmt.Fprintf(os.Stderr, "  Written: %s\n", dmJSONPath)
+
+	bcJSONPath := cfg.OutputDir + "/bounded-context-map.json"
+	bcJSON, _ := json.MarshalIndent(boundedContextMap, "", "  ")
+	if err := os.WriteFile(bcJSONPath, bcJSON, 0644); err != nil {
+		return err
+	}
+	fmt.Fprintf(os.Stderr, "  Written: %s\n", bcJSONPath)
 
 	// Append new decisions to decisions.md
 	if len(newDecisions) > 0 {
@@ -230,24 +403,213 @@ func formatDecisions(decisions []domain.Decision) string {
 	return sb.String()
 }
 
-func printDeriveSummary(cfg *config.Config, dm *domain.Domain, decisions []domain.Decision, result *domain.DerivationResult) {
+func formatDomainModel(doc *DomainModelDoc) string {
+	var sb strings.Builder
+
+	sb.WriteString("# Domain Model\n\n")
+	sb.WriteString(fmt.Sprintf("Generated: %s\n\n", time.Now().Format(time.RFC3339)))
+	sb.WriteString(fmt.Sprintf("**Domain:** %s\n\n", doc.DomainModel.Name))
+	sb.WriteString(fmt.Sprintf("%s\n\n", doc.DomainModel.Description))
+	sb.WriteString("---\n\n")
+
+	// Entities
+	sb.WriteString("## Entities\n\n")
+	for _, e := range doc.Entities {
+		sb.WriteString(fmt.Sprintf("### %s – %s\n\n", e.ID, e.Name))
+		sb.WriteString(fmt.Sprintf("**Type:** %s\n\n", e.Type))
+		sb.WriteString(fmt.Sprintf("**Purpose:** %s\n\n", e.Purpose))
+
+		if len(e.Attributes) > 0 {
+			sb.WriteString("**Attributes:**\n")
+			sb.WriteString("| Name | Type | Constraints |\n")
+			sb.WriteString("|------|------|-------------|\n")
+			for _, attr := range e.Attributes {
+				sb.WriteString(fmt.Sprintf("| %s | %s | %s |\n", attr.Name, attr.Type, attr.Constraints))
+			}
+			sb.WriteString("\n")
+		}
+
+		if len(e.Invariants) > 0 {
+			sb.WriteString("**Invariants:**\n")
+			for _, inv := range e.Invariants {
+				sb.WriteString(fmt.Sprintf("- %s\n", inv))
+			}
+			sb.WriteString("\n")
+		}
+
+		if len(e.Operations) > 0 {
+			sb.WriteString("**Operations:**\n")
+			for _, op := range e.Operations {
+				sb.WriteString(fmt.Sprintf("- `%s`\n", op.Signature))
+				if len(op.Preconditions) > 0 {
+					sb.WriteString(fmt.Sprintf("  - Pre: %v\n", op.Preconditions))
+				}
+				if len(op.Postconditions) > 0 {
+					sb.WriteString(fmt.Sprintf("  - Post: %v\n", op.Postconditions))
+				}
+			}
+			sb.WriteString("\n")
+		}
+
+		if len(e.Events) > 0 {
+			sb.WriteString("**Events:**\n")
+			for _, evt := range e.Events {
+				sb.WriteString(fmt.Sprintf("- `%s` (trigger: %s)\n", evt.Name, evt.Trigger))
+			}
+			sb.WriteString("\n")
+		}
+
+		if len(e.Relationships) > 0 {
+			sb.WriteString("**Relationships:**\n")
+			for _, rel := range e.Relationships {
+				sb.WriteString(fmt.Sprintf("- %s %s (%s)\n", rel.Type, rel.Target, rel.Cardinality))
+			}
+			sb.WriteString("\n")
+		}
+
+		sb.WriteString("---\n\n")
+	}
+
+	// Value Objects
+	if len(doc.ValueObjects) > 0 {
+		sb.WriteString("## Value Objects\n\n")
+		for _, vo := range doc.ValueObjects {
+			sb.WriteString(fmt.Sprintf("### %s – %s\n\n", vo.ID, vo.Name))
+			sb.WriteString(fmt.Sprintf("**Purpose:** %s\n\n", vo.Purpose))
+
+			if len(vo.Attributes) > 0 {
+				sb.WriteString("**Attributes:**\n")
+				for _, attr := range vo.Attributes {
+					sb.WriteString(fmt.Sprintf("- `%s` (%s): %s\n", attr.Name, attr.Type, attr.Constraints))
+				}
+				sb.WriteString("\n")
+			}
+
+			if len(vo.Operations) > 0 {
+				sb.WriteString(fmt.Sprintf("**Operations:** %v\n\n", vo.Operations))
+			}
+
+			sb.WriteString("---\n\n")
+		}
+	}
+
+	// Summary
+	sb.WriteString("## Summary\n\n")
+	sb.WriteString(fmt.Sprintf("- Aggregate Roots: %d\n", doc.Summary.AggregateRoots))
+	sb.WriteString(fmt.Sprintf("- Entities: %d\n", doc.Summary.Entities))
+	sb.WriteString(fmt.Sprintf("- Value Objects: %d\n", doc.Summary.ValueObjects))
+	sb.WriteString(fmt.Sprintf("- Total Operations: %d\n", doc.Summary.TotalOperations))
+	sb.WriteString(fmt.Sprintf("- Total Events: %d\n", doc.Summary.TotalEvents))
+
+	return sb.String()
+}
+
+func formatBoundedContextMap(bcm *BoundedContextMap) string {
+	var sb strings.Builder
+
+	sb.WriteString("# Bounded Context Map\n\n")
+	sb.WriteString(fmt.Sprintf("Generated: %s\n\n", time.Now().Format(time.RFC3339)))
+	sb.WriteString("---\n\n")
+
+	// Bounded Contexts
+	sb.WriteString("## Bounded Contexts\n\n")
+	for _, bc := range bcm.BoundedContexts {
+		sb.WriteString(fmt.Sprintf("### %s – %s\n\n", bc.ID, bc.Name))
+		sb.WriteString(fmt.Sprintf("**Purpose:** %s\n\n", bc.Purpose))
+
+		if len(bc.CoreEntities) > 0 {
+			sb.WriteString(fmt.Sprintf("**Core Entities:** %v\n\n", bc.CoreEntities))
+		}
+
+		if len(bc.Aggregates) > 0 {
+			sb.WriteString(fmt.Sprintf("**Aggregates:** %v\n\n", bc.Aggregates))
+		}
+
+		if len(bc.Capabilities) > 0 {
+			sb.WriteString("**Capabilities:**\n")
+			for _, cap := range bc.Capabilities {
+				sb.WriteString(fmt.Sprintf("- %s\n", cap))
+			}
+			sb.WriteString("\n")
+		}
+
+		if len(bc.UbiquitousLanguage) > 0 {
+			sb.WriteString("**Ubiquitous Language:**\n")
+			for term, def := range bc.UbiquitousLanguage {
+				sb.WriteString(fmt.Sprintf("- **%s**: %s\n", term, def))
+			}
+			sb.WriteString("\n")
+		}
+
+		sb.WriteString("---\n\n")
+	}
+
+	// Context Relationships
+	if len(bcm.ContextRelationships) > 0 {
+		sb.WriteString("## Context Relationships\n\n")
+		sb.WriteString("| Upstream | Downstream | Type | Pattern |\n")
+		sb.WriteString("|----------|------------|------|----------|\n")
+		for _, rel := range bcm.ContextRelationships {
+			sb.WriteString(fmt.Sprintf("| %s | %s | %s | %s |\n",
+				rel.Upstream, rel.Downstream, rel.RelationshipType, rel.IntegrationPattern))
+		}
+		sb.WriteString("\n")
+	}
+
+	// Generate Context Map Diagram programmatically
+	sb.WriteString("## Context Map Diagram\n\n")
+	sb.WriteString("```mermaid\nflowchart TB\n")
+	for _, bc := range bcm.BoundedContexts {
+		// Create subgraph for each context
+		sb.WriteString(fmt.Sprintf("    subgraph %s[\"%s\"]\n", bc.ID, bc.Name))
+		for _, entity := range bc.CoreEntities {
+			sb.WriteString(fmt.Sprintf("        %s_%s[%s]\n", bc.ID, entity, entity))
+		}
+		sb.WriteString("    end\n")
+	}
+	sb.WriteString("\n")
+	// Add relationships
+	for _, rel := range bcm.ContextRelationships {
+		label := rel.IntegrationPattern
+		if label == "" {
+			label = rel.RelationshipType
+		}
+		sb.WriteString(fmt.Sprintf("    %s -->|%s| %s\n", rel.Upstream, label, rel.Downstream))
+	}
+	sb.WriteString("```\n\n")
+
+	// Summary
+	sb.WriteString("## Summary\n\n")
+	sb.WriteString(fmt.Sprintf("- Total Contexts: %d\n", bcm.Summary.TotalContexts))
+	sb.WriteString(fmt.Sprintf("- Total Relationships: %d\n", bcm.Summary.TotalRelationships))
+	if len(bcm.Summary.IntegrationPatternsUsed) > 0 {
+		sb.WriteString(fmt.Sprintf("- Integration Patterns: %v\n", bcm.Summary.IntegrationPatternsUsed))
+	}
+
+	return sb.String()
+}
+
+func printDeriveSummary(cfg *config.Config, dm *domain.Domain, decisions []domain.Decision, result *domain.DerivationResult, domainModelDoc *DomainModelDoc, boundedContextMap *BoundedContextMap) {
 	fmt.Fprintln(os.Stderr, "\n========================================")
-	fmt.Fprintln(os.Stderr, "           DERIVATION COMPLETE")
+	fmt.Fprintln(os.Stderr, "        L1 DERIVATION COMPLETE")
 	fmt.Fprintln(os.Stderr, "========================================")
 
-	fmt.Fprintln(os.Stderr, "\nDomain:")
-	fmt.Fprintf(os.Stderr, "  Entities:      %d\n", len(dm.Entities))
-	fmt.Fprintf(os.Stderr, "  Operations:    %d\n", len(dm.Operations))
-	fmt.Fprintf(os.Stderr, "  Relationships: %d\n", len(dm.Relationships))
+	fmt.Fprintln(os.Stderr, "\nInput:")
+	fmt.Fprintf(os.Stderr, "  Entities (analyzed):    %d\n", len(dm.Entities))
+	fmt.Fprintf(os.Stderr, "  Operations (analyzed):  %d\n", len(dm.Operations))
+	fmt.Fprintf(os.Stderr, "  Decisions used:         %d\n", len(decisions))
 
-	fmt.Fprintln(os.Stderr, "\nDecisions used:")
-	fmt.Fprintf(os.Stderr, "  Total: %d\n", len(decisions))
+	fmt.Fprintln(os.Stderr, "\nGenerated L1 Documents:")
+	fmt.Fprintf(os.Stderr, "  Domain Model:           %d entities, %d value objects\n",
+		len(domainModelDoc.Entities), len(domainModelDoc.ValueObjects))
+	fmt.Fprintf(os.Stderr, "  Bounded Contexts:       %d contexts, %d relationships\n",
+		len(boundedContextMap.BoundedContexts), len(boundedContextMap.ContextRelationships))
+	fmt.Fprintf(os.Stderr, "  Acceptance Criteria:    %d\n", len(result.AcceptanceCriteria))
+	fmt.Fprintf(os.Stderr, "  Business Rules:         %d\n", len(result.BusinessRules))
 
-	fmt.Fprintln(os.Stderr, "\nGenerated:")
-	fmt.Fprintf(os.Stderr, "  Acceptance Criteria: %d\n", len(result.AcceptanceCriteria))
-	fmt.Fprintf(os.Stderr, "  Business Rules:      %d\n", len(result.BusinessRules))
-
-	fmt.Fprintln(os.Stderr, "\nOutput:")
+	fmt.Fprintln(os.Stderr, "\nOutput Files:")
+	fmt.Fprintf(os.Stderr, "  %s/domain-model.md\n", cfg.OutputDir)
+	fmt.Fprintf(os.Stderr, "  %s/bounded-context-map.md\n", cfg.OutputDir)
 	fmt.Fprintf(os.Stderr, "  %s/acceptance-criteria.md\n", cfg.OutputDir)
 	fmt.Fprintf(os.Stderr, "  %s/business-rules.md\n", cfg.OutputDir)
 }
