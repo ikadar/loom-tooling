@@ -24,6 +24,10 @@ func Execute() error {
 		return runInterview()
 	case "derive":
 		return runDeriveNew()
+	case "derive-l2":
+		return runDeriveL2()
+	case "derive-l3":
+		return runDeriveL3()
 	case "version":
 		fmt.Printf("loom-cli v%s\n", Version)
 		return nil
@@ -39,18 +43,27 @@ func printUsage() {
 	fmt.Println(`loom-cli - AI-DOP Documentation Derivation CLI
 
 Usage:
-  loom-cli analyze [options]     # Phases 0-3: analyze and find ambiguities
-  loom-cli interview [options]   # Phase 4: iterative structured interview
-  loom-cli derive [options]      # Phases 5-6: derive AC/BR from decisions
+  loom-cli analyze [options]     # L0 → ambiguities
+  loom-cli interview [options]   # ambiguities → decisions
+  loom-cli derive [options]      # L0+decisions → L1 (AC, BR)
+  loom-cli derive-l2 [options]   # L1 → L2 (Test Cases, Tech Specs)
+  loom-cli derive-l3 [options]   # L2 → L3 (API Spec, Implementation)
   loom-cli version
   loom-cli help
 
 Commands:
   analyze    Analyze L0 input, discover domain model, find ambiguities
   interview  Conduct iterative structured interview (one question at a time)
-  derive     Derive L1 documents from domain model + decisions
+  derive     Derive L1 documents (AC, BR) from domain model + decisions
+  derive-l2  Derive L2 documents (Test Cases, Tech Specs) from L1
+  derive-l3  Derive L3 documents (API Spec, Implementation Skeletons) from L2
   version    Show version information
   help       Show this help message
+
+Derivation Flow:
+  L0 (User Stories) → analyze → interview → derive → L1 (AC, BR)
+  L1 (AC, BR) → derive-l2 → L2 (Test Cases, Tech Specs)
+  L2 (TC, TS) → derive-l3 → L3 (API Spec, Implementation)
 
 Analyze Options:
   --input-file <path>     Path to single L0 input file
@@ -67,24 +80,24 @@ Interview Options:
     1   = Error
     100 = Question available (output contains question JSON)
 
-Derive Options:
+Derive Options (L0 → L1):
   --output-dir <path>     Directory for generated L1 documents (required)
   --decisions <path>      Path to decisions.md (to append new decisions)
   --analysis-file <path>  Path to analysis JSON or interview state
 
-Flow:
+Derive-L2 Options (L1 → L2):
+  --input-dir <path>      Directory containing L1 docs (acceptance-criteria.md, business-rules.md)
+  --output-dir <path>     Directory for generated L2 documents (required)
+
+Derive-L3 Options (L2 → L3):
+  --input-dir <path>      Directory containing L2 docs (test-cases.md, tech-specs.md)
+  --output-dir <path>     Directory for generated L3 documents (required)
+
+Full Flow Example:
   1. loom-cli analyze --input-file story.md > analysis.json
-  2. loom-cli interview --init analysis.json --state state.json  # exits 100
-  3. [Claude presents question, user answers]
-  4. loom-cli interview --state state.json --answer '{"question_id":"...","answer":"..."}'
-  5. Repeat 3-4 until exit code 0
-  6. loom-cli derive --output-dir ./out --analysis-file state.json
-
-Examples:
-  # Initialize interview
-  loom-cli interview --init /tmp/analysis.json --state /tmp/interview.json
-
-  # Answer a question
-  loom-cli interview --state /tmp/interview.json \
-    --answer '{"question_id":"AMB-ENT-001","answer":"Yes, add Draft status","source":"user"}'`)
+  2. loom-cli interview --init analysis.json --state state.json
+  3. [Answer questions until exit code 0]
+  4. loom-cli derive --output-dir ./l1 --analysis-file state.json
+  5. loom-cli derive-l2 --input-dir ./l1 --output-dir ./l2
+  6. loom-cli derive-l3 --input-dir ./l2 --output-dir ./l3`)
 }

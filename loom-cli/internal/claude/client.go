@@ -99,7 +99,18 @@ func (c *Client) CallJSON(prompt string, result interface{}) error {
 		return err
 	}
 
-	// Try to extract JSON from response
+	// Try to extract JSON from markdown code block first
+	codeBlockStart := strings.Index(response, "```json")
+	if codeBlockStart != -1 {
+		codeBlockStart += 7 // skip ```json
+		codeBlockEnd := strings.Index(response[codeBlockStart:], "```")
+		if codeBlockEnd != -1 {
+			jsonStr := strings.TrimSpace(response[codeBlockStart : codeBlockStart+codeBlockEnd])
+			return json.Unmarshal([]byte(jsonStr), result)
+		}
+	}
+
+	// Fallback: Try to extract raw JSON from response
 	jsonStart := strings.Index(response, "{")
 	jsonEnd := strings.LastIndex(response, "}")
 
