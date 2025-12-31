@@ -28,6 +28,8 @@ func Execute() error {
 		return runDeriveL2()
 	case "derive-l3":
 		return runDeriveL3()
+	case "validate":
+		return runValidate()
 	case "version":
 		fmt.Printf("loom-cli v%s\n", Version)
 		return nil
@@ -48,6 +50,7 @@ Usage:
   loom-cli derive [options]      # L0+decisions → L1 (Strategic Design)
   loom-cli derive-l2 [options]   # L1 → L2 (Tactical Design)
   loom-cli derive-l3 [options]   # L2 → L3 (Operational Design)
+  loom-cli validate [options]    # Validate generated documents
   loom-cli version
   loom-cli help
 
@@ -57,6 +60,7 @@ Commands:
   derive     Derive L1 Strategic Design (Domain Model, Bounded Contexts, AC, BR)
   derive-l2  Derive L2 Tactical Design (Test Cases, Tech Specs, Aggregates, Sequences)
   derive-l3  Derive L3 Operational Design (API Spec, Services, Events, Dependencies)
+  validate   Validate documents (structure, traceability, completeness, TDAI)
   version    Show version information
   help       Show this help message
 
@@ -92,6 +96,23 @@ Derive-L2 Options (L1 → L2):
 Derive-L3 Options (L2 → L3):
   --input-dir <path>      Directory containing L2 docs (test-cases.md, tech-specs.md)
   --output-dir <path>     Directory for generated L3 documents (required)
+
+Validate Options:
+  --input-dir <path>      Directory containing documents to validate (required)
+  --level <L1|L2|L3|ALL>  Validation level (default: ALL)
+  --json                  Output results as JSON
+
+Validation Rules:
+  V001  Every document has IDs
+  V002  IDs follow expected patterns (AC-XXX-NNN, BR-XXX-NNN, etc.)
+  V003  All references point to existing IDs
+  V004  Bidirectional links are consistent
+  V005  Every AC has at least 1 test case
+  V006  Every Entity has an aggregate
+  V007  Every Service has an interface contract
+  V008  Negative test ratio >= 20% (TDAI)
+  V009  Every AC has hallucination prevention test (TDAI)
+  V010  No duplicate IDs
 
 Full Flow Example:
   1. loom-cli analyze --input-file story.md > analysis.json
