@@ -45,25 +45,25 @@ func printUsage() {
 Usage:
   loom-cli analyze [options]     # L0 → ambiguities
   loom-cli interview [options]   # ambiguities → decisions
-  loom-cli derive [options]      # L0+decisions → L1 (AC, BR)
-  loom-cli derive-l2 [options]   # L1 → L2 (Test Cases, Tech Specs)
-  loom-cli derive-l3 [options]   # L2 → L3 (API Spec, Implementation)
+  loom-cli derive [options]      # L0+decisions → L1 (Strategic Design)
+  loom-cli derive-l2 [options]   # L1 → L2 (Tactical Design)
+  loom-cli derive-l3 [options]   # L2 → L3 (Operational Design)
   loom-cli version
   loom-cli help
 
 Commands:
   analyze    Analyze L0 input, discover domain model, find ambiguities
   interview  Conduct iterative structured interview (one question at a time)
-  derive     Derive L1 documents (AC, BR) from domain model + decisions
-  derive-l2  Derive L2 documents (Test Cases, Tech Specs) from L1
-  derive-l3  Derive L3 documents (API Spec, Implementation Skeletons) from L2
+  derive     Derive L1 Strategic Design (Domain Model, Bounded Contexts, AC, BR)
+  derive-l2  Derive L2 Tactical Design (Test Cases, Tech Specs, Aggregates, Sequences)
+  derive-l3  Derive L3 Operational Design (API Spec, Services, Events, Dependencies)
   version    Show version information
   help       Show this help message
 
 Derivation Flow:
-  L0 (User Stories) → analyze → interview → derive → L1 (AC, BR)
-  L1 (AC, BR) → derive-l2 → L2 (Test Cases, Tech Specs)
-  L2 (TC, TS) → derive-l3 → L3 (API Spec, Implementation)
+  L0 (User Stories) → analyze → interview → derive → L1 (Strategic Design)
+  L1 (Strategic) → derive-l2 → L2 (Tactical Design)
+  L2 (Tactical) → derive-l3 → L3 (Operational Design)
 
 Analyze Options:
   --input-file <path>     Path to single L0 input file

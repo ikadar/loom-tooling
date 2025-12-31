@@ -554,7 +554,8 @@ func runDeriveL2() error {
 
 	// Print summary
 	fmt.Fprintln(os.Stderr, "\n========================================")
-	fmt.Fprintln(os.Stderr, "        L2 DERIVATION COMPLETE")
+	fmt.Fprintln(os.Stderr, "   L2 DERIVATION COMPLETE")
+	fmt.Fprintln(os.Stderr, "   (Tactical Design Layer)")
 	fmt.Fprintln(os.Stderr, "========================================")
 	fmt.Fprintln(os.Stderr, "")
 	fmt.Fprintln(os.Stderr, "Generated:")

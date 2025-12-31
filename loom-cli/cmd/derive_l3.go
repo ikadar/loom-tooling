@@ -381,7 +381,8 @@ func runDeriveL3() error {
 
 	// Print summary
 	fmt.Fprintln(os.Stderr, "\n========================================")
-	fmt.Fprintln(os.Stderr, "        L3 DERIVATION COMPLETE")
+	fmt.Fprintln(os.Stderr, "   L3 DERIVATION COMPLETE")
+	fmt.Fprintln(os.Stderr, "   (Operational Design Layer)")
 	fmt.Fprintln(os.Stderr, "========================================")
 	fmt.Fprintln(os.Stderr, "")
 	fmt.Fprintln(os.Stderr, "Generated:")

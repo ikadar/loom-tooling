@@ -292,21 +292,6 @@ func writeOutputFiles(cfg *config.Config, result *domain.DerivationResult, domai
 	}
 	fmt.Fprintf(os.Stderr, "  Written: %s\n", brPath)
 
-	// Write JSON outputs for further processing
-	dmJSONPath := cfg.OutputDir + "/domain-model.json"
-	dmJSON, _ := json.MarshalIndent(domainModelDoc, "", "  ")
-	if err := os.WriteFile(dmJSONPath, dmJSON, 0644); err != nil {
-		return err
-	}
-	fmt.Fprintf(os.Stderr, "  Written: %s\n", dmJSONPath)
-
-	bcJSONPath := cfg.OutputDir + "/bounded-context-map.json"
-	bcJSON, _ := json.MarshalIndent(boundedContextMap, "", "  ")
-	if err := os.WriteFile(bcJSONPath, bcJSON, 0644); err != nil {
-		return err
-	}
-	fmt.Fprintf(os.Stderr, "  Written: %s\n", bcJSONPath)
-
 	// Append new decisions to decisions.md
 	if len(newDecisions) > 0 {
 		decContent := formatDecisions(newDecisions)
@@ -591,7 +576,8 @@ func formatBoundedContextMap(bcm *BoundedContextMap) string {
 
 func printDeriveSummary(cfg *config.Config, dm *domain.Domain, decisions []domain.Decision, result *domain.DerivationResult, domainModelDoc *DomainModelDoc, boundedContextMap *BoundedContextMap) {
 	fmt.Fprintln(os.Stderr, "\n========================================")
-	fmt.Fprintln(os.Stderr, "        L1 DERIVATION COMPLETE")
+	fmt.Fprintln(os.Stderr, "   L1 DERIVATION COMPLETE")
+	fmt.Fprintln(os.Stderr, "   (Strategic Design Layer)")
 	fmt.Fprintln(os.Stderr, "========================================")
 
 	fmt.Fprintln(os.Stderr, "\nInput:")
