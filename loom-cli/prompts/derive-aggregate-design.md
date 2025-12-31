@@ -28,6 +28,8 @@ For each aggregate, include:
 
 ## Output Format
 
+CRITICAL: "valueObjects" must be a simple string array (e.g., `["Money", "Address"]`), NOT objects with fields.
+
 ```json
 {
   "aggregates": [

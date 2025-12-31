@@ -36,19 +36,42 @@ type L2Coverage struct {
 type TestCase struct {
 	ID              string     `json:"id"`
 	Name            string     `json:"name"`
-	Type            string     `json:"type"`
+	Category        string     `json:"category"` // positive, negative, boundary, hallucination
 	ACRef           string     `json:"ac_ref"`
 	BRRefs          []string   `json:"br_refs"`
 	Preconditions   []string   `json:"preconditions"`
 	TestData        []TestData `json:"test_data"`
 	Steps           []string   `json:"steps"`
 	ExpectedResults []string   `json:"expected_results"`
+	ShouldNot       string     `json:"should_not,omitempty"` // For hallucination prevention tests
+}
+
+type TestSuite struct {
+	ACRef   string     `json:"ac_ref"`
+	ACTitle string     `json:"ac_title"`
+	Tests   []TestCase `json:"tests"`
 }
 
 type TestData struct {
 	Field string      `json:"field"`
 	Value interface{} `json:"value"`
 	Notes string      `json:"notes"`
+}
+
+type TDAISummary struct {
+	Total      int `json:"total"`
+	ByCategory struct {
+		Positive      int `json:"positive"`
+		Negative      int `json:"negative"`
+		Boundary      int `json:"boundary"`
+		Hallucination int `json:"hallucination"`
+	} `json:"by_category"`
+	Coverage struct {
+		ACsCovered            int     `json:"acs_covered"`
+		PositiveRatio         float64 `json:"positive_ratio"`
+		NegativeRatio         float64 `json:"negative_ratio"`
+		HasHallucinationTests bool    `json:"has_hallucination_tests"`
+	} `json:"coverage"`
 }
 
 type TechSpec struct {
@@ -352,24 +375,31 @@ func runDeriveL2() error {
 	// Create Claude client
 	client := claude.NewClient()
 
-	// Phase 1: Generate Test Cases from ACs
-	fmt.Fprintln(os.Stderr, "\nPhase L2-1: Generating Test Cases from Acceptance Criteria...")
+	// Phase 1: Generate Test Cases from ACs (TDAI methodology)
+	fmt.Fprintln(os.Stderr, "\nPhase L2-1: Generating TDAI Test Cases from Acceptance Criteria...")
 
 	tcPrompt := prompts.DeriveTestCases + "\n" + string(acContent)
 
 	var tcResult struct {
-		TestCases []TestCase `json:"test_cases"`
-		Summary   struct {
-			Total     int `json:"total"`
-			HappyPath int `json:"happy_path"`
-			ErrorCase int `json:"error_case"`
-			EdgeCase  int `json:"edge_case"`
-		} `json:"summary"`
+		TestSuites []TestSuite `json:"test_suites"`
+		Summary    TDAISummary `json:"summary"`
 	}
 	if err := client.CallJSON(tcPrompt, &tcResult); err != nil {
 		return fmt.Errorf("failed to generate test cases: %w", err)
 	}
-	fmt.Fprintf(os.Stderr, "  Generated: %d Test Cases\n", len(tcResult.TestCases))
+
+	// Flatten test suites into test cases for compatibility
+	var allTestCases []TestCase
+	for _, suite := range tcResult.TestSuites {
+		allTestCases = append(allTestCases, suite.Tests...)
+	}
+
+	fmt.Fprintf(os.Stderr, "  Generated: %d Test Cases (P:%d N:%d B:%d H:%d)\n",
+		tcResult.Summary.Total,
+		tcResult.Summary.ByCategory.Positive,
+		tcResult.Summary.ByCategory.Negative,
+		tcResult.Summary.ByCategory.Boundary,
+		tcResult.Summary.ByCategory.Hallucination)
 
 	// Phase 2: Generate Tech Specs from BRs
 	fmt.Fprintln(os.Stderr, "\nPhase L2-2: Generating Tech Specs from Business Rules...")
@@ -471,30 +501,33 @@ func runDeriveL2() error {
 
 	// Combine results
 	var result L2Result
-	result.TestCases = tcResult.TestCases
+	result.TestCases = allTestCases
 	result.TechSpecs = tsResult.TechSpecs
 	result.Summary = L2Summary{
-		TestCasesGenerated: len(tcResult.TestCases),
+		TestCasesGenerated: len(allTestCases),
 		TechSpecsGenerated: len(tsResult.TechSpecs),
 		Coverage: L2Coverage{
-			ACsCovered:     tcResult.Summary.Total,
+			ACsCovered:     tcResult.Summary.Coverage.ACsCovered,
 			BRsCovered:     tsResult.Summary.Total,
-			HappyPathTests: tcResult.Summary.HappyPath,
-			ErrorTests:     tcResult.Summary.ErrorCase,
-			EdgeCaseTests:  tcResult.Summary.EdgeCase,
+			HappyPathTests: tcResult.Summary.ByCategory.Positive,
+			ErrorTests:     tcResult.Summary.ByCategory.Negative,
+			EdgeCaseTests:  tcResult.Summary.ByCategory.Boundary,
 		},
 	}
+
+	// Store TDAI summary for output
+	tdaiSummary := tcResult.Summary
 
 	// Create output directory
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
-	// Write Test Cases
+	// Write Test Cases (TDAI format)
 	fmt.Fprintln(os.Stderr, "\nPhase L2-3: Writing output...")
 
 	tcPath := filepath.Join(outputDir, "test-cases.md")
-	if err := writeTestCases(tcPath, result.TestCases); err != nil {
+	if err := writeTestCases(tcPath, result.TestCases, tdaiSummary); err != nil {
 		return fmt.Errorf("failed to write test cases: %w", err)
 	}
 	fmt.Fprintf(os.Stderr, "  Written: %s\n", tcPath)
@@ -577,55 +610,99 @@ func runDeriveL2() error {
 	return nil
 }
 
-func writeTestCases(path string, testCases []TestCase) error {
+func writeTestCases(path string, testCases []TestCase, summary TDAISummary) error {
 	f, err := os.Create(path)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 
-	fmt.Fprintf(f, "# Test Cases\n\n")
+	fmt.Fprintf(f, "# TDAI Test Cases\n\n")
 	fmt.Fprintf(f, "Generated: %s\n\n", time.Now().Format(time.RFC3339))
-	fmt.Fprintf(f, "---\n\n")
+	fmt.Fprintf(f, "**Methodology:** Test-Driven AI Development (TDAI)\n\n")
 
-	for _, tc := range testCases {
-		fmt.Fprintf(f, "## %s – %s\n\n", tc.ID, tc.Name)
-		fmt.Fprintf(f, "**Type:** %s\n\n", tc.Type)
+	// TDAI Summary
+	fmt.Fprintf(f, "## Summary\n\n")
+	fmt.Fprintf(f, "| Category | Count | Ratio |\n")
+	fmt.Fprintf(f, "|----------|-------|-------|\n")
+	fmt.Fprintf(f, "| Positive | %d | %.1f%% |\n", summary.ByCategory.Positive, summary.Coverage.PositiveRatio*100)
+	fmt.Fprintf(f, "| Negative | %d | %.1f%% |\n", summary.ByCategory.Negative, summary.Coverage.NegativeRatio*100)
+	fmt.Fprintf(f, "| Boundary | %d | - |\n", summary.ByCategory.Boundary)
+	fmt.Fprintf(f, "| Hallucination Prevention | %d | - |\n", summary.ByCategory.Hallucination)
+	fmt.Fprintf(f, "| **Total** | **%d** | - |\n\n", summary.Total)
 
-		fmt.Fprintf(f, "**Preconditions:**\n")
-		for _, p := range tc.Preconditions {
-			fmt.Fprintf(f, "- %s\n", p)
+	fmt.Fprintf(f, "**Coverage:** %d ACs covered\n", summary.Coverage.ACsCovered)
+	if summary.Coverage.HasHallucinationTests {
+		fmt.Fprintf(f, "**Hallucination Prevention:** ✓ Enabled\n")
+	}
+	fmt.Fprintf(f, "\n---\n\n")
+
+	// Group tests by category
+	categories := []string{"positive", "negative", "boundary", "hallucination"}
+	categoryNames := map[string]string{
+		"positive":      "Positive Tests (Happy Path)",
+		"negative":      "Negative Tests (Error Cases)",
+		"boundary":      "Boundary Tests",
+		"hallucination": "Hallucination Prevention Tests",
+	}
+
+	for _, cat := range categories {
+		var catTests []TestCase
+		for _, tc := range testCases {
+			if tc.Category == cat {
+				catTests = append(catTests, tc)
+			}
 		}
-		fmt.Fprintf(f, "\n")
 
-		if len(tc.TestData) > 0 {
-			fmt.Fprintf(f, "**Test Data:**\n")
-			fmt.Fprintf(f, "| Field | Value | Notes |\n")
-			fmt.Fprintf(f, "|-------|-------|-------|\n")
-			for _, td := range tc.TestData {
-				fmt.Fprintf(f, "| %s | %v | %s |\n", td.Field, td.Value, td.Notes)
+		if len(catTests) == 0 {
+			continue
+		}
+
+		fmt.Fprintf(f, "## %s\n\n", categoryNames[cat])
+
+		for _, tc := range catTests {
+			fmt.Fprintf(f, "### %s – %s\n\n", tc.ID, tc.Name)
+
+			// Special handling for hallucination tests
+			if tc.Category == "hallucination" && tc.ShouldNot != "" {
+				fmt.Fprintf(f, "**⚠️ Should NOT:** %s\n\n", tc.ShouldNot)
+			}
+
+			fmt.Fprintf(f, "**Preconditions:**\n")
+			for _, p := range tc.Preconditions {
+				fmt.Fprintf(f, "- %s\n", p)
 			}
 			fmt.Fprintf(f, "\n")
-		}
 
-		fmt.Fprintf(f, "**Steps:**\n")
-		for i, s := range tc.Steps {
-			fmt.Fprintf(f, "%d. %s\n", i+1, s)
-		}
-		fmt.Fprintf(f, "\n")
+			if len(tc.TestData) > 0 {
+				fmt.Fprintf(f, "**Test Data:**\n")
+				fmt.Fprintf(f, "| Field | Value | Notes |\n")
+				fmt.Fprintf(f, "|-------|-------|-------|\n")
+				for _, td := range tc.TestData {
+					fmt.Fprintf(f, "| %s | %v | %s |\n", td.Field, td.Value, td.Notes)
+				}
+				fmt.Fprintf(f, "\n")
+			}
 
-		fmt.Fprintf(f, "**Expected Result:**\n")
-		for _, r := range tc.ExpectedResults {
-			fmt.Fprintf(f, "- %s\n", r)
-		}
-		fmt.Fprintf(f, "\n")
+			fmt.Fprintf(f, "**Steps:**\n")
+			for i, s := range tc.Steps {
+				fmt.Fprintf(f, "%d. %s\n", i+1, s)
+			}
+			fmt.Fprintf(f, "\n")
 
-		fmt.Fprintf(f, "**Traceability:**\n")
-		fmt.Fprintf(f, "- AC: %s\n", tc.ACRef)
-		if len(tc.BRRefs) > 0 {
-			fmt.Fprintf(f, "- BR: %v\n", tc.BRRefs)
+			fmt.Fprintf(f, "**Expected Result:**\n")
+			for _, r := range tc.ExpectedResults {
+				fmt.Fprintf(f, "- %s\n", r)
+			}
+			fmt.Fprintf(f, "\n")
+
+			fmt.Fprintf(f, "**Traceability:**\n")
+			fmt.Fprintf(f, "- AC: %s\n", tc.ACRef)
+			if len(tc.BRRefs) > 0 {
+				fmt.Fprintf(f, "- BR: %v\n", tc.BRRefs)
+			}
+			fmt.Fprintf(f, "\n---\n\n")
 		}
-		fmt.Fprintf(f, "\n---\n\n")
 	}
 
 	return nil

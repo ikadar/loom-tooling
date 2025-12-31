@@ -23,6 +23,8 @@ For each service interface, include:
 
 ## Output Format
 
+CRITICAL: Event "payload" must be a simple string array (e.g., `["orderId", "customerId"]`), NOT objects.
+
 ```json
 {
   "interface_contracts": [

@@ -3,6 +3,7 @@ package claude
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 )
@@ -27,7 +28,8 @@ func NewClient() *Client {
 
 // Call sends a prompt to Claude and returns the response
 func (c *Client) Call(prompt string) (string, error) {
-	args := []string{"-p", prompt, "--output-format", "json"}
+	// Don't use --output-format json as it returns empty result for multi-turn responses
+	args := []string{"-p", prompt}
 
 	// Resume session if we have one
 	if c.SessionID != "" {
@@ -35,6 +37,8 @@ func (c *Client) Call(prompt string) (string, error) {
 	}
 
 	cmd := exec.Command("claude", args...)
+	// Set high output token limit for large generations
+	cmd.Env = append(os.Environ(), "CLAUDE_CODE_MAX_OUTPUT_TOKENS=100000")
 
 	output, err := cmd.Output()
 	if err != nil {
@@ -44,26 +48,15 @@ func (c *Client) Call(prompt string) (string, error) {
 		return "", fmt.Errorf("failed to run claude: %w", err)
 	}
 
-	var response Response
-	if err := json.Unmarshal(output, &response); err != nil {
-		// If JSON parsing fails, return raw output
-		return strings.TrimSpace(string(output)), nil
-	}
-
-	// Store session ID for continuation
-	if response.SessionID != "" {
-		c.SessionID = response.SessionID
-	}
-
-	return response.Result, nil
+	return strings.TrimSpace(string(output)), nil
 }
 
 // CallWithSystemPrompt calls Claude with an additional system prompt
 func (c *Client) CallWithSystemPrompt(systemPrompt, userPrompt string) (string, error) {
+	// Don't use --output-format json as it returns empty result for multi-turn responses
 	args := []string{
 		"-p", userPrompt,
 		"--append-system-prompt", systemPrompt,
-		"--output-format", "json",
 	}
 
 	if c.SessionID != "" {
@@ -71,6 +64,8 @@ func (c *Client) CallWithSystemPrompt(systemPrompt, userPrompt string) (string, 
 	}
 
 	cmd := exec.Command("claude", args...)
+	// Set high output token limit for large generations
+	cmd.Env = append(os.Environ(), "CLAUDE_CODE_MAX_OUTPUT_TOKENS=100000")
 
 	output, err := cmd.Output()
 	if err != nil {
@@ -80,16 +75,7 @@ func (c *Client) CallWithSystemPrompt(systemPrompt, userPrompt string) (string, 
 		return "", fmt.Errorf("failed to run claude: %w", err)
 	}
 
-	var response Response
-	if err := json.Unmarshal(output, &response); err != nil {
-		return strings.TrimSpace(string(output)), nil
-	}
-
-	if response.SessionID != "" {
-		c.SessionID = response.SessionID
-	}
-
-	return response.Result, nil
+	return strings.TrimSpace(string(output)), nil
 }
 
 // sanitizeJSON attempts to fix common JSON issues from LLM output
