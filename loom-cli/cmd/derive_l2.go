@@ -12,6 +12,16 @@ import (
 	"github.com/ikadar/loom-cli/prompts"
 )
 
+// toAnchorL2 converts an ID to a lowercase anchor (e.g., "TC-AC-CUST-001-P01" -> "tc-ac-cust-001-p01")
+func toAnchorL2(id string) string {
+	return strings.ToLower(id)
+}
+
+// toLinkL2 creates a markdown link with anchor
+func toLinkL2(id, file string) string {
+	return fmt.Sprintf("[%s](%s#%s)", id, file, toAnchorL2(id))
+}
+
 // L2Result is the output of the derive-l2 command
 type L2Result struct {
 	Summary    L2Summary    `json:"summary"`
@@ -661,7 +671,8 @@ func writeTestCases(path string, testCases []TestCase, summary TDAISummary) erro
 		fmt.Fprintf(f, "## %s\n\n", categoryNames[cat])
 
 		for _, tc := range catTests {
-			fmt.Fprintf(f, "### %s – %s\n\n", tc.ID, tc.Name)
+			// Add anchor: ### TC-AC-CUST-001-P01 – Title {#tc-ac-cust-001-p01}
+			fmt.Fprintf(f, "### %s – %s {#%s}\n\n", tc.ID, tc.Name, toAnchorL2(tc.ID))
 
 			// Special handling for hallucination tests
 			if tc.Category == "hallucination" && tc.ShouldNot != "" {
@@ -697,9 +708,17 @@ func writeTestCases(path string, testCases []TestCase, summary TDAISummary) erro
 			fmt.Fprintf(f, "\n")
 
 			fmt.Fprintf(f, "**Traceability:**\n")
-			fmt.Fprintf(f, "- AC: %s\n", tc.ACRef)
+			// Link to L1 acceptance-criteria.md
+			fmt.Fprintf(f, "- AC: %s\n", toLinkL2(tc.ACRef, "../l1/acceptance-criteria.md"))
 			if len(tc.BRRefs) > 0 {
-				fmt.Fprintf(f, "- BR: %v\n", tc.BRRefs)
+				fmt.Fprintf(f, "- BR: ")
+				for i, br := range tc.BRRefs {
+					if i > 0 {
+						fmt.Fprintf(f, ", ")
+					}
+					fmt.Fprintf(f, "%s", toLinkL2(br, "../l1/business-rules.md"))
+				}
+				fmt.Fprintf(f, "\n")
 			}
 			fmt.Fprintf(f, "\n---\n\n")
 		}
@@ -720,7 +739,8 @@ func writeTechSpecs(path string, techSpecs []TechSpec) error {
 	fmt.Fprintf(f, "---\n\n")
 
 	for _, ts := range techSpecs {
-		fmt.Fprintf(f, "## %s – %s\n\n", ts.ID, ts.Name)
+		// Add anchor: ## TS-BR-CUST-001 – Title {#ts-br-cust-001}
+		fmt.Fprintf(f, "## %s – %s {#%s}\n\n", ts.ID, ts.Name, toAnchorL2(ts.ID))
 		fmt.Fprintf(f, "**Rule:** %s\n\n", ts.Rule)
 		fmt.Fprintf(f, "**Implementation Approach:**\n%s\n\n", ts.Implementation)
 
@@ -753,9 +773,17 @@ func writeTechSpecs(path string, techSpecs []TechSpec) error {
 		}
 
 		fmt.Fprintf(f, "**Traceability:**\n")
-		fmt.Fprintf(f, "- BR: %s\n", ts.BRRef)
+		// Link to L1 business-rules.md
+		fmt.Fprintf(f, "- BR: %s\n", toLinkL2(ts.BRRef, "../l1/business-rules.md"))
 		if len(ts.RelatedACs) > 0 {
-			fmt.Fprintf(f, "- Related ACs: %v\n", ts.RelatedACs)
+			fmt.Fprintf(f, "- Related ACs: ")
+			for i, ac := range ts.RelatedACs {
+				if i > 0 {
+					fmt.Fprintf(f, ", ")
+				}
+				fmt.Fprintf(f, "%s", toLinkL2(ac, "../l1/acceptance-criteria.md"))
+			}
+			fmt.Fprintf(f, "\n")
 		}
 		fmt.Fprintf(f, "\n---\n\n")
 	}
@@ -791,7 +819,7 @@ func writeInterfaceContracts(path string, contracts []InterfaceContract, sharedT
 
 	// Contracts
 	for _, ic := range contracts {
-		fmt.Fprintf(f, "## %s – %s\n\n", ic.ID, ic.ServiceName)
+		fmt.Fprintf(f, "## %s – %s {#%s}\n\n", ic.ID, ic.ServiceName, toAnchorL2(ic.ID))
 		fmt.Fprintf(f, "**Purpose:** %s\n\n", ic.Purpose)
 		fmt.Fprintf(f, "**Base URL:** `%s`\n\n", ic.BaseURL)
 
@@ -872,7 +900,7 @@ func writeAggregateDesign(path string, aggregates []AggregateDesign) error {
 	fmt.Fprintf(f, "---\n\n")
 
 	for _, agg := range aggregates {
-		fmt.Fprintf(f, "## %s – %s\n\n", agg.ID, agg.Name)
+		fmt.Fprintf(f, "## %s – %s {#%s}\n\n", agg.ID, agg.Name, toAnchorL2(agg.ID))
 		fmt.Fprintf(f, "**Purpose:** %s\n\n", agg.Purpose)
 
 		// Root
@@ -956,7 +984,7 @@ func writeSequenceDesign(path string, sequences []SequenceDesign) error {
 	fmt.Fprintf(f, "---\n\n")
 
 	for _, seq := range sequences {
-		fmt.Fprintf(f, "## %s – %s\n\n", seq.ID, seq.Name)
+		fmt.Fprintf(f, "## %s – %s {#%s}\n\n", seq.ID, seq.Name, toAnchorL2(seq.ID))
 		fmt.Fprintf(f, "%s\n\n", seq.Description)
 
 		// Trigger
@@ -1050,7 +1078,7 @@ func writeDataModel(path string, tables []DataTable, enums []DataEnum) error {
 	// Tables
 	fmt.Fprintf(f, "## Tables\n\n")
 	for _, tbl := range tables {
-		fmt.Fprintf(f, "### %s – %s\n\n", tbl.ID, tbl.Name)
+		fmt.Fprintf(f, "### %s – %s {#%s}\n\n", tbl.ID, tbl.Name, toAnchorL2(tbl.ID))
 		fmt.Fprintf(f, "**Aggregate:** %s\n\n", tbl.Aggregate)
 		fmt.Fprintf(f, "**Purpose:** %s\n\n", tbl.Purpose)
 

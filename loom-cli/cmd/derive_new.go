@@ -309,6 +309,16 @@ func writeOutputFiles(cfg *config.Config, result *domain.DerivationResult, domai
 	return nil
 }
 
+// toAnchor converts an ID to a lowercase anchor (e.g., "AC-CUST-001" -> "ac-cust-001")
+func toAnchor(id string) string {
+	return strings.ToLower(id)
+}
+
+// toLink creates a markdown link with anchor (e.g., [AC-CUST-001](acceptance-criteria.md#ac-cust-001))
+func toLink(id, file string) string {
+	return fmt.Sprintf("[%s](%s#%s)", id, file, toAnchor(id))
+}
+
 func formatAC(acs []domain.AcceptanceCriteria) string {
 	var sb strings.Builder
 
@@ -317,7 +327,8 @@ func formatAC(acs []domain.AcceptanceCriteria) string {
 	sb.WriteString("---\n\n")
 
 	for _, ac := range acs {
-		sb.WriteString(fmt.Sprintf("## %s – %s\n\n", ac.ID, ac.Title))
+		// Add anchor to heading: ## AC-CUST-001 – Title {#ac-cust-001}
+		sb.WriteString(fmt.Sprintf("## %s – %s {#%s}\n\n", ac.ID, ac.Title, toAnchor(ac.ID)))
 		sb.WriteString(fmt.Sprintf("**Given** %s\n", ac.Given))
 		sb.WriteString(fmt.Sprintf("**When** %s\n", ac.When))
 		sb.WriteString(fmt.Sprintf("**Then** %s\n\n", ac.Then))
@@ -335,7 +346,8 @@ func formatAC(acs []domain.AcceptanceCriteria) string {
 			sb.WriteString(fmt.Sprintf("- Source: %s\n", ref))
 		}
 		for _, ref := range ac.DecisionRefs {
-			sb.WriteString(fmt.Sprintf("- Decision: %s\n", ref))
+			// Link to decisions.md
+			sb.WriteString(fmt.Sprintf("- Decision: %s\n", toLink(ref, "decisions.md")))
 		}
 		sb.WriteString("\n---\n\n")
 	}
@@ -351,7 +363,8 @@ func formatBR(brs []domain.BusinessRule) string {
 	sb.WriteString("---\n\n")
 
 	for _, br := range brs {
-		sb.WriteString(fmt.Sprintf("## %s – %s\n\n", br.ID, br.Title))
+		// Add anchor to heading: ## BR-CUST-001 – Title {#br-cust-001}
+		sb.WriteString(fmt.Sprintf("## %s – %s {#%s}\n\n", br.ID, br.Title, toAnchor(br.ID)))
 		sb.WriteString(fmt.Sprintf("**Rule:** %s\n\n", br.Rule))
 		sb.WriteString(fmt.Sprintf("**Invariant:** %s\n\n", br.Invariant))
 		sb.WriteString(fmt.Sprintf("**Enforcement:** %s\n\n", br.Enforcement))
@@ -365,7 +378,8 @@ func formatBR(brs []domain.BusinessRule) string {
 			sb.WriteString(fmt.Sprintf("- Source: %s\n", ref))
 		}
 		for _, ref := range br.DecisionRefs {
-			sb.WriteString(fmt.Sprintf("- Decision: %s\n", ref))
+			// Link to decisions.md
+			sb.WriteString(fmt.Sprintf("- Decision: %s\n", toLink(ref, "decisions.md")))
 		}
 		sb.WriteString("\n---\n\n")
 	}
@@ -400,7 +414,8 @@ func formatDomainModel(doc *DomainModelDoc) string {
 	// Entities
 	sb.WriteString("## Entities\n\n")
 	for _, e := range doc.Entities {
-		sb.WriteString(fmt.Sprintf("### %s – %s\n\n", e.ID, e.Name))
+		// Add anchor: ### ENT-Customer – Customer {#ent-customer}
+		sb.WriteString(fmt.Sprintf("### %s – %s {#%s}\n\n", e.ID, e.Name, toAnchor(e.ID)))
 		sb.WriteString(fmt.Sprintf("**Type:** %s\n\n", e.Type))
 		sb.WriteString(fmt.Sprintf("**Purpose:** %s\n\n", e.Purpose))
 
@@ -459,7 +474,8 @@ func formatDomainModel(doc *DomainModelDoc) string {
 	if len(doc.ValueObjects) > 0 {
 		sb.WriteString("## Value Objects\n\n")
 		for _, vo := range doc.ValueObjects {
-			sb.WriteString(fmt.Sprintf("### %s – %s\n\n", vo.ID, vo.Name))
+			// Add anchor: ### VO-Money – Money {#vo-money}
+			sb.WriteString(fmt.Sprintf("### %s – %s {#%s}\n\n", vo.ID, vo.Name, toAnchor(vo.ID)))
 			sb.WriteString(fmt.Sprintf("**Purpose:** %s\n\n", vo.Purpose))
 
 			if len(vo.Attributes) > 0 {
@@ -499,7 +515,8 @@ func formatBoundedContextMap(bcm *BoundedContextMap) string {
 	// Bounded Contexts
 	sb.WriteString("## Bounded Contexts\n\n")
 	for _, bc := range bcm.BoundedContexts {
-		sb.WriteString(fmt.Sprintf("### %s – %s\n\n", bc.ID, bc.Name))
+		// Add anchor: ### BC-Customer – Customer Context {#bc-customer}
+		sb.WriteString(fmt.Sprintf("### %s – %s {#%s}\n\n", bc.ID, bc.Name, toAnchor(bc.ID)))
 		sb.WriteString(fmt.Sprintf("**Purpose:** %s\n\n", bc.Purpose))
 
 		if len(bc.CoreEntities) > 0 {
