@@ -1,0 +1,2882 @@
+{
+  "aggregates": [
+    {
+      "id": "AGG-CUSTOMER-001",
+      "name": "Customer",
+      "purpose": "Manages customer identity, authentication credentials, and account lifecycle",
+      "invariants": [
+        {
+          "id": "INV-CUST-001",
+          "rule": "Password must be at least 8 characters and contain at least one number",
+          "enforcement": "Validated on password creation and update via Password value object"
+        },
+        {
+          "id": "INV-CUST-002",
+          "rule": "Email address must be unique across all customers",
+          "enforcement": "Enforced via unique constraint and domain service check before registration"
+        },
+        {
+          "id": "INV-CUST-003",
+          "rule": "Email must be valid format",
+          "enforcement": "Validated via Email value object on creation and update"
+        },
+        {
+          "id": "INV-CUST-004",
+          "rule": "Status transitions must follow valid state machine (unverified→verified→suspended, unverified→suspended)",
+          "enforcement": "Guard clauses in status transition methods"
+        },
+        {
+          "id": "INV-CUST-005",
+          "rule": "Customer must have non-empty first and last name",
+          "enforcement": "Validated on creation and profile update"
+        }
+      ],
+      "root": {
+        "entity": "Customer",
+        "identity": "CustomerId (UUID)",
+        "attributes": [
+          {
+            "name": "email",
+            "type": "Email",
+            "mutable": true
+          },
+          {
+            "name": "passwordHash",
+            "type": "PasswordHash",
+            "mutable": true
+          },
+          {
+            "name": "firstName",
+            "type": "string",
+            "mutable": true
+          },
+          {
+            "name": "lastName",
+            "type": "string",
+            "mutable": true
+          },
+          {
+            "name": "status",
+            "type": "CustomerStatus",
+            "mutable": true
+          },
+          {
+            "name": "createdAt",
+            "type": "DateTime",
+            "mutable": false
+          },
+          {
+            "name": "verifiedAt",
+            "type": "DateTime?",
+            "mutable": true
+          }
+        ]
+      },
+      "entities": [],
+      "valueObjects": [
+        "Email",
+        "PasswordHash",
+        "CustomerStatus",
+        "PersonName"
+      ],
+      "behaviors": [
+        {
+          "name": "register",
+          "command": "RegisterCustomer",
+          "preconditions": [
+            "email is unique (checked via domain service)"
+          ],
+          "postconditions": [
+            "status == 'unverified'",
+            "customer persisted"
+          ],
+          "emits": "CustomerRegistered"
+        },
+        {
+          "name": "verify",
+          "command": "VerifyCustomer",
+          "preconditions": [
+            "status == 'unverified'"
+          ],
+          "postconditions": [
+            "status == 'verified'",
+            "verifiedAt is set"
+          ],
+          "emits": "CustomerVerified"
+        },
+        {
+          "name": "suspend",
+          "command": "SuspendCustomer",
+          "preconditions": [
+            "status in ['unverified', 'verified']"
+          ],
+          "postconditions": [
+            "status == 'suspended'"
+          ],
+          "emits": "CustomerSuspended"
+        },
+        {
+          "name": "reactivate",
+          "command": "ReactivateCustomer",
+          "preconditions": [
+            "status == 'suspended'"
+          ],
+          "postconditions": [
+            "status == 'verified'"
+          ],
+          "emits": "CustomerReactivated"
+        },
+        {
+          "name": "changeEmail",
+          "command": "ChangeCustomerEmail",
+          "preconditions": [
+            "status != 'suspended'",
+            "new email is unique"
+          ],
+          "postconditions": [
+            "email updated",
+            "status == 'unverified' (re-verification required)"
+          ],
+          "emits": "CustomerEmailChanged"
+        },
+        {
+          "name": "changePassword",
+          "command": "ChangeCustomerPassword",
+          "preconditions": [
+            "status != 'suspended'",
+            "new password meets requirements"
+          ],
+          "postconditions": [
+            "passwordHash updated"
+          ],
+          "emits": "CustomerPasswordChanged"
+        },
+        {
+          "name": "updateProfile",
+          "command": "UpdateCustomerProfile",
+          "preconditions": [
+            "status != 'suspended'"
+          ],
+          "postconditions": [
+            "firstName and/or lastName updated"
+          ],
+          "emits": "CustomerProfileUpdated"
+        }
+      ],
+      "events": [
+        {
+          "name": "CustomerRegistered",
+          "payload": [
+            "customerId",
+            "email",
+            "firstName",
+            "lastName",
+            "registeredAt"
+          ]
+        },
+        {
+          "name": "CustomerVerified",
+          "payload": [
+            "customerId",
+            "verifiedAt"
+          ]
+        },
+        {
+          "name": "CustomerSuspended",
+          "payload": [
+            "customerId",
+            "suspendedAt",
+            "reason"
+          ]
+        },
+        {
+          "name": "CustomerReactivated",
+          "payload": [
+            "customerId",
+            "reactivatedAt"
+          ]
+        },
+        {
+          "name": "CustomerEmailChanged",
+          "payload": [
+            "customerId",
+            "oldEmail",
+            "newEmail",
+            "changedAt"
+          ]
+        },
+        {
+          "name": "CustomerPasswordChanged",
+          "payload": [
+            "customerId",
+            "changedAt"
+          ]
+        },
+        {
+          "name": "CustomerProfileUpdated",
+          "payload": [
+            "customerId",
+            "firstName",
+            "lastName",
+            "updatedAt"
+          ]
+        }
+      ],
+      "repository": {
+        "name": "CustomerRepository",
+        "methods": [
+          {
+            "name": "findById",
+            "params": "CustomerId",
+            "returns": "Customer?"
+          },
+          {
+            "name": "findByEmail",
+            "params": "Email",
+            "returns": "Customer?"
+          },
+          {
+            "name": "existsByEmail",
+            "params": "Email",
+            "returns": "boolean"
+          },
+          {
+            "name": "save",
+            "params": "Customer",
+            "returns": "void"
+          }
+        ],
+        "loadStrategy": "Load complete aggregate (single entity)",
+        "concurrency": "Optimistic locking via version field"
+      },
+      "externalReferences": []
+    }
+  ],
+  "enums": [
+    {
+      "name": "registration_status",
+      "values": [
+        "unverified",
+        "verified",
+        "suspended"
+      ]
+    },
+    {
+      "name": "order_status",
+      "values": [
+        "pending",
+        "confirmed",
+        "shipped",
+        "delivered",
+        "cancelled"
+      ]
+    },
+    {
+      "name": "payment_type",
+      "values": [
+        "credit_card",
+        "paypal"
+      ]
+    },
+    {
+      "name": "product_status",
+      "values": [
+        "draft",
+        "active",
+        "archived"
+      ]
+    },
+    {
+      "name": "inventory_action",
+      "values": [
+        "set",
+        "adjust",
+        "reserve",
+        "release",
+        "deduct",
+        "restock"
+      ]
+    }
+  ],
+  "interface_contracts": [
+    {
+      "id": "IC-CUSTOMER-001",
+      "serviceName": "Customer Service",
+      "purpose": "Manages customer registration and account lifecycle",
+      "baseUrl": "/api/v1/customers",
+      "operations": [
+        {
+          "id": "OP-CUSTOMER-001",
+          "name": "registerCustomer",
+          "method": "POST",
+          "path": "/register",
+          "description": "Register a new customer account",
+          "inputSchema": {
+            "email": {
+              "type": "Email",
+              "required": true
+            },
+            "firstName": {
+              "type": "string",
+              "required": true
+            },
+            "lastName": {
+              "type": "string",
+              "required": true
+            },
+            "password": {
+              "type": "string",
+              "required": true
+            }
+          },
+          "outputSchema": {
+            "createdAt": {
+              "type": "DateTime"
+            },
+            "customerId": {
+              "type": "UUID"
+            },
+            "email": {
+              "type": "Email"
+            },
+            "firstName": {
+              "type": "string"
+            },
+            "lastName": {
+              "type": "string"
+            },
+            "status": {
+              "type": "CustomerStatus"
+            }
+          },
+          "errors": [
+            {
+              "code": "DUPLICATE_EMAIL",
+              "httpStatus": 409,
+              "message": "Email already registered. Please login or reset your password."
+            },
+            {
+              "code": "INVALID_PASSWORD",
+              "httpStatus": 400,
+              "message": "Password must be at least 8 characters and contain at least one number."
+            },
+            {
+              "code": "INVALID_EMAIL",
+              "httpStatus": 400,
+              "message": "Invalid email format."
+            }
+          ],
+          "preconditions": [
+            "Email must not be already registered"
+          ],
+          "postconditions": [
+            "Customer account created with status 'unverified'",
+            "Verification email sent to customer"
+          ],
+          "relatedACs": [
+            "AC-CUST-001"
+          ],
+          "relatedBRs": [
+            "BR-CUST-001",
+            "BR-CUST-002"
+          ]
+        }
+      ],
+      "events": [
+        {
+          "name": "CustomerRegistered",
+          "description": "Emitted when a new customer account is created",
+          "payload": [
+            "customerId",
+            "email",
+            "firstName",
+            "lastName",
+            "status"
+          ]
+        },
+        {
+          "name": "VerificationEmailSent",
+          "description": "Emitted when a verification email is dispatched",
+          "payload": [
+            "customerId",
+            "email",
+            "sentAt"
+          ]
+        }
+      ],
+      "securityRequirements": {
+        "authentication": "None (public endpoint)",
+        "authorization": "None"
+      }
+    }
+  ],
+  "sequences": [
+    {
+      "id": "SEQ-CUST-001",
+      "name": "Customer Registration Flow",
+      "description": "Complete flow from registration form submission to account creation",
+      "trigger": {
+        "type": "user_action",
+        "description": "Customer submits registration form"
+      },
+      "participants": [
+        {
+          "name": "Customer",
+          "type": "actor"
+        },
+        {
+          "name": "Customer Service",
+          "type": "service"
+        },
+        {
+          "name": "Customer Aggregate",
+          "type": "aggregate"
+        },
+        {
+          "name": "Email Service",
+          "type": "service"
+        }
+      ],
+      "steps": [
+        {
+          "step": 1,
+          "actor": "Customer",
+          "action": "Submit registration request",
+          "target": "Customer Service",
+          "data": [
+            "email",
+            "password",
+            "firstName",
+            "lastName"
+          ]
+        },
+        {
+          "step": 2,
+          "actor": "Customer Service",
+          "action": "Validate password requirements",
+          "target": "Customer Service"
+        },
+        {
+          "step": 3,
+          "actor": "Customer Service",
+          "action": "Check email uniqueness",
+          "target": "Customer Aggregate",
+          "returns": "Email availability status"
+        },
+        {
+          "step": 4,
+          "actor": "Customer Service",
+          "action": "Create customer with status 'unverified'",
+          "target": "Customer Aggregate",
+          "event": "CustomerCreated"
+        },
+        {
+          "step": 5,
+          "actor": "Customer Service",
+          "action": "Send verification email",
+          "target": "Email Service",
+          "event": "VerificationEmailSent"
+        },
+        {
+          "step": 6,
+          "actor": "Customer Service",
+          "action": "Return registration confirmation",
+          "target": "Customer",
+          "returns": "Registration success with customerId"
+        }
+      ],
+      "outcome": {
+        "success": "Customer account created with 'unverified' status, verification email sent",
+        "state_changes": [
+          "Customer.status = unverified",
+          "Customer.id = generated UUID"
+        ]
+      },
+      "exceptions": [
+        {
+          "condition": "Password does not meet requirements",
+          "step": 2,
+          "handling": "Return error INVALID_PASSWORD with requirements, abort flow"
+        },
+        {
+          "condition": "Email already registered",
+          "step": 3,
+          "handling": "Return error EMAIL_ALREADY_EXISTS, abort flow"
+        }
+      ],
+      "relatedACs": [],
+      "relatedBRs": [
+        "BR-CUST-001",
+        "BR-CUST-002"
+      ]
+    },
+    {
+      "id": "SEQ-CUST-002",
+      "name": "Email Verification Flow",
+      "description": "Customer verifies email address via verification link",
+      "trigger": {
+        "type": "user_action",
+        "description": "Customer clicks email verification link"
+      },
+      "participants": [
+        {
+          "name": "Customer",
+          "type": "actor"
+        },
+        {
+          "name": "Customer Service",
+          "type": "service"
+        },
+        {
+          "name": "Customer Aggregate",
+          "type": "aggregate"
+        }
+      ],
+      "steps": [
+        {
+          "step": 1,
+          "actor": "Customer",
+          "action": "Click verification link",
+          "target": "Customer Service",
+          "data": [
+            "verificationToken"
+          ]
+        },
+        {
+          "step": 2,
+          "actor": "Customer Service",
+          "action": "Validate verification token",
+          "target": "Customer Service",
+          "returns": "Token validity and associated customerId"
+        },
+        {
+          "step": 3,
+          "actor": "Customer Service",
+          "action": "Update customer status to 'verified'",
+          "target": "Customer Aggregate",
+          "event": "CustomerVerified"
+        },
+        {
+          "step": 4,
+          "actor": "Customer Service",
+          "action": "Return verification success",
+          "target": "Customer",
+          "returns": "Verification confirmation"
+        }
+      ],
+      "outcome": {
+        "success": "Customer account status changed to 'verified'",
+        "state_changes": [
+          "Customer.status = verified"
+        ]
+      },
+      "exceptions": [
+        {
+          "condition": "Invalid or expired token",
+          "step": 2,
+          "handling": "Return error INVALID_TOKEN, abort flow"
+        },
+        {
+          "condition": "Customer already verified",
+          "step": 3,
+          "handling": "Return success (idempotent), no state change"
+        }
+      ],
+      "relatedACs": [],
+      "relatedBRs": []
+    },
+    {
+      "id": "SEQ-CUST-003",
+      "name": "Customer Suspension Flow",
+      "description": "Administrator suspends a customer account",
+      "trigger": {
+        "type": "admin_action",
+        "description": "Administrator initiates customer suspension"
+      },
+      "participants": [
+        {
+          "name": "Administrator",
+          "type": "actor"
+        },
+        {
+          "name": "Customer Service",
+          "type": "service"
+        },
+        {
+          "name": "Customer Aggregate",
+          "type": "aggregate"
+        }
+      ],
+      "steps": [
+        {
+          "step": 1,
+          "actor": "Administrator",
+          "action": "Submit suspension request",
+          "target": "Customer Service",
+          "data": [
+            "customerId",
+            "reason"
+          ]
+        },
+        {
+          "step": 2,
+          "actor": "Customer Service",
+          "action": "Verify customer exists",
+          "target": "Customer Aggregate",
+          "returns": "Customer details"
+        },
+        {
+          "step": 3,
+          "actor": "Customer Service",
+          "action": "Update customer status to 'suspended'",
+          "target": "Customer Aggregate",
+          "event": "CustomerSuspended"
+        },
+        {
+          "step": 4,
+          "actor": "Customer Service",
+          "action": "Return suspension confirmation",
+          "target": "Administrator",
+          "returns": "Suspension success with timestamp"
+        }
+      ],
+      "outcome": {
+        "success": "Customer account status changed to 'suspended'",
+        "state_changes": [
+          "Customer.status = suspended"
+        ]
+      },
+      "exceptions": [
+        {
+          "condition": "Customer not found",
+          "step": 2,
+          "handling": "Return error CUSTOMER_NOT_FOUND, abort flow"
+        },
+        {
+          "condition": "Customer already suspended",
+          "step": 3,
+          "handling": "Return success (idempotent), no state change"
+        }
+      ],
+      "relatedACs": [],
+      "relatedBRs": []
+    },
+    {
+      "id": "SEQ-CUST-004",
+      "name": "Customer Profile Update Flow",
+      "description": "Customer updates their profile information",
+      "trigger": {
+        "type": "user_action",
+        "description": "Customer submits profile update form"
+      },
+      "participants": [
+        {
+          "name": "Customer",
+          "type": "actor"
+        },
+        {
+          "name": "Customer Service",
+          "type": "service"
+        },
+        {
+          "name": "Customer Aggregate",
+          "type": "aggregate"
+        }
+      ],
+      "steps": [
+        {
+          "step": 1,
+          "actor": "Customer",
+          "action": "Submit profile update request",
+          "target": "Customer Service",
+          "data": [
+            "customerId",
+            "firstName",
+            "lastName"
+          ]
+        },
+        {
+          "step": 2,
+          "actor": "Customer Service",
+          "action": "Verify customer exists and is not suspended",
+          "target": "Customer Aggregate",
+          "returns": "Customer details with status"
+        },
+        {
+          "step": 3,
+          "actor": "Customer Service",
+          "action": "Update customer profile",
+          "target": "Customer Aggregate",
+          "event": "CustomerProfileUpdated"
+        },
+        {
+          "step": 4,
+          "actor": "Customer Service",
+          "action": "Return update confirmation",
+          "target": "Customer",
+          "returns": "Updated customer profile"
+        }
+      ],
+      "outcome": {
+        "success": "Customer profile information updated",
+        "state_changes": [
+          "Customer.firstName = new value",
+          "Customer.lastName = new value"
+        ]
+      },
+      "exceptions": [
+        {
+          "condition": "Customer not found",
+          "step": 2,
+          "handling": "Return error CUSTOMER_NOT_FOUND, abort flow"
+        },
+        {
+          "condition": "Customer is suspended",
+          "step": 2,
+          "handling": "Return error ACCOUNT_SUSPENDED, abort flow"
+        }
+      ],
+      "relatedACs": [],
+      "relatedBRs": []
+    },
+    {
+      "id": "SEQ-CUST-005",
+      "name": "Customer Email Change Flow",
+      "description": "Customer changes their email address with re-verification",
+      "trigger": {
+        "type": "user_action",
+        "description": "Customer submits email change request"
+      },
+      "participants": [
+        {
+          "name": "Customer",
+          "type": "actor"
+        },
+        {
+          "name": "Customer Service",
+          "type": "service"
+        },
+        {
+          "name": "Customer Aggregate",
+          "type": "aggregate"
+        },
+        {
+          "name": "Email Service",
+          "type": "service"
+        }
+      ],
+      "steps": [
+        {
+          "step": 1,
+          "actor": "Customer",
+          "action": "Submit email change request",
+          "target": "Customer Service",
+          "data": [
+            "customerId",
+            "newEmail"
+          ]
+        },
+        {
+          "step": 2,
+          "actor": "Customer Service",
+          "action": "Verify customer exists and is not suspended",
+          "target": "Customer Aggregate",
+          "returns": "Customer details with status"
+        },
+        {
+          "step": 3,
+          "actor": "Customer Service",
+          "action": "Check new email uniqueness",
+          "target": "Customer Aggregate",
+          "returns": "Email availability status"
+        },
+        {
+          "step": 4,
+          "actor": "Customer Service",
+          "action": "Update email and set status to 'unverified'",
+          "target": "Customer Aggregate",
+          "event": "CustomerEmailChanged"
+        },
+        {
+          "step": 5,
+          "actor": "Customer Service",
+          "action": "Send verification email to new address",
+          "target": "Email Service",
+          "event": "VerificationEmailSent"
+        },
+        {
+          "step": 6,
+          "actor": "Customer Service",
+          "action": "Return email change confirmation",
+          "target": "Customer",
+          "returns": "Email change initiated, verification required"
+        }
+      ],
+      "outcome": {
+        "success": "Customer email updated, status set to 'unverified', verification email sent",
+        "state_changes": [
+          "Customer.email = new email",
+          "Customer.status = unverified"
+        ]
+      },
+      "exceptions": [
+        {
+          "condition": "Customer not found",
+          "step": 2,
+          "handling": "Return error CUSTOMER_NOT_FOUND, abort flow"
+        },
+        {
+          "condition": "Customer is suspended",
+          "step": 2,
+          "handling": "Return error ACCOUNT_SUSPENDED, abort flow"
+        },
+        {
+          "condition": "New email already registered",
+          "step": 3,
+          "handling": "Return error EMAIL_ALREADY_EXISTS, abort flow"
+        }
+      ],
+      "relatedACs": [],
+      "relatedBRs": [
+        "BR-CUST-002"
+      ]
+    }
+  ],
+  "shared_types": [
+    {
+      "name": "Email",
+      "fields": [
+        {
+          "name": "value",
+          "type": "string",
+          "constraints": "valid email format (RFC 5322)"
+        }
+      ]
+    },
+    {
+      "name": "CustomerStatus",
+      "fields": [
+        {
+          "name": "value",
+          "type": "enum",
+          "constraints": "unverified | verified | suspended"
+        }
+      ]
+    }
+  ],
+  "tables": [
+    {
+      "id": "TBL-CUSTOMER-001",
+      "name": "customers",
+      "aggregate": "Customer",
+      "purpose": "Stores customer account information and authentication details",
+      "fields": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "constraints": "NOT NULL",
+          "default": "gen_random_uuid()"
+        },
+        {
+          "name": "email",
+          "type": "VARCHAR(255)",
+          "constraints": "NOT NULL UNIQUE"
+        },
+        {
+          "name": "password_hash",
+          "type": "VARCHAR(255)",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "registration_status",
+          "type": "VARCHAR(20)",
+          "constraints": "NOT NULL",
+          "default": "'unverified'"
+        },
+        {
+          "name": "email_verified",
+          "type": "BOOLEAN",
+          "constraints": "NOT NULL",
+          "default": "false"
+        },
+        {
+          "name": "first_name",
+          "type": "VARCHAR(100)",
+          "constraints": "NULL"
+        },
+        {
+          "name": "last_name",
+          "type": "VARCHAR(100)",
+          "constraints": "NULL"
+        },
+        {
+          "name": "version",
+          "type": "INTEGER",
+          "constraints": "NOT NULL",
+          "default": "1"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "constraints": "NOT NULL",
+          "default": "NOW()"
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "constraints": "NOT NULL",
+          "default": "NOW()"
+        }
+      ],
+      "primaryKey": {
+        "columns": [
+          "id"
+        ]
+      },
+      "indexes": [
+        {
+          "name": "idx_customers_email",
+          "columns": [
+            "email"
+          ]
+        },
+        {
+          "name": "idx_customers_registration_status",
+          "columns": [
+            "registration_status"
+          ]
+        }
+      ],
+      "foreignKeys": [],
+      "checkConstraints": [
+        {
+          "name": "chk_customer_registration_status",
+          "expression": "registration_status IN ('unverified', 'verified', 'suspended')"
+        }
+      ]
+    },
+    {
+      "id": "TBL-CUSTOMER-002",
+      "name": "shipping_addresses",
+      "aggregate": "Customer",
+      "purpose": "Stores customer saved shipping addresses (child of customers)",
+      "fields": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "constraints": "NOT NULL",
+          "default": "gen_random_uuid()"
+        },
+        {
+          "name": "customer_id",
+          "type": "UUID",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "label",
+          "type": "VARCHAR(50)",
+          "constraints": "NULL"
+        },
+        {
+          "name": "street",
+          "type": "VARCHAR(200)",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "city",
+          "type": "VARCHAR(100)",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "state",
+          "type": "VARCHAR(50)",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "postal_code",
+          "type": "VARCHAR(20)",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "country",
+          "type": "CHAR(2)",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "is_default",
+          "type": "BOOLEAN",
+          "constraints": "NOT NULL",
+          "default": "false"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "constraints": "NOT NULL",
+          "default": "NOW()"
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "constraints": "NOT NULL",
+          "default": "NOW()"
+        }
+      ],
+      "primaryKey": {
+        "columns": [
+          "id"
+        ]
+      },
+      "indexes": [
+        {
+          "name": "idx_shipping_addresses_customer",
+          "columns": [
+            "customer_id"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "columns": [
+            "customer_id"
+          ],
+          "references": "customers(id)",
+          "onDelete": "CASCADE"
+        }
+      ],
+      "checkConstraints": []
+    },
+    {
+      "id": "TBL-CART-001",
+      "name": "carts",
+      "aggregate": "Cart",
+      "purpose": "Stores shopping cart header information",
+      "fields": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "constraints": "NOT NULL",
+          "default": "gen_random_uuid()"
+        },
+        {
+          "name": "customer_id",
+          "type": "UUID",
+          "constraints": "NULL"
+        },
+        {
+          "name": "is_guest",
+          "type": "BOOLEAN",
+          "constraints": "NOT NULL",
+          "default": "false"
+        },
+        {
+          "name": "total_price_amount",
+          "type": "DECIMAL(12,2)",
+          "constraints": "NOT NULL",
+          "default": "0.00"
+        },
+        {
+          "name": "total_price_currency",
+          "type": "CHAR(3)",
+          "constraints": "NOT NULL",
+          "default": "'USD'"
+        },
+        {
+          "name": "last_activity_date",
+          "type": "TIMESTAMP",
+          "constraints": "NOT NULL",
+          "default": "NOW()"
+        },
+        {
+          "name": "version",
+          "type": "INTEGER",
+          "constraints": "NOT NULL",
+          "default": "1"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "constraints": "NOT NULL",
+          "default": "NOW()"
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "constraints": "NOT NULL",
+          "default": "NOW()"
+        }
+      ],
+      "primaryKey": {
+        "columns": [
+          "id"
+        ]
+      },
+      "indexes": [
+        {
+          "name": "idx_carts_customer",
+          "columns": [
+            "customer_id"
+          ]
+        },
+        {
+          "name": "idx_carts_last_activity",
+          "columns": [
+            "last_activity_date"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "columns": [
+            "customer_id"
+          ],
+          "references": "customers(id)",
+          "onDelete": "SET NULL"
+        }
+      ],
+      "checkConstraints": [
+        {
+          "name": "chk_cart_total_positive",
+          "expression": "total_price_amount \u003e= 0"
+        }
+      ]
+    },
+    {
+      "id": "TBL-CART-002",
+      "name": "cart_items",
+      "aggregate": "Cart",
+      "purpose": "Stores cart line items (child of carts)",
+      "fields": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "constraints": "NOT NULL",
+          "default": "gen_random_uuid()"
+        },
+        {
+          "name": "cart_id",
+          "type": "UUID",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "product_id",
+          "type": "UUID",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "variant_id",
+          "type": "UUID",
+          "constraints": "NULL"
+        },
+        {
+          "name": "product_name",
+          "type": "VARCHAR(200)",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "unit_price_amount",
+          "type": "DECIMAL(12,2)",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "unit_price_currency",
+          "type": "CHAR(3)",
+          "constraints": "NOT NULL",
+          "default": "'USD'"
+        },
+        {
+          "name": "quantity",
+          "type": "INTEGER",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "subtotal_amount",
+          "type": "DECIMAL(12,2)",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "subtotal_currency",
+          "type": "CHAR(3)",
+          "constraints": "NOT NULL",
+          "default": "'USD'"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "constraints": "NOT NULL",
+          "default": "NOW()"
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "constraints": "NOT NULL",
+          "default": "NOW()"
+        }
+      ],
+      "primaryKey": {
+        "columns": [
+          "id"
+        ]
+      },
+      "indexes": [
+        {
+          "name": "idx_cart_items_cart",
+          "columns": [
+            "cart_id"
+          ]
+        },
+        {
+          "name": "idx_cart_items_product",
+          "columns": [
+            "product_id"
+          ]
+        },
+        {
+          "name": "uq_cart_items_product_variant",
+          "columns": [
+            "cart_id",
+            "product_id",
+            "variant_id"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "columns": [
+            "cart_id"
+          ],
+          "references": "carts(id)",
+          "onDelete": "CASCADE"
+        },
+        {
+          "columns": [
+            "product_id"
+          ],
+          "references": "products(id)",
+          "onDelete": "RESTRICT"
+        },
+        {
+          "columns": [
+            "variant_id"
+          ],
+          "references": "product_variants(id)",
+          "onDelete": "RESTRICT"
+        }
+      ],
+      "checkConstraints": [
+        {
+          "name": "chk_cart_item_quantity",
+          "expression": "quantity \u003e 0"
+        },
+        {
+          "name": "chk_cart_item_price",
+          "expression": "unit_price_amount \u003e= 0 AND subtotal_amount \u003e= 0"
+        }
+      ]
+    },
+    {
+      "id": "TBL-ORDER-001",
+      "name": "orders",
+      "aggregate": "Order",
+      "purpose": "Stores order header information",
+      "fields": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "constraints": "NOT NULL",
+          "default": "gen_random_uuid()"
+        },
+        {
+          "name": "order_number",
+          "type": "VARCHAR(20)",
+          "constraints": "NOT NULL UNIQUE"
+        },
+        {
+          "name": "customer_id",
+          "type": "UUID",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "status",
+          "type": "VARCHAR(20)",
+          "constraints": "NOT NULL",
+          "default": "'pending'"
+        },
+        {
+          "name": "shipping_street",
+          "type": "VARCHAR(200)",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "shipping_city",
+          "type": "VARCHAR(100)",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "shipping_state",
+          "type": "VARCHAR(50)",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "shipping_postal_code",
+          "type": "VARCHAR(20)",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "shipping_country",
+          "type": "CHAR(2)",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "payment_type",
+          "type": "VARCHAR(20)",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "payment_last_four_digits",
+          "type": "CHAR(4)",
+          "constraints": "NULL"
+        },
+        {
+          "name": "payment_paypal_email",
+          "type": "VARCHAR(255)",
+          "constraints": "NULL"
+        },
+        {
+          "name": "payment_transaction_id",
+          "type": "VARCHAR(100)",
+          "constraints": "NULL"
+        },
+        {
+          "name": "subtotal_amount",
+          "type": "DECIMAL(12,2)",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "subtotal_currency",
+          "type": "CHAR(3)",
+          "constraints": "NOT NULL",
+          "default": "'USD'"
+        },
+        {
+          "name": "shipping_cost_amount",
+          "type": "DECIMAL(12,2)",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "shipping_cost_currency",
+          "type": "CHAR(3)",
+          "constraints": "NOT NULL",
+          "default": "'USD'"
+        },
+        {
+          "name": "tax_amount",
+          "type": "DECIMAL(12,2)",
+          "constraints": "NOT NULL",
+          "default": "0.00"
+        },
+        {
+          "name": "tax_currency",
+          "type": "CHAR(3)",
+          "constraints": "NOT NULL",
+          "default": "'USD'"
+        },
+        {
+          "name": "total_amount",
+          "type": "DECIMAL(12,2)",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "total_currency",
+          "type": "CHAR(3)",
+          "constraints": "NOT NULL",
+          "default": "'USD'"
+        },
+        {
+          "name": "tracking_number",
+          "type": "VARCHAR(100)",
+          "constraints": "NULL"
+        },
+        {
+          "name": "cancellation_reason",
+          "type": "VARCHAR(500)",
+          "constraints": "NULL"
+        },
+        {
+          "name": "version",
+          "type": "INTEGER",
+          "constraints": "NOT NULL",
+          "default": "1"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "constraints": "NOT NULL",
+          "default": "NOW()"
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "constraints": "NOT NULL",
+          "default": "NOW()"
+        }
+      ],
+      "primaryKey": {
+        "columns": [
+          "id"
+        ]
+      },
+      "indexes": [
+        {
+          "name": "idx_orders_order_number",
+          "columns": [
+            "order_number"
+          ]
+        },
+        {
+          "name": "idx_orders_customer",
+          "columns": [
+            "customer_id"
+          ]
+        },
+        {
+          "name": "idx_orders_status",
+          "columns": [
+            "status"
+          ]
+        },
+        {
+          "name": "idx_orders_created",
+          "columns": [
+            "created_at"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "columns": [
+            "customer_id"
+          ],
+          "references": "customers(id)",
+          "onDelete": "RESTRICT"
+        }
+      ],
+      "checkConstraints": [
+        {
+          "name": "chk_order_status",
+          "expression": "status IN ('pending', 'confirmed', 'shipped', 'delivered', 'cancelled')"
+        },
+        {
+          "name": "chk_order_amounts",
+          "expression": "total_amount \u003e= 0 AND subtotal_amount \u003e= 0 AND shipping_cost_amount \u003e= 0 AND tax_amount \u003e= 0"
+        },
+        {
+          "name": "chk_order_payment_type",
+          "expression": "payment_type IN ('credit_card', 'paypal')"
+        }
+      ]
+    },
+    {
+      "id": "TBL-ORDER-002",
+      "name": "order_line_items",
+      "aggregate": "Order",
+      "purpose": "Stores order line items (child of orders)",
+      "fields": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "constraints": "NOT NULL",
+          "default": "gen_random_uuid()"
+        },
+        {
+          "name": "order_id",
+          "type": "UUID",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "product_id",
+          "type": "UUID",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "variant_id",
+          "type": "UUID",
+          "constraints": "NULL"
+        },
+        {
+          "name": "product_name",
+          "type": "VARCHAR(200)",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "sku",
+          "type": "VARCHAR(50)",
+          "constraints": "NULL"
+        },
+        {
+          "name": "unit_price_amount",
+          "type": "DECIMAL(12,2)",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "unit_price_currency",
+          "type": "CHAR(3)",
+          "constraints": "NOT NULL",
+          "default": "'USD'"
+        },
+        {
+          "name": "quantity",
+          "type": "INTEGER",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "subtotal_amount",
+          "type": "DECIMAL(12,2)",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "subtotal_currency",
+          "type": "CHAR(3)",
+          "constraints": "NOT NULL",
+          "default": "'USD'"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "constraints": "NOT NULL",
+          "default": "NOW()"
+        }
+      ],
+      "primaryKey": {
+        "columns": [
+          "id"
+        ]
+      },
+      "indexes": [
+        {
+          "name": "idx_order_line_items_order",
+          "columns": [
+            "order_id"
+          ]
+        },
+        {
+          "name": "idx_order_line_items_product",
+          "columns": [
+            "product_id"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "columns": [
+            "order_id"
+          ],
+          "references": "orders(id)",
+          "onDelete": "CASCADE"
+        }
+      ],
+      "checkConstraints": [
+        {
+          "name": "chk_line_item_quantity",
+          "expression": "quantity \u003e 0"
+        },
+        {
+          "name": "chk_line_item_price",
+          "expression": "unit_price_amount \u003e= 0 AND subtotal_amount \u003e= 0"
+        }
+      ]
+    },
+    {
+      "id": "TBL-PRODUCT-001",
+      "name": "products",
+      "aggregate": "Product",
+      "purpose": "Stores product catalog information",
+      "fields": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "constraints": "NOT NULL",
+          "default": "gen_random_uuid()"
+        },
+        {
+          "name": "name",
+          "type": "VARCHAR(200)",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "description",
+          "type": "TEXT",
+          "constraints": "NULL"
+        },
+        {
+          "name": "price_amount",
+          "type": "DECIMAL(12,2)",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "price_currency",
+          "type": "CHAR(3)",
+          "constraints": "NOT NULL",
+          "default": "'USD'"
+        },
+        {
+          "name": "category_id",
+          "type": "UUID",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "is_active",
+          "type": "BOOLEAN",
+          "constraints": "NOT NULL",
+          "default": "true"
+        },
+        {
+          "name": "is_deleted",
+          "type": "BOOLEAN",
+          "constraints": "NOT NULL",
+          "default": "false"
+        },
+        {
+          "name": "status",
+          "type": "VARCHAR(20)",
+          "constraints": "NOT NULL",
+          "default": "'draft'"
+        },
+        {
+          "name": "version",
+          "type": "INTEGER",
+          "constraints": "NOT NULL",
+          "default": "1"
+        },
+        {
+          "name": "created_by",
+          "type": "UUID",
+          "constraints": "NULL"
+        },
+        {
+          "name": "updated_by",
+          "type": "UUID",
+          "constraints": "NULL"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "constraints": "NOT NULL",
+          "default": "NOW()"
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "constraints": "NOT NULL",
+          "default": "NOW()"
+        }
+      ],
+      "primaryKey": {
+        "columns": [
+          "id"
+        ]
+      },
+      "indexes": [
+        {
+          "name": "idx_products_category",
+          "columns": [
+            "category_id"
+          ]
+        },
+        {
+          "name": "idx_products_status",
+          "columns": [
+            "status"
+          ]
+        },
+        {
+          "name": "idx_products_active",
+          "columns": [
+            "is_active",
+            "is_deleted"
+          ]
+        },
+        {
+          "name": "idx_products_name",
+          "columns": [
+            "name"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "columns": [
+            "category_id"
+          ],
+          "references": "categories(id)",
+          "onDelete": "RESTRICT"
+        }
+      ],
+      "checkConstraints": [
+        {
+          "name": "chk_product_price",
+          "expression": "price_amount \u003e= 0.01"
+        },
+        {
+          "name": "chk_product_name_length",
+          "expression": "LENGTH(name) \u003e= 2 AND LENGTH(name) \u003c= 200"
+        },
+        {
+          "name": "chk_product_status",
+          "expression": "status IN ('draft', 'active', 'archived')"
+        }
+      ]
+    },
+    {
+      "id": "TBL-PRODUCT-002",
+      "name": "product_variants",
+      "aggregate": "Product",
+      "purpose": "Stores product variant information (child of products)",
+      "fields": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "constraints": "NOT NULL",
+          "default": "gen_random_uuid()"
+        },
+        {
+          "name": "product_id",
+          "type": "UUID",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "sku",
+          "type": "VARCHAR(50)",
+          "constraints": "NOT NULL UNIQUE"
+        },
+        {
+          "name": "size",
+          "type": "VARCHAR(20)",
+          "constraints": "NULL"
+        },
+        {
+          "name": "color",
+          "type": "VARCHAR(50)",
+          "constraints": "NULL"
+        },
+        {
+          "name": "price_adjustment_amount",
+          "type": "DECIMAL(12,2)",
+          "constraints": "NOT NULL",
+          "default": "0.00"
+        },
+        {
+          "name": "price_adjustment_currency",
+          "type": "CHAR(3)",
+          "constraints": "NOT NULL",
+          "default": "'USD'"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "constraints": "NOT NULL",
+          "default": "NOW()"
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "constraints": "NOT NULL",
+          "default": "NOW()"
+        }
+      ],
+      "primaryKey": {
+        "columns": [
+          "id"
+        ]
+      },
+      "indexes": [
+        {
+          "name": "idx_product_variants_product",
+          "columns": [
+            "product_id"
+          ]
+        },
+        {
+          "name": "idx_product_variants_sku",
+          "columns": [
+            "sku"
+          ]
+        },
+        {
+          "name": "uq_product_variant_combo",
+          "columns": [
+            "product_id",
+            "size",
+            "color"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "columns": [
+            "product_id"
+          ],
+          "references": "products(id)",
+          "onDelete": "CASCADE"
+        }
+      ],
+      "checkConstraints": [
+        {
+          "name": "chk_variant_has_attribute",
+          "expression": "size IS NOT NULL OR color IS NOT NULL"
+        }
+      ]
+    },
+    {
+      "id": "TBL-PRODUCT-003",
+      "name": "product_images",
+      "aggregate": "Product",
+      "purpose": "Stores product image references (child of products)",
+      "fields": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "constraints": "NOT NULL",
+          "default": "gen_random_uuid()"
+        },
+        {
+          "name": "product_id",
+          "type": "UUID",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "url",
+          "type": "VARCHAR(500)",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "alt_text",
+          "type": "VARCHAR(200)",
+          "constraints": "NULL"
+        },
+        {
+          "name": "display_order",
+          "type": "INTEGER",
+          "constraints": "NOT NULL",
+          "default": "0"
+        },
+        {
+          "name": "is_primary",
+          "type": "BOOLEAN",
+          "constraints": "NOT NULL",
+          "default": "false"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "constraints": "NOT NULL",
+          "default": "NOW()"
+        }
+      ],
+      "primaryKey": {
+        "columns": [
+          "id"
+        ]
+      },
+      "indexes": [
+        {
+          "name": "idx_product_images_product",
+          "columns": [
+            "product_id"
+          ]
+        },
+        {
+          "name": "idx_product_images_order",
+          "columns": [
+            "product_id",
+            "display_order"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "columns": [
+            "product_id"
+          ],
+          "references": "products(id)",
+          "onDelete": "CASCADE"
+        }
+      ],
+      "checkConstraints": [
+        {
+          "name": "chk_image_display_order",
+          "expression": "display_order \u003e= 0"
+        }
+      ]
+    },
+    {
+      "id": "TBL-INVENTORY-001",
+      "name": "inventory",
+      "aggregate": "Inventory",
+      "purpose": "Stores stock levels and reservations for products",
+      "fields": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "constraints": "NOT NULL",
+          "default": "gen_random_uuid()"
+        },
+        {
+          "name": "product_id",
+          "type": "UUID",
+          "constraints": "NOT NULL UNIQUE"
+        },
+        {
+          "name": "stock_level",
+          "type": "INTEGER",
+          "constraints": "NOT NULL",
+          "default": "0"
+        },
+        {
+          "name": "reserved_quantity",
+          "type": "INTEGER",
+          "constraints": "NOT NULL",
+          "default": "0"
+        },
+        {
+          "name": "low_stock_threshold",
+          "type": "INTEGER",
+          "constraints": "NOT NULL",
+          "default": "10"
+        },
+        {
+          "name": "version",
+          "type": "INTEGER",
+          "constraints": "NOT NULL",
+          "default": "1"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "constraints": "NOT NULL",
+          "default": "NOW()"
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "constraints": "NOT NULL",
+          "default": "NOW()"
+        }
+      ],
+      "primaryKey": {
+        "columns": [
+          "id"
+        ]
+      },
+      "indexes": [
+        {
+          "name": "idx_inventory_product",
+          "columns": [
+            "product_id"
+          ]
+        },
+        {
+          "name": "idx_inventory_low_stock",
+          "columns": [
+            "stock_level",
+            "low_stock_threshold"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "columns": [
+            "product_id"
+          ],
+          "references": "products(id)",
+          "onDelete": "CASCADE"
+        }
+      ],
+      "checkConstraints": [
+        {
+          "name": "chk_inventory_stock_level",
+          "expression": "stock_level \u003e= 0"
+        },
+        {
+          "name": "chk_inventory_reserved",
+          "expression": "reserved_quantity \u003e= 0 AND reserved_quantity \u003c= stock_level"
+        },
+        {
+          "name": "chk_inventory_threshold",
+          "expression": "low_stock_threshold \u003e= 0"
+        }
+      ]
+    },
+    {
+      "id": "TBL-INVENTORY-002",
+      "name": "inventory_audit_logs",
+      "aggregate": "Inventory",
+      "purpose": "Stores immutable inventory change audit trail (child of inventory)",
+      "fields": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "constraints": "NOT NULL",
+          "default": "gen_random_uuid()"
+        },
+        {
+          "name": "inventory_id",
+          "type": "UUID",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "action",
+          "type": "VARCHAR(30)",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "previous_value",
+          "type": "INTEGER",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "new_value",
+          "type": "INTEGER",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "quantity_changed",
+          "type": "INTEGER",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "reason",
+          "type": "VARCHAR(500)",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "order_id",
+          "type": "UUID",
+          "constraints": "NULL"
+        },
+        {
+          "name": "user_id",
+          "type": "UUID",
+          "constraints": "NULL"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "constraints": "NOT NULL",
+          "default": "NOW()"
+        }
+      ],
+      "primaryKey": {
+        "columns": [
+          "id"
+        ]
+      },
+      "indexes": [
+        {
+          "name": "idx_inventory_audit_inventory",
+          "columns": [
+            "inventory_id"
+          ]
+        },
+        {
+          "name": "idx_inventory_audit_created",
+          "columns": [
+            "created_at"
+          ]
+        },
+        {
+          "name": "idx_inventory_audit_order",
+          "columns": [
+            "order_id"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "columns": [
+            "inventory_id"
+          ],
+          "references": "inventory(id)",
+          "onDelete": "CASCADE"
+        }
+      ],
+      "checkConstraints": [
+        {
+          "name": "chk_audit_action",
+          "expression": "action IN ('set', 'adjust', 'reserve', 'release', 'deduct', 'restock')"
+        },
+        {
+          "name": "chk_audit_values",
+          "expression": "previous_value \u003e= 0 AND new_value \u003e= 0"
+        }
+      ]
+    },
+    {
+      "id": "TBL-CATEGORY-001",
+      "name": "categories",
+      "aggregate": "Category",
+      "purpose": "Stores product category hierarchy",
+      "fields": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "constraints": "NOT NULL",
+          "default": "gen_random_uuid()"
+        },
+        {
+          "name": "name",
+          "type": "VARCHAR(100)",
+          "constraints": "NOT NULL UNIQUE"
+        },
+        {
+          "name": "description",
+          "type": "TEXT",
+          "constraints": "NULL"
+        },
+        {
+          "name": "parent_category_id",
+          "type": "UUID",
+          "constraints": "NULL"
+        },
+        {
+          "name": "depth",
+          "type": "INTEGER",
+          "constraints": "NOT NULL",
+          "default": "0"
+        },
+        {
+          "name": "display_order",
+          "type": "INTEGER",
+          "constraints": "NOT NULL",
+          "default": "0"
+        },
+        {
+          "name": "is_active",
+          "type": "BOOLEAN",
+          "constraints": "NOT NULL",
+          "default": "true"
+        },
+        {
+          "name": "version",
+          "type": "INTEGER",
+          "constraints": "NOT NULL",
+          "default": "1"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "constraints": "NOT NULL",
+          "default": "NOW()"
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "constraints": "NOT NULL",
+          "default": "NOW()"
+        }
+      ],
+      "primaryKey": {
+        "columns": [
+          "id"
+        ]
+      },
+      "indexes": [
+        {
+          "name": "idx_categories_name",
+          "columns": [
+            "name"
+          ]
+        },
+        {
+          "name": "idx_categories_parent",
+          "columns": [
+            "parent_category_id"
+          ]
+        },
+        {
+          "name": "idx_categories_depth",
+          "columns": [
+            "depth"
+          ]
+        },
+        {
+          "name": "idx_categories_display_order",
+          "columns": [
+            "display_order"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "columns": [
+            "parent_category_id"
+          ],
+          "references": "categories(id)",
+          "onDelete": "RESTRICT"
+        }
+      ],
+      "checkConstraints": [
+        {
+          "name": "chk_category_name_length",
+          "expression": "LENGTH(name) \u003e= 1 AND LENGTH(name) \u003c= 100"
+        },
+        {
+          "name": "chk_category_depth",
+          "expression": "depth \u003e= 0 AND depth \u003c= 3"
+        },
+        {
+          "name": "chk_category_no_self_parent",
+          "expression": "parent_category_id IS NULL OR parent_category_id \u003c\u003e id"
+        }
+      ]
+    }
+  ],
+  "tech_specs": [
+    {
+      "id": "TS-BR-CUST-001",
+      "name": "Password validation requirements",
+      "br_ref": "BR-CUST-001",
+      "rule": "Password must be at least 8 characters and contain at least one number",
+      "implementation": "Apply regex validation on password field during registration and password change operations. Validate on both client-side (for UX) and server-side (for security).",
+      "validation_points": [
+        "Registration API endpoint",
+        "Password change API endpoint",
+        "Registration form UI",
+        "Password change form UI"
+      ],
+      "data_requirements": [
+        {
+          "field": "password",
+          "type": "string",
+          "constraints": "minLength: 8, pattern: /.*[0-9].*/",
+          "source": "BR-CUST-001"
+        }
+      ],
+      "error_handling": [
+        {
+          "condition": "password.length \u003c 8",
+          "error_code": "PASSWORD_TOO_SHORT",
+          "message": "Password must be at least 8 characters long",
+          "http_status": 400
+        },
+        {
+          "condition": "!password.match(/[0-9]/)",
+          "error_code": "PASSWORD_MISSING_NUMBER",
+          "message": "Password must contain at least one number",
+          "http_status": 400
+        }
+      ],
+      "related_acs": [
+        "AC-REG-001",
+        "AC-PWD-001"
+      ]
+    },
+    {
+      "id": "TS-BR-CUST-002",
+      "name": "Email uniqueness constraint",
+      "br_ref": "BR-CUST-002",
+      "rule": "Each email address can only be associated with one customer account",
+      "implementation": "Add unique constraint on email column in customers table. Check for existing email before creating new account. Use case-insensitive comparison (normalize to lowercase before storage).",
+      "validation_points": [
+        "Registration API endpoint",
+        "Email change API endpoint",
+        "Database constraint level"
+      ],
+      "data_requirements": [
+        {
+          "field": "email",
+          "type": "string",
+          "constraints": "unique, format: email, maxLength: 255, stored as lowercase",
+          "source": "BR-CUST-002"
+        }
+      ],
+      "error_handling": [
+        {
+          "condition": "email already exists in database",
+          "error_code": "EMAIL_ALREADY_EXISTS",
+          "message": "An account with this email address already exists",
+          "http_status": 409
+        },
+        {
+          "condition": "invalid email format",
+          "error_code": "INVALID_EMAIL_FORMAT",
+          "message": "Please provide a valid email address",
+          "http_status": 400
+        }
+      ],
+      "related_acs": [
+        "AC-REG-001",
+        "AC-EMAIL-001"
+      ]
+    }
+  ],
+  "test_cases": [
+    {
+      "id": "TC-AC-CUST-001-P01",
+      "name": "Valid registration with all required fields",
+      "category": "positive",
+      "ac_ref": "AC-CUST-001",
+      "br_refs": [
+        "BR-CUST-001"
+      ],
+      "preconditions": [
+        "Email john@example.com not registered"
+      ],
+      "test_data": [
+        {
+          "field": "email",
+          "value": "john@example.com",
+          "notes": "Valid email"
+        },
+        {
+          "field": "password",
+          "value": "SecurePass1",
+          "notes": "Valid password"
+        },
+        {
+          "field": "firstName",
+          "value": "John",
+          "notes": "Required field"
+        },
+        {
+          "field": "lastName",
+          "value": "Doe",
+          "notes": "Required field"
+        }
+      ],
+      "steps": [
+        "Navigate to registration page",
+        "Enter all required fields with valid data",
+        "Submit registration form"
+      ],
+      "expected_results": [
+        "Customer account created with status 'unverified'",
+        "Verification email sent to john@example.com"
+      ]
+    },
+    {
+      "id": "TC-AC-CUST-001-P02",
+      "name": "Valid registration with different email domain",
+      "category": "positive",
+      "ac_ref": "AC-CUST-001",
+      "br_refs": [
+        "BR-CUST-001"
+      ],
+      "preconditions": [
+        "Email jane@company.org not registered"
+      ],
+      "test_data": [
+        {
+          "field": "email",
+          "value": "jane@company.org",
+          "notes": "Different domain"
+        },
+        {
+          "field": "password",
+          "value": "MyPass123",
+          "notes": "Valid password"
+        },
+        {
+          "field": "firstName",
+          "value": "Jane",
+          "notes": "Required field"
+        },
+        {
+          "field": "lastName",
+          "value": "Smith",
+          "notes": "Required field"
+        }
+      ],
+      "steps": [
+        "Navigate to registration page",
+        "Enter valid data with .org email domain",
+        "Submit registration form"
+      ],
+      "expected_results": [
+        "Customer account created with status 'unverified'",
+        "Verification email sent to jane@company.org"
+      ]
+    },
+    {
+      "id": "TC-AC-CUST-001-P03",
+      "name": "Valid registration with complex password",
+      "category": "positive",
+      "ac_ref": "AC-CUST-001",
+      "br_refs": [
+        "BR-CUST-001"
+      ],
+      "preconditions": [
+        "Email test@test.com not registered"
+      ],
+      "test_data": [
+        {
+          "field": "email",
+          "value": "test@test.com",
+          "notes": "Valid email"
+        },
+        {
+          "field": "password",
+          "value": "C0mpl3x!Pass",
+          "notes": "Complex password"
+        },
+        {
+          "field": "firstName",
+          "value": "Test",
+          "notes": "Required field"
+        },
+        {
+          "field": "lastName",
+          "value": "User",
+          "notes": "Required field"
+        }
+      ],
+      "steps": [
+        "Navigate to registration page",
+        "Enter complex password with special chars",
+        "Submit registration form"
+      ],
+      "expected_results": [
+        "Customer account created with status 'unverified'",
+        "Verification email sent"
+      ]
+    },
+    {
+      "id": "TC-AC-CUST-001-N01",
+      "name": "Reject duplicate email registration",
+      "category": "negative",
+      "ac_ref": "AC-CUST-001",
+      "br_refs": [
+        "BR-CUST-001"
+      ],
+      "preconditions": [
+        "Email exists@example.com already registered"
+      ],
+      "test_data": [
+        {
+          "field": "email",
+          "value": "exists@example.com",
+          "notes": "Duplicate"
+        },
+        {
+          "field": "password",
+          "value": "SecurePass1",
+          "notes": "Valid password"
+        },
+        {
+          "field": "firstName",
+          "value": "John",
+          "notes": "Required field"
+        },
+        {
+          "field": "lastName",
+          "value": "Doe",
+          "notes": "Required field"
+        }
+      ],
+      "steps": [
+        "Navigate to registration page",
+        "Enter already registered email",
+        "Submit registration form"
+      ],
+      "expected_results": [
+        "DUPLICATE_EMAIL error returned",
+        "Suggest login or password reset",
+        "No account created"
+      ]
+    },
+    {
+      "id": "TC-AC-CUST-001-N02",
+      "name": "Reject password shorter than 8 characters",
+      "category": "negative",
+      "ac_ref": "AC-CUST-001",
+      "br_refs": [
+        "BR-CUST-001"
+      ],
+      "preconditions": [
+        "Email new@example.com not registered"
+      ],
+      "test_data": [
+        {
+          "field": "email",
+          "value": "new@example.com",
+          "notes": "Valid email"
+        },
+        {
+          "field": "password",
+          "value": "Short1",
+          "notes": "Only 6 chars"
+        },
+        {
+          "field": "firstName",
+          "value": "John",
+          "notes": "Required field"
+        },
+        {
+          "field": "lastName",
+          "value": "Doe",
+          "notes": "Required field"
+        }
+      ],
+      "steps": [
+        "Navigate to registration page",
+        "Enter password with only 6 characters",
+        "Submit registration form"
+      ],
+      "expected_results": [
+        "INVALID_PASSWORD error returned",
+        "Requirements message displayed",
+        "No account created"
+      ]
+    },
+    {
+      "id": "TC-AC-CUST-001-N03",
+      "name": "Reject password without number",
+      "category": "negative",
+      "ac_ref": "AC-CUST-001",
+      "br_refs": [
+        "BR-CUST-001"
+      ],
+      "preconditions": [
+        "Email new@example.com not registered"
+      ],
+      "test_data": [
+        {
+          "field": "email",
+          "value": "new@example.com",
+          "notes": "Valid email"
+        },
+        {
+          "field": "password",
+          "value": "NoNumberPass",
+          "notes": "No digits"
+        },
+        {
+          "field": "firstName",
+          "value": "John",
+          "notes": "Required field"
+        },
+        {
+          "field": "lastName",
+          "value": "Doe",
+          "notes": "Required field"
+        }
+      ],
+      "steps": [
+        "Navigate to registration page",
+        "Enter password without any numbers",
+        "Submit registration form"
+      ],
+      "expected_results": [
+        "INVALID_PASSWORD error returned",
+        "Requirements message displayed",
+        "No account created"
+      ]
+    },
+    {
+      "id": "TC-AC-CUST-001-N04",
+      "name": "Reject invalid email format",
+      "category": "negative",
+      "ac_ref": "AC-CUST-001",
+      "br_refs": [
+        "BR-CUST-001"
+      ],
+      "preconditions": [
+        "None"
+      ],
+      "test_data": [
+        {
+          "field": "email",
+          "value": "invalid-email",
+          "notes": "Missing @ and domain"
+        },
+        {
+          "field": "password",
+          "value": "SecurePass1",
+          "notes": "Valid password"
+        },
+        {
+          "field": "firstName",
+          "value": "John",
+          "notes": "Required field"
+        },
+        {
+          "field": "lastName",
+          "value": "Doe",
+          "notes": "Required field"
+        }
+      ],
+      "steps": [
+        "Navigate to registration page",
+        "Enter email without @ symbol",
+        "Submit registration form"
+      ],
+      "expected_results": [
+        "INVALID_EMAIL error returned",
+        "No account created"
+      ]
+    },
+    {
+      "id": "TC-AC-CUST-001-N05",
+      "name": "Reject email without domain extension",
+      "category": "negative",
+      "ac_ref": "AC-CUST-001",
+      "br_refs": [
+        "BR-CUST-001"
+      ],
+      "preconditions": [
+        "None"
+      ],
+      "test_data": [
+        {
+          "field": "email",
+          "value": "user@domain",
+          "notes": "Missing TLD"
+        },
+        {
+          "field": "password",
+          "value": "SecurePass1",
+          "notes": "Valid password"
+        },
+        {
+          "field": "firstName",
+          "value": "John",
+          "notes": "Required field"
+        },
+        {
+          "field": "lastName",
+          "value": "Doe",
+          "notes": "Required field"
+        }
+      ],
+      "steps": [
+        "Navigate to registration page",
+        "Enter email without domain extension",
+        "Submit registration form"
+      ],
+      "expected_results": [
+        "INVALID_EMAIL error returned",
+        "No account created"
+      ]
+    },
+    {
+      "id": "TC-AC-CUST-001-B01",
+      "name": "Password at minimum length (8 characters)",
+      "category": "boundary",
+      "ac_ref": "AC-CUST-001",
+      "br_refs": [
+        "BR-CUST-001"
+      ],
+      "preconditions": [
+        "Email boundary@example.com not registered"
+      ],
+      "test_data": [
+        {
+          "field": "email",
+          "value": "boundary@example.com",
+          "notes": "Valid"
+        },
+        {
+          "field": "password",
+          "value": "Pass1234",
+          "notes": "Exactly 8 chars"
+        },
+        {
+          "field": "firstName",
+          "value": "Test",
+          "notes": "Required field"
+        },
+        {
+          "field": "lastName",
+          "value": "User",
+          "notes": "Required field"
+        }
+      ],
+      "steps": [
+        "Navigate to registration page",
+        "Enter password with exactly 8 characters",
+        "Submit registration form"
+      ],
+      "expected_results": [
+        "Registration succeeds",
+        "Customer account created"
+      ]
+    },
+    {
+      "id": "TC-AC-CUST-001-B02",
+      "name": "Password below minimum (7 characters)",
+      "category": "boundary",
+      "ac_ref": "AC-CUST-001",
+      "br_refs": [
+        "BR-CUST-001"
+      ],
+      "preconditions": [
+        "Email boundary@example.com not registered"
+      ],
+      "test_data": [
+        {
+          "field": "email",
+          "value": "boundary@example.com",
+          "notes": "Valid"
+        },
+        {
+          "field": "password",
+          "value": "Pass123",
+          "notes": "Only 7 chars"
+        },
+        {
+          "field": "firstName",
+          "value": "Test",
+          "notes": "Required field"
+        },
+        {
+          "field": "lastName",
+          "value": "User",
+          "notes": "Required field"
+        }
+      ],
+      "steps": [
+        "Navigate to registration page",
+        "Enter password with 7 characters",
+        "Submit registration form"
+      ],
+      "expected_results": [
+        "INVALID_PASSWORD error returned",
+        "No account created"
+      ]
+    },
+    {
+      "id": "TC-AC-CUST-001-H01",
+      "name": "Phone number should NOT be required",
+      "category": "hallucination",
+      "ac_ref": "AC-CUST-001",
+      "br_refs": [],
+      "preconditions": [
+        "Email nophone@example.com not registered"
+      ],
+      "test_data": [
+        {
+          "field": "email",
+          "value": "nophone@example.com",
+          "notes": "Valid"
+        },
+        {
+          "field": "password",
+          "value": "SecurePass1",
+          "notes": "Valid password"
+        },
+        {
+          "field": "firstName",
+          "value": "John",
+          "notes": "Required field"
+        },
+        {
+          "field": "lastName",
+          "value": "Doe",
+          "notes": "Required field"
+        },
+        {
+          "field": "phone",
+          "value": "",
+          "notes": "Empty - not in AC"
+        }
+      ],
+      "steps": [
+        "Navigate to registration page",
+        "Fill all AC-specified fields",
+        "Leave phone field empty",
+        "Submit registration form"
+      ],
+      "expected_results": [
+        "Registration succeeds without phone"
+      ],
+      "should_not": "Require phone number (not specified in AC)"
+    },
+    {
+      "id": "TC-AC-CUST-001-H02",
+      "name": "Address should NOT be required",
+      "category": "hallucination",
+      "ac_ref": "AC-CUST-001",
+      "br_refs": [],
+      "preconditions": [
+        "Email noaddr@example.com not registered"
+      ],
+      "test_data": [
+        {
+          "field": "email",
+          "value": "noaddr@example.com",
+          "notes": "Valid"
+        },
+        {
+          "field": "password",
+          "value": "SecurePass1",
+          "notes": "Valid password"
+        },
+        {
+          "field": "firstName",
+          "value": "John",
+          "notes": "Required field"
+        },
+        {
+          "field": "lastName",
+          "value": "Doe",
+          "notes": "Required field"
+        },
+        {
+          "field": "address",
+          "value": "",
+          "notes": "Empty - not in AC"
+        }
+      ],
+      "steps": [
+        "Navigate to registration page",
+        "Fill only AC-specified fields",
+        "Leave address empty",
+        "Submit registration form"
+      ],
+      "expected_results": [
+        "Registration succeeds without address"
+      ],
+      "should_not": "Require address fields (not specified in AC)"
+    },
+    {
+      "id": "TC-AC-CUST-001-H03",
+      "name": "Account should NOT be auto-verified",
+      "category": "hallucination",
+      "ac_ref": "AC-CUST-001",
+      "br_refs": [],
+      "preconditions": [
+        "Email verify@example.com not registered"
+      ],
+      "test_data": [
+        {
+          "field": "email",
+          "value": "verify@example.com",
+          "notes": "Valid"
+        },
+        {
+          "field": "password",
+          "value": "SecurePass1",
+          "notes": "Valid password"
+        },
+        {
+          "field": "firstName",
+          "value": "John",
+          "notes": "Required field"
+        },
+        {
+          "field": "lastName",
+          "value": "Doe",
+          "notes": "Required field"
+        }
+      ],
+      "steps": [
+        "Complete registration successfully",
+        "Check account status immediately"
+      ],
+      "expected_results": [
+        "Account status is 'unverified'",
+        "Verification email sent"
+      ],
+      "should_not": "Auto-verify account (AC specifies 'unverified' status)"
+    }
+  ]
+}

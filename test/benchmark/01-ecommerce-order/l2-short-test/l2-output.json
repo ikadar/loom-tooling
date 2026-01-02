@@ -1,0 +1,2248 @@
+{
+  "aggregates": [
+    {
+      "id": "AGG-CUST-001",
+      "name": "Customer",
+      "purpose": "Manages customer identity, authentication credentials, and account lifecycle",
+      "invariants": [
+        {
+          "id": "INV-CUST-001",
+          "rule": "Email must be unique across all customers",
+          "enforcement": "Checked via domain service before registration; unique constraint in database"
+        },
+        {
+          "id": "INV-CUST-002",
+          "rule": "Password must be at least 8 characters",
+          "enforcement": "Validated in Password value object constructor"
+        },
+        {
+          "id": "INV-CUST-003",
+          "rule": "Password must contain at least one number",
+          "enforcement": "Validated in Password value object constructor"
+        },
+        {
+          "id": "INV-CUST-004",
+          "rule": "Email must be valid format",
+          "enforcement": "Validated in Email value object constructor"
+        },
+        {
+          "id": "INV-CUST-005",
+          "rule": "Status transitions must follow valid state machine",
+          "enforcement": "Guard clauses in status change methods"
+        },
+        {
+          "id": "INV-CUST-006",
+          "rule": "First name and last name are required",
+          "enforcement": "Validated on creation and update"
+        }
+      ],
+      "root": {
+        "entity": "Customer",
+        "identity": "CustomerId (UUID)",
+        "attributes": [
+          {
+            "name": "email",
+            "type": "Email",
+            "mutable": false
+          },
+          {
+            "name": "passwordHash",
+            "type": "PasswordHash",
+            "mutable": true
+          },
+          {
+            "name": "firstName",
+            "type": "string",
+            "mutable": true
+          },
+          {
+            "name": "lastName",
+            "type": "string",
+            "mutable": true
+          },
+          {
+            "name": "status",
+            "type": "CustomerStatus",
+            "mutable": true
+          },
+          {
+            "name": "createdAt",
+            "type": "DateTime",
+            "mutable": false
+          },
+          {
+            "name": "verifiedAt",
+            "type": "DateTime",
+            "mutable": true
+          }
+        ]
+      },
+      "entities": [],
+      "valueObjects": [
+        "Email",
+        "Password",
+        "PasswordHash",
+        "CustomerStatus",
+        "FullName"
+      ],
+      "behaviors": [
+        {
+          "name": "register",
+          "command": "RegisterCustomer",
+          "preconditions": [
+            "email not already registered"
+          ],
+          "postconditions": [
+            "customer created with status 'unverified'",
+            "verification token generated"
+          ],
+          "emits": "CustomerRegistered"
+        },
+        {
+          "name": "verifyEmail",
+          "command": "VerifyCustomerEmail",
+          "preconditions": [
+            "status == 'unverified'",
+            "valid verification token"
+          ],
+          "postconditions": [
+            "status == 'verified'",
+            "verifiedAt set"
+          ],
+          "emits": "CustomerEmailVerified"
+        },
+        {
+          "name": "changePassword",
+          "command": "ChangeCustomerPassword",
+          "preconditions": [
+            "status != 'suspended'",
+            "new password meets requirements"
+          ],
+          "postconditions": [
+            "passwordHash updated"
+          ],
+          "emits": "CustomerPasswordChanged"
+        },
+        {
+          "name": "updateProfile",
+          "command": "UpdateCustomerProfile",
+          "preconditions": [
+            "status != 'suspended'"
+          ],
+          "postconditions": [
+            "firstName and/or lastName updated"
+          ],
+          "emits": "CustomerProfileUpdated"
+        },
+        {
+          "name": "suspend",
+          "command": "SuspendCustomer",
+          "preconditions": [
+            "status != 'suspended'"
+          ],
+          "postconditions": [
+            "status == 'suspended'"
+          ],
+          "emits": "CustomerSuspended"
+        },
+        {
+          "name": "reactivate",
+          "command": "ReactivateCustomer",
+          "preconditions": [
+            "status == 'suspended'"
+          ],
+          "postconditions": [
+            "status == 'verified'"
+          ],
+          "emits": "CustomerReactivated"
+        }
+      ],
+      "events": [
+        {
+          "name": "CustomerRegistered",
+          "payload": [
+            "customerId",
+            "email",
+            "firstName",
+            "lastName",
+            "status"
+          ]
+        },
+        {
+          "name": "CustomerEmailVerified",
+          "payload": [
+            "customerId",
+            "email",
+            "verifiedAt"
+          ]
+        },
+        {
+          "name": "CustomerPasswordChanged",
+          "payload": [
+            "customerId",
+            "changedAt"
+          ]
+        },
+        {
+          "name": "CustomerProfileUpdated",
+          "payload": [
+            "customerId",
+            "firstName",
+            "lastName",
+            "updatedAt"
+          ]
+        },
+        {
+          "name": "CustomerSuspended",
+          "payload": [
+            "customerId",
+            "suspendedAt",
+            "reason"
+          ]
+        },
+        {
+          "name": "CustomerReactivated",
+          "payload": [
+            "customerId",
+            "reactivatedAt"
+          ]
+        }
+      ],
+      "repository": {
+        "name": "CustomerRepository",
+        "methods": [
+          {
+            "name": "findById",
+            "params": "CustomerId",
+            "returns": "Customer?"
+          },
+          {
+            "name": "findByEmail",
+            "params": "Email",
+            "returns": "Customer?"
+          },
+          {
+            "name": "existsByEmail",
+            "params": "Email",
+            "returns": "boolean"
+          },
+          {
+            "name": "save",
+            "params": "Customer",
+            "returns": "void"
+          }
+        ],
+        "loadStrategy": "Load complete aggregate (single entity, no children)",
+        "concurrency": "Optimistic locking via version field"
+      },
+      "externalReferences": []
+    }
+  ],
+  "enums": [
+    {
+      "name": "customer_status",
+      "values": [
+        "unverified",
+        "verified",
+        "suspended"
+      ]
+    },
+    {
+      "name": "customer_audit_event_type",
+      "values": [
+        "registered",
+        "email_verified",
+        "password_changed",
+        "profile_updated",
+        "suspended",
+        "reactivated",
+        "login_success",
+        "login_failed"
+      ]
+    }
+  ],
+  "interface_contracts": [
+    {
+      "id": "IC-CUST-001",
+      "serviceName": "Customer Service",
+      "purpose": "Manages customer registration, authentication, and account lifecycle",
+      "baseUrl": "/api/v1/customers",
+      "operations": [
+        {
+          "id": "OP-CUST-001",
+          "name": "registerCustomer",
+          "method": "POST",
+          "path": "/register",
+          "description": "Register a new customer account",
+          "inputSchema": {
+            "email": {
+              "type": "Email",
+              "required": true
+            },
+            "firstName": {
+              "type": "string",
+              "required": true
+            },
+            "lastName": {
+              "type": "string",
+              "required": true
+            },
+            "password": {
+              "type": "string",
+              "required": true
+            }
+          },
+          "outputSchema": {
+            "createdAt": {
+              "type": "DateTime"
+            },
+            "customerId": {
+              "type": "UUID"
+            },
+            "email": {
+              "type": "Email"
+            },
+            "firstName": {
+              "type": "string"
+            },
+            "lastName": {
+              "type": "string"
+            },
+            "status": {
+              "type": "CustomerStatus"
+            }
+          },
+          "errors": [
+            {
+              "code": "DUPLICATE_EMAIL",
+              "httpStatus": 409,
+              "message": "Email already registered. Please login or reset password"
+            },
+            {
+              "code": "INVALID_PASSWORD",
+              "httpStatus": 400,
+              "message": "Password must be at least 8 characters and contain at least one number"
+            },
+            {
+              "code": "INVALID_EMAIL",
+              "httpStatus": 400,
+              "message": "Please provide a valid email address"
+            },
+            {
+              "code": "MISSING_REQUIRED_FIELD",
+              "httpStatus": 400,
+              "message": "Required field is missing"
+            }
+          ],
+          "preconditions": [
+            "Email must not be registered"
+          ],
+          "postconditions": [
+            "Customer account created with status 'unverified'",
+            "Verification email sent to customer"
+          ],
+          "relatedACs": [
+            "AC-CUST-001"
+          ],
+          "relatedBRs": [
+            "BR-CUST-001",
+            "BR-CUST-002"
+          ]
+        },
+        {
+          "id": "OP-CUST-002",
+          "name": "verifyEmail",
+          "method": "POST",
+          "path": "/{customerId}/verify",
+          "description": "Verify customer email address using verification token",
+          "inputSchema": {
+            "customerId": {
+              "type": "UUID",
+              "required": true
+            },
+            "verificationToken": {
+              "type": "string",
+              "required": true
+            }
+          },
+          "outputSchema": {
+            "customerId": {
+              "type": "UUID"
+            },
+            "status": {
+              "type": "CustomerStatus"
+            },
+            "verifiedAt": {
+              "type": "DateTime"
+            }
+          },
+          "errors": [
+            {
+              "code": "CUSTOMER_NOT_FOUND",
+              "httpStatus": 404,
+              "message": "Customer does not exist"
+            },
+            {
+              "code": "INVALID_TOKEN",
+              "httpStatus": 400,
+              "message": "Verification token is invalid or expired"
+            },
+            {
+              "code": "ALREADY_VERIFIED",
+              "httpStatus": 409,
+              "message": "Email already verified"
+            }
+          ],
+          "preconditions": [
+            "Customer must exist",
+            "Customer status must be 'unverified'"
+          ],
+          "postconditions": [
+            "Customer status changed to 'verified'"
+          ],
+          "relatedACs": [
+            "AC-CUST-001"
+          ],
+          "relatedBRs": []
+        },
+        {
+          "id": "OP-CUST-003",
+          "name": "getCustomer",
+          "method": "GET",
+          "path": "/{customerId}",
+          "description": "Retrieve customer details by ID",
+          "inputSchema": {
+            "customerId": {
+              "type": "UUID",
+              "required": true
+            }
+          },
+          "outputSchema": {
+            "createdAt": {
+              "type": "DateTime"
+            },
+            "customerId": {
+              "type": "UUID"
+            },
+            "email": {
+              "type": "Email"
+            },
+            "firstName": {
+              "type": "string"
+            },
+            "lastName": {
+              "type": "string"
+            },
+            "status": {
+              "type": "CustomerStatus"
+            },
+            "verifiedAt": {
+              "type": "DateTime"
+            }
+          },
+          "errors": [
+            {
+              "code": "CUSTOMER_NOT_FOUND",
+              "httpStatus": 404,
+              "message": "Customer does not exist"
+            },
+            {
+              "code": "UNAUTHORIZED",
+              "httpStatus": 401,
+              "message": "Authentication required"
+            },
+            {
+              "code": "FORBIDDEN",
+              "httpStatus": 403,
+              "message": "Access denied"
+            }
+          ],
+          "preconditions": [
+            "Customer must be authenticated",
+            "Customer can only access own profile"
+          ],
+          "postconditions": [],
+          "relatedACs": [],
+          "relatedBRs": []
+        },
+        {
+          "id": "OP-CUST-004",
+          "name": "resendVerificationEmail",
+          "method": "POST",
+          "path": "/{customerId}/resend-verification",
+          "description": "Resend verification email to customer",
+          "inputSchema": {
+            "customerId": {
+              "type": "UUID",
+              "required": true
+            }
+          },
+          "outputSchema": {
+            "message": {
+              "type": "string"
+            },
+            "sentAt": {
+              "type": "DateTime"
+            }
+          },
+          "errors": [
+            {
+              "code": "CUSTOMER_NOT_FOUND",
+              "httpStatus": 404,
+              "message": "Customer does not exist"
+            },
+            {
+              "code": "ALREADY_VERIFIED",
+              "httpStatus": 409,
+              "message": "Email already verified"
+            },
+            {
+              "code": "RATE_LIMITED",
+              "httpStatus": 429,
+              "message": "Too many requests. Please wait before trying again"
+            }
+          ],
+          "preconditions": [
+            "Customer must exist",
+            "Customer status must be 'unverified'"
+          ],
+          "postconditions": [
+            "New verification email sent"
+          ],
+          "relatedACs": [
+            "AC-CUST-001"
+          ],
+          "relatedBRs": []
+        }
+      ],
+      "events": [
+        {
+          "name": "CustomerRegistered",
+          "description": "Emitted when a new customer account is created",
+          "payload": [
+            "customerId",
+            "email",
+            "firstName",
+            "lastName",
+            "status"
+          ]
+        },
+        {
+          "name": "CustomerEmailVerified",
+          "description": "Emitted when customer verifies their email address",
+          "payload": [
+            "customerId",
+            "email",
+            "verifiedAt"
+          ]
+        },
+        {
+          "name": "VerificationEmailSent",
+          "description": "Emitted when a verification email is sent",
+          "payload": [
+            "customerId",
+            "email",
+            "sentAt"
+          ]
+        }
+      ],
+      "securityRequirements": {
+        "authentication": "Bearer JWT (except registration endpoint)",
+        "authorization": "Customers can only access their own data"
+      }
+    }
+  ],
+  "sequences": [
+    {
+      "id": "SEQ-CUST-001",
+      "name": "Customer Registration Flow",
+      "description": "Complete flow from visitor registration to verification email sent",
+      "trigger": {
+        "type": "user_action",
+        "description": "Visitor submits registration form"
+      },
+      "participants": [
+        {
+          "name": "Visitor",
+          "type": "actor"
+        },
+        {
+          "name": "API Gateway",
+          "type": "infrastructure"
+        },
+        {
+          "name": "Customer Service",
+          "type": "service"
+        },
+        {
+          "name": "Customer Aggregate",
+          "type": "aggregate"
+        },
+        {
+          "name": "Email Service",
+          "type": "service"
+        },
+        {
+          "name": "Database",
+          "type": "infrastructure"
+        }
+      ],
+      "steps": [
+        {
+          "step": 1,
+          "actor": "Visitor",
+          "action": "Submit registration request",
+          "target": "API Gateway",
+          "data": [
+            "email",
+            "password",
+            "firstName",
+            "lastName"
+          ]
+        },
+        {
+          "step": 2,
+          "actor": "API Gateway",
+          "action": "Route to registration endpoint",
+          "target": "Customer Service",
+          "data": [
+            "email",
+            "password",
+            "firstName",
+            "lastName"
+          ]
+        },
+        {
+          "step": 3,
+          "actor": "Customer Service",
+          "action": "Validate email format",
+          "target": "Email Value Object",
+          "returns": "Valid Email or INVALID_EMAIL error"
+        },
+        {
+          "step": 4,
+          "actor": "Customer Service",
+          "action": "Validate password requirements",
+          "target": "Password Value Object",
+          "returns": "Valid Password or INVALID_PASSWORD error"
+        },
+        {
+          "step": 5,
+          "actor": "Customer Service",
+          "action": "Check email uniqueness",
+          "target": "Database",
+          "returns": "Email available or DUPLICATE_EMAIL error"
+        },
+        {
+          "step": 6,
+          "actor": "Customer Service",
+          "action": "Hash password",
+          "target": "Password Hasher",
+          "returns": "PasswordHash"
+        },
+        {
+          "step": 7,
+          "actor": "Customer Service",
+          "action": "Create customer with status 'unverified'",
+          "target": "Customer Aggregate",
+          "event": "CustomerRegistered"
+        },
+        {
+          "step": 8,
+          "actor": "Customer Service",
+          "action": "Persist customer to database",
+          "target": "Database",
+          "returns": "Success"
+        },
+        {
+          "step": 9,
+          "actor": "Customer Service",
+          "action": "Generate verification token",
+          "target": "Token Service",
+          "returns": "Verification token"
+        },
+        {
+          "step": 10,
+          "actor": "Customer Service",
+          "action": "Request verification email",
+          "target": "Email Service",
+          "event": "VerificationEmailRequested"
+        },
+        {
+          "step": 11,
+          "actor": "Email Service",
+          "action": "Send verification email",
+          "target": "Email Provider",
+          "event": "VerificationEmailSent"
+        },
+        {
+          "step": 12,
+          "actor": "Customer Service",
+          "action": "Return registration success",
+          "target": "Visitor",
+          "returns": "Customer details with customerId and status"
+        }
+      ],
+      "outcome": {
+        "success": "Customer account created with 'unverified' status, verification email sent",
+        "state_changes": [
+          "Customer created in database",
+          "Customer.status = unverified",
+          "Verification token stored"
+        ]
+      },
+      "exceptions": [
+        {
+          "condition": "Invalid email format",
+          "step": 3,
+          "handling": "Return INVALID_EMAIL error, abort flow"
+        },
+        {
+          "condition": "Password less than 8 characters",
+          "step": 4,
+          "handling": "Return INVALID_PASSWORD error with requirements, abort flow"
+        },
+        {
+          "condition": "Password without number",
+          "step": 4,
+          "handling": "Return INVALID_PASSWORD error with requirements, abort flow"
+        },
+        {
+          "condition": "Email already registered",
+          "step": 5,
+          "handling": "Return DUPLICATE_EMAIL error, suggest login or password reset, abort flow"
+        }
+      ],
+      "relatedACs": [
+        "AC-CUST-001"
+      ],
+      "relatedBRs": [
+        "BR-CUST-001",
+        "BR-CUST-002"
+      ]
+    },
+    {
+      "id": "SEQ-CUST-002",
+      "name": "Email Verification Flow",
+      "description": "Complete flow from verification link click to account activation",
+      "trigger": {
+        "type": "user_action",
+        "description": "Customer clicks verification link in email"
+      },
+      "participants": [
+        {
+          "name": "Customer",
+          "type": "actor"
+        },
+        {
+          "name": "API Gateway",
+          "type": "infrastructure"
+        },
+        {
+          "name": "Customer Service",
+          "type": "service"
+        },
+        {
+          "name": "Customer Aggregate",
+          "type": "aggregate"
+        },
+        {
+          "name": "Database",
+          "type": "infrastructure"
+        }
+      ],
+      "steps": [
+        {
+          "step": 1,
+          "actor": "Customer",
+          "action": "Click verification link",
+          "target": "API Gateway",
+          "data": [
+            "customerId",
+            "verificationToken"
+          ]
+        },
+        {
+          "step": 2,
+          "actor": "API Gateway",
+          "action": "Route to verification endpoint",
+          "target": "Customer Service",
+          "data": [
+            "customerId",
+            "verificationToken"
+          ]
+        },
+        {
+          "step": 3,
+          "actor": "Customer Service",
+          "action": "Load customer by ID",
+          "target": "Database",
+          "returns": "Customer or CUSTOMER_NOT_FOUND error"
+        },
+        {
+          "step": 4,
+          "actor": "Customer Service",
+          "action": "Validate verification token",
+          "target": "Token Service",
+          "returns": "Valid or INVALID_TOKEN error"
+        },
+        {
+          "step": 5,
+          "actor": "Customer Service",
+          "action": "Check customer status is unverified",
+          "target": "Customer Aggregate",
+          "returns": "OK or ALREADY_VERIFIED error"
+        },
+        {
+          "step": 6,
+          "actor": "Customer Service",
+          "action": "Update status to verified",
+          "target": "Customer Aggregate",
+          "event": "CustomerEmailVerified"
+        },
+        {
+          "step": 7,
+          "actor": "Customer Service",
+          "action": "Persist updated customer",
+          "target": "Database",
+          "returns": "Success"
+        },
+        {
+          "step": 8,
+          "actor": "Customer Service",
+          "action": "Invalidate verification token",
+          "target": "Token Service",
+          "returns": "Success"
+        },
+        {
+          "step": 9,
+          "actor": "Customer Service",
+          "action": "Return verification success",
+          "target": "Customer",
+          "returns": "Verified status confirmation"
+        }
+      ],
+      "outcome": {
+        "success": "Customer email verified, account fully activated",
+        "state_changes": [
+          "Customer.status = verified",
+          "Customer.verifiedAt = now",
+          "Verification token invalidated"
+        ]
+      },
+      "exceptions": [
+        {
+          "condition": "Customer not found",
+          "step": 3,
+          "handling": "Return CUSTOMER_NOT_FOUND error, abort flow"
+        },
+        {
+          "condition": "Invalid or expired token",
+          "step": 4,
+          "handling": "Return INVALID_TOKEN error, suggest resend verification, abort flow"
+        },
+        {
+          "condition": "Already verified",
+          "step": 5,
+          "handling": "Return ALREADY_VERIFIED error, redirect to login"
+        }
+      ],
+      "relatedACs": [
+        "AC-CUST-001"
+      ],
+      "relatedBRs": []
+    },
+    {
+      "id": "SEQ-CUST-003",
+      "name": "Resend Verification Email Flow",
+      "description": "Flow for resending verification email to unverified customer",
+      "trigger": {
+        "type": "user_action",
+        "description": "Customer requests new verification email"
+      },
+      "participants": [
+        {
+          "name": "Customer",
+          "type": "actor"
+        },
+        {
+          "name": "API Gateway",
+          "type": "infrastructure"
+        },
+        {
+          "name": "Customer Service",
+          "type": "service"
+        },
+        {
+          "name": "Email Service",
+          "type": "service"
+        },
+        {
+          "name": "Database",
+          "type": "infrastructure"
+        }
+      ],
+      "steps": [
+        {
+          "step": 1,
+          "actor": "Customer",
+          "action": "Request verification email resend",
+          "target": "API Gateway",
+          "data": [
+            "customerId"
+          ]
+        },
+        {
+          "step": 2,
+          "actor": "API Gateway",
+          "action": "Route to resend endpoint",
+          "target": "Customer Service",
+          "data": [
+            "customerId"
+          ]
+        },
+        {
+          "step": 3,
+          "actor": "Customer Service",
+          "action": "Load customer by ID",
+          "target": "Database",
+          "returns": "Customer or CUSTOMER_NOT_FOUND error"
+        },
+        {
+          "step": 4,
+          "actor": "Customer Service",
+          "action": "Check customer status is unverified",
+          "target": "Customer Aggregate",
+          "returns": "OK or ALREADY_VERIFIED error"
+        },
+        {
+          "step": 5,
+          "actor": "Customer Service",
+          "action": "Check rate limit",
+          "target": "Rate Limiter",
+          "returns": "OK or RATE_LIMITED error"
+        },
+        {
+          "step": 6,
+          "actor": "Customer Service",
+          "action": "Generate new verification token",
+          "target": "Token Service",
+          "returns": "New verification token"
+        },
+        {
+          "step": 7,
+          "actor": "Customer Service",
+          "action": "Invalidate old verification token",
+          "target": "Token Service",
+          "returns": "Success"
+        },
+        {
+          "step": 8,
+          "actor": "Customer Service",
+          "action": "Request verification email",
+          "target": "Email Service",
+          "event": "VerificationEmailRequested"
+        },
+        {
+          "step": 9,
+          "actor": "Email Service",
+          "action": "Send verification email",
+          "target": "Email Provider",
+          "event": "VerificationEmailSent"
+        },
+        {
+          "step": 10,
+          "actor": "Customer Service",
+          "action": "Return resend confirmation",
+          "target": "Customer",
+          "returns": "Email sent confirmation with timestamp"
+        }
+      ],
+      "outcome": {
+        "success": "New verification email sent, old token invalidated",
+        "state_changes": [
+          "Old verification token invalidated",
+          "New verification token created",
+          "Rate limit counter incremented"
+        ]
+      },
+      "exceptions": [
+        {
+          "condition": "Customer not found",
+          "step": 3,
+          "handling": "Return CUSTOMER_NOT_FOUND error, abort flow"
+        },
+        {
+          "condition": "Already verified",
+          "step": 4,
+          "handling": "Return ALREADY_VERIFIED error, redirect to login"
+        },
+        {
+          "condition": "Rate limit exceeded",
+          "step": 5,
+          "handling": "Return RATE_LIMITED error with retry-after time, abort flow"
+        }
+      ],
+      "relatedACs": [
+        "AC-CUST-001"
+      ],
+      "relatedBRs": []
+    },
+    {
+      "id": "SEQ-CUST-004",
+      "name": "Password Change Flow",
+      "description": "Flow for authenticated customer changing their password",
+      "trigger": {
+        "type": "user_action",
+        "description": "Customer submits password change request"
+      },
+      "participants": [
+        {
+          "name": "Customer",
+          "type": "actor"
+        },
+        {
+          "name": "API Gateway",
+          "type": "infrastructure"
+        },
+        {
+          "name": "Customer Service",
+          "type": "service"
+        },
+        {
+          "name": "Customer Aggregate",
+          "type": "aggregate"
+        },
+        {
+          "name": "Database",
+          "type": "infrastructure"
+        }
+      ],
+      "steps": [
+        {
+          "step": 1,
+          "actor": "Customer",
+          "action": "Submit password change request",
+          "target": "API Gateway",
+          "data": [
+            "currentPassword",
+            "newPassword"
+          ]
+        },
+        {
+          "step": 2,
+          "actor": "API Gateway",
+          "action": "Verify JWT token and extract customerId",
+          "target": "Auth Middleware",
+          "returns": "CustomerId or UNAUTHORIZED error"
+        },
+        {
+          "step": 3,
+          "actor": "API Gateway",
+          "action": "Route to password change endpoint",
+          "target": "Customer Service",
+          "data": [
+            "customerId",
+            "currentPassword",
+            "newPassword"
+          ]
+        },
+        {
+          "step": 4,
+          "actor": "Customer Service",
+          "action": "Load customer by ID",
+          "target": "Database",
+          "returns": "Customer"
+        },
+        {
+          "step": 5,
+          "actor": "Customer Service",
+          "action": "Verify current password",
+          "target": "Password Hasher",
+          "returns": "Match or INVALID_CURRENT_PASSWORD error"
+        },
+        {
+          "step": 6,
+          "actor": "Customer Service",
+          "action": "Validate new password requirements",
+          "target": "Password Value Object",
+          "returns": "Valid Password or INVALID_PASSWORD error"
+        },
+        {
+          "step": 7,
+          "actor": "Customer Service",
+          "action": "Hash new password",
+          "target": "Password Hasher",
+          "returns": "New PasswordHash"
+        },
+        {
+          "step": 8,
+          "actor": "Customer Service",
+          "action": "Update password hash",
+          "target": "Customer Aggregate",
+          "event": "CustomerPasswordChanged"
+        },
+        {
+          "step": 9,
+          "actor": "Customer Service",
+          "action": "Persist updated customer",
+          "target": "Database",
+          "returns": "Success"
+        },
+        {
+          "step": 10,
+          "actor": "Customer Service",
+          "action": "Return password change success",
+          "target": "Customer",
+          "returns": "Success confirmation"
+        }
+      ],
+      "outcome": {
+        "success": "Customer password updated successfully",
+        "state_changes": [
+          "Customer.passwordHash = new hash"
+        ]
+      },
+      "exceptions": [
+        {
+          "condition": "Not authenticated",
+          "step": 2,
+          "handling": "Return UNAUTHORIZED error, abort flow"
+        },
+        {
+          "condition": "Current password incorrect",
+          "step": 5,
+          "handling": "Return INVALID_CURRENT_PASSWORD error, abort flow"
+        },
+        {
+          "condition": "New password less than 8 characters",
+          "step": 6,
+          "handling": "Return INVALID_PASSWORD error with requirements, abort flow"
+        },
+        {
+          "condition": "New password without number",
+          "step": 6,
+          "handling": "Return INVALID_PASSWORD error with requirements, abort flow"
+        }
+      ],
+      "relatedACs": [],
+      "relatedBRs": [
+        "BR-CUST-001"
+      ]
+    }
+  ],
+  "shared_types": [
+    {
+      "name": "Email",
+      "fields": [
+        {
+          "name": "value",
+          "type": "string",
+          "constraints": "RFC 5322 format, max 255 chars, unique per customer"
+        }
+      ]
+    },
+    {
+      "name": "CustomerStatus",
+      "fields": [
+        {
+          "name": "value",
+          "type": "enum",
+          "constraints": "unverified | verified | suspended"
+        }
+      ]
+    },
+    {
+      "name": "Password",
+      "fields": [
+        {
+          "name": "value",
+          "type": "string",
+          "constraints": "min 8 chars, must contain at least one number, stored as bcrypt hash"
+        }
+      ]
+    },
+    {
+      "name": "Customer",
+      "fields": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "constraints": "primary key"
+        },
+        {
+          "name": "email",
+          "type": "Email",
+          "constraints": "unique, required"
+        },
+        {
+          "name": "firstName",
+          "type": "string",
+          "constraints": "1-100 chars, required"
+        },
+        {
+          "name": "lastName",
+          "type": "string",
+          "constraints": "1-100 chars, required"
+        },
+        {
+          "name": "status",
+          "type": "CustomerStatus",
+          "constraints": "default: unverified"
+        },
+        {
+          "name": "createdAt",
+          "type": "DateTime",
+          "constraints": "auto-generated"
+        },
+        {
+          "name": "verifiedAt",
+          "type": "DateTime",
+          "constraints": "nullable"
+        }
+      ]
+    }
+  ],
+  "tables": [
+    {
+      "id": "TBL-CUST-001",
+      "name": "customers",
+      "aggregate": "Customer",
+      "purpose": "Stores customer account information and credentials",
+      "fields": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "constraints": "NOT NULL",
+          "default": "gen_random_uuid()"
+        },
+        {
+          "name": "email",
+          "type": "VARCHAR(255)",
+          "constraints": "NOT NULL UNIQUE"
+        },
+        {
+          "name": "password_hash",
+          "type": "VARCHAR(255)",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "first_name",
+          "type": "VARCHAR(100)",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "last_name",
+          "type": "VARCHAR(100)",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "status",
+          "type": "VARCHAR(20)",
+          "constraints": "NOT NULL",
+          "default": "'unverified'"
+        },
+        {
+          "name": "version",
+          "type": "INTEGER",
+          "constraints": "NOT NULL",
+          "default": "1"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "constraints": "NOT NULL",
+          "default": "NOW()"
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "constraints": "NOT NULL",
+          "default": "NOW()"
+        },
+        {
+          "name": "verified_at",
+          "type": "TIMESTAMP",
+          "constraints": "NULL"
+        }
+      ],
+      "primaryKey": {
+        "columns": [
+          "id"
+        ]
+      },
+      "indexes": [
+        {
+          "name": "idx_customers_email",
+          "columns": [
+            "email"
+          ]
+        },
+        {
+          "name": "idx_customers_status",
+          "columns": [
+            "status"
+          ]
+        },
+        {
+          "name": "idx_customers_created",
+          "columns": [
+            "created_at"
+          ]
+        }
+      ],
+      "foreignKeys": [],
+      "checkConstraints": [
+        {
+          "name": "chk_customer_status",
+          "expression": "status IN ('unverified', 'verified', 'suspended')"
+        },
+        {
+          "name": "chk_customer_email_format",
+          "expression": "email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$'"
+        },
+        {
+          "name": "chk_customer_first_name_length",
+          "expression": "LENGTH(first_name) \u003e= 1 AND LENGTH(first_name) \u003c= 100"
+        },
+        {
+          "name": "chk_customer_last_name_length",
+          "expression": "LENGTH(last_name) \u003e= 1 AND LENGTH(last_name) \u003c= 100"
+        }
+      ]
+    },
+    {
+      "id": "TBL-CUST-002",
+      "name": "customer_verification_tokens",
+      "aggregate": "Customer",
+      "purpose": "Stores email verification tokens for customer registration",
+      "fields": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "constraints": "NOT NULL",
+          "default": "gen_random_uuid()"
+        },
+        {
+          "name": "customer_id",
+          "type": "UUID",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "token",
+          "type": "VARCHAR(255)",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "expires_at",
+          "type": "TIMESTAMP",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "used_at",
+          "type": "TIMESTAMP",
+          "constraints": "NULL"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "constraints": "NOT NULL",
+          "default": "NOW()"
+        }
+      ],
+      "primaryKey": {
+        "columns": [
+          "id"
+        ]
+      },
+      "indexes": [
+        {
+          "name": "idx_verification_tokens_customer",
+          "columns": [
+            "customer_id"
+          ]
+        },
+        {
+          "name": "idx_verification_tokens_token",
+          "columns": [
+            "token"
+          ]
+        },
+        {
+          "name": "idx_verification_tokens_expires",
+          "columns": [
+            "expires_at"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "columns": [
+            "customer_id"
+          ],
+          "references": "customers(id)",
+          "onDelete": "CASCADE"
+        }
+      ],
+      "checkConstraints": [
+        {
+          "name": "chk_token_expiry",
+          "expression": "expires_at \u003e created_at"
+        }
+      ]
+    },
+    {
+      "id": "TBL-CUST-003",
+      "name": "customer_password_reset_tokens",
+      "aggregate": "Customer",
+      "purpose": "Stores password reset tokens for customer account recovery",
+      "fields": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "constraints": "NOT NULL",
+          "default": "gen_random_uuid()"
+        },
+        {
+          "name": "customer_id",
+          "type": "UUID",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "token",
+          "type": "VARCHAR(255)",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "expires_at",
+          "type": "TIMESTAMP",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "used_at",
+          "type": "TIMESTAMP",
+          "constraints": "NULL"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "constraints": "NOT NULL",
+          "default": "NOW()"
+        }
+      ],
+      "primaryKey": {
+        "columns": [
+          "id"
+        ]
+      },
+      "indexes": [
+        {
+          "name": "idx_password_reset_tokens_customer",
+          "columns": [
+            "customer_id"
+          ]
+        },
+        {
+          "name": "idx_password_reset_tokens_token",
+          "columns": [
+            "token"
+          ]
+        },
+        {
+          "name": "idx_password_reset_tokens_expires",
+          "columns": [
+            "expires_at"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "columns": [
+            "customer_id"
+          ],
+          "references": "customers(id)",
+          "onDelete": "CASCADE"
+        }
+      ],
+      "checkConstraints": [
+        {
+          "name": "chk_reset_token_expiry",
+          "expression": "expires_at \u003e created_at"
+        }
+      ]
+    },
+    {
+      "id": "TBL-CUST-004",
+      "name": "customer_audit_log",
+      "aggregate": "Customer",
+      "purpose": "Stores audit trail of customer account changes",
+      "fields": [
+        {
+          "name": "id",
+          "type": "UUID",
+          "constraints": "NOT NULL",
+          "default": "gen_random_uuid()"
+        },
+        {
+          "name": "customer_id",
+          "type": "UUID",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "event_type",
+          "type": "VARCHAR(50)",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "event_data",
+          "type": "JSONB",
+          "constraints": "NULL"
+        },
+        {
+          "name": "ip_address",
+          "type": "INET",
+          "constraints": "NULL"
+        },
+        {
+          "name": "user_agent",
+          "type": "VARCHAR(500)",
+          "constraints": "NULL"
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "constraints": "NOT NULL",
+          "default": "NOW()"
+        }
+      ],
+      "primaryKey": {
+        "columns": [
+          "id"
+        ]
+      },
+      "indexes": [
+        {
+          "name": "idx_audit_log_customer",
+          "columns": [
+            "customer_id"
+          ]
+        },
+        {
+          "name": "idx_audit_log_event_type",
+          "columns": [
+            "event_type"
+          ]
+        },
+        {
+          "name": "idx_audit_log_created",
+          "columns": [
+            "created_at"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "columns": [
+            "customer_id"
+          ],
+          "references": "customers(id)",
+          "onDelete": "CASCADE"
+        }
+      ],
+      "checkConstraints": [
+        {
+          "name": "chk_audit_event_type",
+          "expression": "event_type IN ('registered', 'email_verified', 'password_changed', 'profile_updated', 'suspended', 'reactivated', 'login_success', 'login_failed')"
+        }
+      ]
+    }
+  ],
+  "tech_specs": [
+    {
+      "id": "TS-BR-CUST-001",
+      "name": "Password validation requirements",
+      "br_ref": "BR-CUST-001",
+      "rule": "Password must be at least 8 characters and contain at least one number",
+      "implementation": "Validate password against regex pattern on client and server side before account creation or password update",
+      "validation_points": [
+        "Registration API endpoint",
+        "Password change API endpoint",
+        "Password reset API endpoint",
+        "Registration form (client-side)",
+        "Password change form (client-side)"
+      ],
+      "data_requirements": [
+        {
+          "field": "password",
+          "type": "string",
+          "constraints": "minLength: 8, pattern: /.*[0-9].*/",
+          "source": "BR-CUST-001"
+        }
+      ],
+      "error_handling": [
+        {
+          "condition": "password.length \u003c 8",
+          "error_code": "INVALID_PASSWORD",
+          "message": "Password must be at least 8 characters",
+          "http_status": 400
+        },
+        {
+          "condition": "!password.match(/[0-9]/)",
+          "error_code": "INVALID_PASSWORD",
+          "message": "Password must contain at least one number",
+          "http_status": 400
+        }
+      ],
+      "related_acs": [
+        "AC-CUST-001"
+      ]
+    },
+    {
+      "id": "TS-BR-CUST-002",
+      "name": "Email uniqueness constraint",
+      "br_ref": "BR-CUST-002",
+      "rule": "Each email address can only be associated with one customer account",
+      "implementation": "Enforce unique constraint on email column in customers table; check email existence before account creation",
+      "validation_points": [
+        "Registration API endpoint",
+        "Email change API endpoint",
+        "Database constraint (unique index)"
+      ],
+      "data_requirements": [
+        {
+          "field": "email",
+          "type": "string",
+          "constraints": "unique, format: email, maxLength: 255",
+          "source": "BR-CUST-002"
+        }
+      ],
+      "error_handling": [
+        {
+          "condition": "email already exists in database",
+          "error_code": "DUPLICATE_EMAIL",
+          "message": "Email already registered. Please login or reset password",
+          "http_status": 409
+        },
+        {
+          "condition": "invalid email format",
+          "error_code": "INVALID_EMAIL",
+          "message": "Please provide a valid email address",
+          "http_status": 400
+        }
+      ],
+      "related_acs": [
+        "AC-CUST-001"
+      ]
+    }
+  ],
+  "test_cases": [
+    {
+      "id": "TC-AC-CUST-001-P01",
+      "name": "Valid registration with all required fields",
+      "category": "positive",
+      "ac_ref": "AC-CUST-001",
+      "br_refs": [
+        "BR-CUST-001"
+      ],
+      "preconditions": [
+        "Email john@example.com not registered"
+      ],
+      "test_data": [
+        {
+          "field": "email",
+          "value": "john@example.com",
+          "notes": "Valid email"
+        },
+        {
+          "field": "password",
+          "value": "SecurePass1",
+          "notes": "Valid password"
+        },
+        {
+          "field": "firstName",
+          "value": "John",
+          "notes": "Required"
+        },
+        {
+          "field": "lastName",
+          "value": "Doe",
+          "notes": "Required"
+        }
+      ],
+      "steps": [
+        "Navigate to registration page",
+        "Enter all required fields",
+        "Submit registration form"
+      ],
+      "expected_results": [
+        "Customer account created with status 'unverified'",
+        "Verification email sent to john@example.com"
+      ]
+    },
+    {
+      "id": "TC-AC-CUST-001-P02",
+      "name": "Valid registration with different valid email",
+      "category": "positive",
+      "ac_ref": "AC-CUST-001",
+      "br_refs": [
+        "BR-CUST-001"
+      ],
+      "preconditions": [
+        "Email jane.doe@company.org not registered"
+      ],
+      "test_data": [
+        {
+          "field": "email",
+          "value": "jane.doe@company.org",
+          "notes": "Valid"
+        },
+        {
+          "field": "password",
+          "value": "MyPass123",
+          "notes": "Valid password"
+        },
+        {
+          "field": "firstName",
+          "value": "Jane",
+          "notes": "Required"
+        },
+        {
+          "field": "lastName",
+          "value": "Doe",
+          "notes": "Required"
+        }
+      ],
+      "steps": [
+        "Navigate to registration page",
+        "Enter all required fields",
+        "Submit registration form"
+      ],
+      "expected_results": [
+        "Customer account created with status 'unverified'",
+        "Verification email sent to jane.doe@company.org"
+      ]
+    },
+    {
+      "id": "TC-AC-CUST-001-P03",
+      "name": "Valid registration with complex password",
+      "category": "positive",
+      "ac_ref": "AC-CUST-001",
+      "br_refs": [
+        "BR-CUST-001"
+      ],
+      "preconditions": [
+        "Email test@example.com not registered"
+      ],
+      "test_data": [
+        {
+          "field": "email",
+          "value": "test@example.com",
+          "notes": "Valid"
+        },
+        {
+          "field": "password",
+          "value": "C0mpl3x!Pass#2024",
+          "notes": "Complex"
+        },
+        {
+          "field": "firstName",
+          "value": "Test",
+          "notes": "Required"
+        },
+        {
+          "field": "lastName",
+          "value": "User",
+          "notes": "Required"
+        }
+      ],
+      "steps": [
+        "Navigate to registration page",
+        "Enter all required fields with complex password",
+        "Submit registration form"
+      ],
+      "expected_results": [
+        "Customer account created with status 'unverified'",
+        "Verification email sent"
+      ]
+    },
+    {
+      "id": "TC-AC-CUST-001-N01",
+      "name": "Reject duplicate email address",
+      "category": "negative",
+      "ac_ref": "AC-CUST-001",
+      "br_refs": [
+        "BR-CUST-001"
+      ],
+      "preconditions": [
+        "Email exists@example.com already registered"
+      ],
+      "test_data": [
+        {
+          "field": "email",
+          "value": "exists@example.com",
+          "notes": "Duplicate"
+        },
+        {
+          "field": "password",
+          "value": "SecurePass1",
+          "notes": "Valid"
+        },
+        {
+          "field": "firstName",
+          "value": "John",
+          "notes": "Required"
+        },
+        {
+          "field": "lastName",
+          "value": "Doe",
+          "notes": "Required"
+        }
+      ],
+      "steps": [
+        "Navigate to registration page",
+        "Enter existing email with valid other fields",
+        "Submit registration form"
+      ],
+      "expected_results": [
+        "DUPLICATE_EMAIL error returned",
+        "Suggestion to login or reset password displayed"
+      ]
+    },
+    {
+      "id": "TC-AC-CUST-001-N02",
+      "name": "Reject password less than 8 characters",
+      "category": "negative",
+      "ac_ref": "AC-CUST-001",
+      "br_refs": [
+        "BR-CUST-001"
+      ],
+      "preconditions": [
+        "Email new@example.com not registered"
+      ],
+      "test_data": [
+        {
+          "field": "email",
+          "value": "new@example.com",
+          "notes": "Valid"
+        },
+        {
+          "field": "password",
+          "value": "Pass1",
+          "notes": "Only 5 chars"
+        },
+        {
+          "field": "firstName",
+          "value": "John",
+          "notes": "Required"
+        },
+        {
+          "field": "lastName",
+          "value": "Doe",
+          "notes": "Required"
+        }
+      ],
+      "steps": [
+        "Navigate to registration page",
+        "Enter password with less than 8 characters",
+        "Submit registration form"
+      ],
+      "expected_results": [
+        "INVALID_PASSWORD error returned",
+        "Password requirements message displayed"
+      ]
+    },
+    {
+      "id": "TC-AC-CUST-001-N03",
+      "name": "Reject password without number",
+      "category": "negative",
+      "ac_ref": "AC-CUST-001",
+      "br_refs": [
+        "BR-CUST-001"
+      ],
+      "preconditions": [
+        "Email new@example.com not registered"
+      ],
+      "test_data": [
+        {
+          "field": "email",
+          "value": "new@example.com",
+          "notes": "Valid"
+        },
+        {
+          "field": "password",
+          "value": "SecurePass",
+          "notes": "No number"
+        },
+        {
+          "field": "firstName",
+          "value": "John",
+          "notes": "Required"
+        },
+        {
+          "field": "lastName",
+          "value": "Doe",
+          "notes": "Required"
+        }
+      ],
+      "steps": [
+        "Navigate to registration page",
+        "Enter password without any number",
+        "Submit registration form"
+      ],
+      "expected_results": [
+        "INVALID_PASSWORD error returned",
+        "Password requirements message displayed"
+      ]
+    },
+    {
+      "id": "TC-AC-CUST-001-N04",
+      "name": "Reject invalid email format",
+      "category": "negative",
+      "ac_ref": "AC-CUST-001",
+      "br_refs": [
+        "BR-CUST-001"
+      ],
+      "preconditions": [
+        "User on registration page"
+      ],
+      "test_data": [
+        {
+          "field": "email",
+          "value": "invalid-email",
+          "notes": "No @ symbol"
+        },
+        {
+          "field": "password",
+          "value": "SecurePass1",
+          "notes": "Valid"
+        },
+        {
+          "field": "firstName",
+          "value": "John",
+          "notes": "Required"
+        },
+        {
+          "field": "lastName",
+          "value": "Doe",
+          "notes": "Required"
+        }
+      ],
+      "steps": [
+        "Navigate to registration page",
+        "Enter email without @ symbol",
+        "Submit registration form"
+      ],
+      "expected_results": [
+        "INVALID_EMAIL error returned"
+      ]
+    },
+    {
+      "id": "TC-AC-CUST-001-N05",
+      "name": "Reject email without domain",
+      "category": "negative",
+      "ac_ref": "AC-CUST-001",
+      "br_refs": [
+        "BR-CUST-001"
+      ],
+      "preconditions": [
+        "User on registration page"
+      ],
+      "test_data": [
+        {
+          "field": "email",
+          "value": "john@",
+          "notes": "No domain"
+        },
+        {
+          "field": "password",
+          "value": "SecurePass1",
+          "notes": "Valid"
+        },
+        {
+          "field": "firstName",
+          "value": "John",
+          "notes": "Required"
+        },
+        {
+          "field": "lastName",
+          "value": "Doe",
+          "notes": "Required"
+        }
+      ],
+      "steps": [
+        "Navigate to registration page",
+        "Enter email without domain part",
+        "Submit registration form"
+      ],
+      "expected_results": [
+        "INVALID_EMAIL error returned"
+      ]
+    },
+    {
+      "id": "TC-AC-CUST-001-B01",
+      "name": "Password at minimum length (8 characters)",
+      "category": "boundary",
+      "ac_ref": "AC-CUST-001",
+      "br_refs": [
+        "BR-CUST-001"
+      ],
+      "preconditions": [
+        "Email boundary@example.com not registered"
+      ],
+      "test_data": [
+        {
+          "field": "email",
+          "value": "boundary@example.com",
+          "notes": "Valid"
+        },
+        {
+          "field": "password",
+          "value": "Pass123!",
+          "notes": "Exactly 8 chars"
+        },
+        {
+          "field": "firstName",
+          "value": "John",
+          "notes": "Required"
+        },
+        {
+          "field": "lastName",
+          "value": "Doe",
+          "notes": "Required"
+        }
+      ],
+      "steps": [
+        "Navigate to registration page",
+        "Enter password with exactly 8 characters",
+        "Submit registration form"
+      ],
+      "expected_results": [
+        "Registration succeeds",
+        "Customer account created with status 'unverified'"
+      ]
+    },
+    {
+      "id": "TC-AC-CUST-001-B02",
+      "name": "Password at 7 characters (below minimum)",
+      "category": "boundary",
+      "ac_ref": "AC-CUST-001",
+      "br_refs": [
+        "BR-CUST-001"
+      ],
+      "preconditions": [
+        "Email boundary@example.com not registered"
+      ],
+      "test_data": [
+        {
+          "field": "email",
+          "value": "boundary@example.com",
+          "notes": "Valid"
+        },
+        {
+          "field": "password",
+          "value": "Pass12!",
+          "notes": "Only 7 chars"
+        },
+        {
+          "field": "firstName",
+          "value": "John",
+          "notes": "Required"
+        },
+        {
+          "field": "lastName",
+          "value": "Doe",
+          "notes": "Required"
+        }
+      ],
+      "steps": [
+        "Navigate to registration page",
+        "Enter password with 7 characters",
+        "Submit registration form"
+      ],
+      "expected_results": [
+        "INVALID_PASSWORD error returned",
+        "Password requirements message displayed"
+      ]
+    },
+    {
+      "id": "TC-AC-CUST-001-H01",
+      "name": "Middle name should NOT be required",
+      "category": "hallucination",
+      "ac_ref": "AC-CUST-001",
+      "br_refs": [],
+      "preconditions": [
+        "Email hal@example.com not registered"
+      ],
+      "test_data": [
+        {
+          "field": "email",
+          "value": "hal@example.com",
+          "notes": "Valid"
+        },
+        {
+          "field": "password",
+          "value": "SecurePass1",
+          "notes": "Valid"
+        },
+        {
+          "field": "firstName",
+          "value": "John",
+          "notes": "Required"
+        },
+        {
+          "field": "lastName",
+          "value": "Doe",
+          "notes": "Required"
+        },
+        {
+          "field": "middleName",
+          "value": "",
+          "notes": "Not provided"
+        }
+      ],
+      "steps": [
+        "Navigate to registration page",
+        "Fill form without middle name",
+        "Submit registration form"
+      ],
+      "expected_results": [
+        "Registration succeeds without middle name"
+      ],
+      "should_not": "Require middle name (not in AC)"
+    },
+    {
+      "id": "TC-AC-CUST-001-H02",
+      "name": "Phone number should NOT be required",
+      "category": "hallucination",
+      "ac_ref": "AC-CUST-001",
+      "br_refs": [],
+      "preconditions": [
+        "Email hal2@example.com not registered"
+      ],
+      "test_data": [
+        {
+          "field": "email",
+          "value": "hal2@example.com",
+          "notes": "Valid"
+        },
+        {
+          "field": "password",
+          "value": "SecurePass1",
+          "notes": "Valid"
+        },
+        {
+          "field": "firstName",
+          "value": "John",
+          "notes": "Required"
+        },
+        {
+          "field": "lastName",
+          "value": "Doe",
+          "notes": "Required"
+        },
+        {
+          "field": "phone",
+          "value": "",
+          "notes": "Not provided"
+        }
+      ],
+      "steps": [
+        "Navigate to registration page",
+        "Fill form without phone number",
+        "Submit registration form"
+      ],
+      "expected_results": [
+        "Registration succeeds without phone"
+      ],
+      "should_not": "Require phone number (not in AC)"
+    },
+    {
+      "id": "TC-AC-CUST-001-H03",
+      "name": "Address should NOT be required for registration",
+      "category": "hallucination",
+      "ac_ref": "AC-CUST-001",
+      "br_refs": [],
+      "preconditions": [
+        "Email hal3@example.com not registered"
+      ],
+      "test_data": [
+        {
+          "field": "email",
+          "value": "hal3@example.com",
+          "notes": "Valid"
+        },
+        {
+          "field": "password",
+          "value": "SecurePass1",
+          "notes": "Valid"
+        },
+        {
+          "field": "firstName",
+          "value": "John",
+          "notes": "Required"
+        },
+        {
+          "field": "lastName",
+          "value": "Doe",
+          "notes": "Required"
+        },
+        {
+          "field": "address",
+          "value": "",
+          "notes": "Not provided"
+        }
+      ],
+      "steps": [
+        "Navigate to registration page",
+        "Fill form without address",
+        "Submit registration form"
+      ],
+      "expected_results": [
+        "Registration succeeds without address"
+      ],
+      "should_not": "Require address for registration (not in AC)"
+    },
+    {
+      "id": "TC-AC-CUST-001-H04",
+      "name": "Account should NOT be auto-verified",
+      "category": "hallucination",
+      "ac_ref": "AC-CUST-001",
+      "br_refs": [],
+      "preconditions": [
+        "Email hal4@example.com not registered"
+      ],
+      "test_data": [
+        {
+          "field": "email",
+          "value": "hal4@example.com",
+          "notes": "Valid"
+        },
+        {
+          "field": "password",
+          "value": "SecurePass1",
+          "notes": "Valid"
+        },
+        {
+          "field": "firstName",
+          "value": "John",
+          "notes": "Required"
+        },
+        {
+          "field": "lastName",
+          "value": "Doe",
+          "notes": "Required"
+        }
+      ],
+      "steps": [
+        "Navigate to registration page",
+        "Complete registration with valid data",
+        "Check account status immediately"
+      ],
+      "expected_results": [
+        "Account status is 'unverified'",
+        "Account is NOT automatically verified"
+      ],
+      "should_not": "Auto-verify account (AC specifies 'unverified' status)"
+    }
+  ]
+}
