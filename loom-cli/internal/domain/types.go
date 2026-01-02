@@ -77,14 +77,23 @@ type InterviewState struct {
 	Complete        bool         `json:"complete"`         // interview done?
 }
 
+// QuestionGroup represents a group of related questions
+type QuestionGroup struct {
+	ID        string      `json:"id"`
+	Subject   string      `json:"subject"`   // Common subject (e.g., "Order", "Customer")
+	Category  string      `json:"category"`  // Common category (e.g., "entity", "operation")
+	Questions []Ambiguity `json:"questions"` // Questions in this group
+}
+
 // InterviewOutput is what the CLI outputs for each question
 type InterviewOutput struct {
-	Status          string     `json:"status"`           // "question", "complete", "error"
-	Question        *Ambiguity `json:"question,omitempty"`
-	Progress        string     `json:"progress,omitempty"` // e.g., "5/23"
-	RemainingCount  int        `json:"remaining_count"`
-	SkippedCount    int        `json:"skipped_count"`
-	Message         string     `json:"message,omitempty"`
+	Status          string         `json:"status"`                    // "question", "group", "complete", "error"
+	Question        *Ambiguity     `json:"question,omitempty"`        // Single question (legacy)
+	Group           *QuestionGroup `json:"group,omitempty"`           // Grouped questions (R6)
+	Progress        string         `json:"progress,omitempty"`        // e.g., "5/23"
+	RemainingCount  int            `json:"remaining_count"`
+	SkippedCount    int            `json:"skipped_count"`
+	Message         string         `json:"message,omitempty"`
 }
 
 // Decision represents a resolved ambiguity
