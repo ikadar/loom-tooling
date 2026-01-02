@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/ikadar/loom-cli/internal/claude"
+	"github.com/ikadar/loom-cli/internal/formatter"
 	"github.com/ikadar/loom-cli/internal/generator"
 	"github.com/ikadar/loom-cli/internal/workflow"
 	"github.com/ikadar/loom-cli/prompts"
@@ -733,531 +734,129 @@ func runDeriveL2() error {
 }
 
 func writeTestCases(path string, testCases []TestCase, summary TDAISummary) error {
-	f, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
+	timestamp := time.Now().Format(time.RFC3339)
 
-	fmt.Fprintf(f, "# TDAI Test Cases\n\n")
-	fmt.Fprintf(f, "Generated: %s\n\n", time.Now().Format(time.RFC3339))
-	fmt.Fprintf(f, "**Methodology:** Test-Driven AI Development (TDAI)\n\n")
+	// Convert to formatter types
+	fmtCases := convertTestCasesToFormatter(testCases)
+	fmtSummary := convertSummaryToFormatter(summary)
 
-	// TDAI Summary
-	fmt.Fprintf(f, "## Summary\n\n")
-	fmt.Fprintf(f, "| Category | Count | Ratio |\n")
-	fmt.Fprintf(f, "|----------|-------|-------|\n")
-	fmt.Fprintf(f, "| Positive | %d | %.1f%% |\n", summary.ByCategory.Positive, summary.Coverage.PositiveRatio*100)
-	fmt.Fprintf(f, "| Negative | %d | %.1f%% |\n", summary.ByCategory.Negative, summary.Coverage.NegativeRatio*100)
-	fmt.Fprintf(f, "| Boundary | %d | - |\n", summary.ByCategory.Boundary)
-	fmt.Fprintf(f, "| Hallucination Prevention | %d | - |\n", summary.ByCategory.Hallucination)
-	fmt.Fprintf(f, "| **Total** | **%d** | - |\n\n", summary.Total)
+	content := formatter.FormatTestCases(fmtCases, fmtSummary, timestamp)
+	return os.WriteFile(path, []byte(content), 0644)
+}
 
-	fmt.Fprintf(f, "**Coverage:** %d ACs covered\n", summary.Coverage.ACsCovered)
-	if summary.Coverage.HasHallucinationTests {
-		fmt.Fprintf(f, "**Hallucination Prevention:** ✓ Enabled\n")
-	}
-	fmt.Fprintf(f, "\n---\n\n")
-
-	// Group tests by category
-	categories := []string{"positive", "negative", "boundary", "hallucination"}
-	categoryNames := map[string]string{
-		"positive":      "Positive Tests (Happy Path)",
-		"negative":      "Negative Tests (Error Cases)",
-		"boundary":      "Boundary Tests",
-		"hallucination": "Hallucination Prevention Tests",
-	}
-
-	for _, cat := range categories {
-		var catTests []TestCase
-		for _, tc := range testCases {
-			if tc.Category == cat {
-				catTests = append(catTests, tc)
+// convertTestCasesToFormatter converts local TestCase slice to formatter types
+func convertTestCasesToFormatter(testCases []TestCase) []formatter.TestCase {
+	result := make([]formatter.TestCase, len(testCases))
+	for i, tc := range testCases {
+		testData := make([]formatter.TestData, len(tc.TestData))
+		for j, td := range tc.TestData {
+			testData[j] = formatter.TestData{
+				Field: td.Field,
+				Value: td.Value,
+				Notes: td.Notes,
 			}
 		}
-
-		if len(catTests) == 0 {
-			continue
-		}
-
-		fmt.Fprintf(f, "## %s\n\n", categoryNames[cat])
-
-		for _, tc := range catTests {
-			// Add anchor: ### TC-AC-CUST-001-P01 – Title {#tc-ac-cust-001-p01}
-			fmt.Fprintf(f, "### %s – %s {#%s}\n\n", tc.ID, tc.Name, toAnchorL2(tc.ID))
-
-			// Special handling for hallucination tests
-			if tc.Category == "hallucination" && tc.ShouldNot != "" {
-				fmt.Fprintf(f, "**⚠️ Should NOT:** %s\n\n", tc.ShouldNot)
-			}
-
-			fmt.Fprintf(f, "**Preconditions:**\n")
-			for _, p := range tc.Preconditions {
-				fmt.Fprintf(f, "- %s\n", p)
-			}
-			fmt.Fprintf(f, "\n")
-
-			if len(tc.TestData) > 0 {
-				fmt.Fprintf(f, "**Test Data:**\n")
-				fmt.Fprintf(f, "| Field | Value | Notes |\n")
-				fmt.Fprintf(f, "|-------|-------|-------|\n")
-				for _, td := range tc.TestData {
-					fmt.Fprintf(f, "| %s | %v | %s |\n", td.Field, td.Value, td.Notes)
-				}
-				fmt.Fprintf(f, "\n")
-			}
-
-			fmt.Fprintf(f, "**Steps:**\n")
-			for i, s := range tc.Steps {
-				fmt.Fprintf(f, "%d. %s\n", i+1, s)
-			}
-			fmt.Fprintf(f, "\n")
-
-			fmt.Fprintf(f, "**Expected Result:**\n")
-			for _, r := range tc.ExpectedResults {
-				fmt.Fprintf(f, "- %s\n", r)
-			}
-			fmt.Fprintf(f, "\n")
-
-			fmt.Fprintf(f, "**Traceability:**\n")
-			// Link to L1 acceptance-criteria.md
-			fmt.Fprintf(f, "- AC: %s\n", toLinkL2(tc.ACRef, "../l1/acceptance-criteria.md"))
-			if len(tc.BRRefs) > 0 {
-				fmt.Fprintf(f, "- BR: ")
-				for i, br := range tc.BRRefs {
-					if i > 0 {
-						fmt.Fprintf(f, ", ")
-					}
-					fmt.Fprintf(f, "%s", toLinkL2(br, "../l1/business-rules.md"))
-				}
-				fmt.Fprintf(f, "\n")
-			}
-			fmt.Fprintf(f, "\n---\n\n")
+		result[i] = formatter.TestCase{
+			ID:              tc.ID,
+			Name:            tc.Name,
+			Category:        tc.Category,
+			ACRef:           tc.ACRef,
+			BRRefs:          tc.BRRefs,
+			Preconditions:   tc.Preconditions,
+			TestData:        testData,
+			Steps:           tc.Steps,
+			ExpectedResults: tc.ExpectedResults,
+			ShouldNot:       tc.ShouldNot,
 		}
 	}
+	return result
+}
 
-	return nil
+// convertSummaryToFormatter converts local TDAISummary to formatter type
+func convertSummaryToFormatter(s TDAISummary) formatter.TDAISummary {
+	var result formatter.TDAISummary
+	result.Total = s.Total
+	result.ByCategory.Positive = s.ByCategory.Positive
+	result.ByCategory.Negative = s.ByCategory.Negative
+	result.ByCategory.Boundary = s.ByCategory.Boundary
+	result.ByCategory.Hallucination = s.ByCategory.Hallucination
+	result.Coverage.ACsCovered = s.Coverage.ACsCovered
+	result.Coverage.PositiveRatio = s.Coverage.PositiveRatio
+	result.Coverage.NegativeRatio = s.Coverage.NegativeRatio
+	result.Coverage.HasHallucinationTests = s.Coverage.HasHallucinationTests
+	return result
 }
 
 func writeTechSpecs(path string, techSpecs []TechSpec) error {
-	f, err := os.Create(path)
-	if err != nil {
-		return err
+	timestamp := time.Now().Format(time.RFC3339)
+	fmtSpecs := convertTechSpecsToFormatter(techSpecs)
+	content := formatter.FormatTechSpecs(fmtSpecs, timestamp)
+	return os.WriteFile(path, []byte(content), 0644)
+}
+
+// convertTechSpecsToFormatter converts local TechSpec slice to formatter types
+func convertTechSpecsToFormatter(techSpecs []TechSpec) []formatter.TechSpec {
+	result := make([]formatter.TechSpec, len(techSpecs))
+	for i, ts := range techSpecs {
+		dataReqs := make([]formatter.DataReq, len(ts.DataRequirements))
+		for j, dr := range ts.DataRequirements {
+			dataReqs[j] = formatter.DataReq{
+				Field:       dr.Field,
+				Type:        dr.Type,
+				Constraints: dr.Constraints,
+				Source:      dr.Source,
+			}
+		}
+		errHandling := make([]formatter.ErrorHandling, len(ts.ErrorHandling))
+		for j, eh := range ts.ErrorHandling {
+			errHandling[j] = formatter.ErrorHandling{
+				Condition:  eh.Condition,
+				ErrorCode:  eh.ErrorCode,
+				Message:    eh.Message,
+				HTTPStatus: eh.HTTPStatus,
+			}
+		}
+		result[i] = formatter.TechSpec{
+			ID:               ts.ID,
+			Name:             ts.Name,
+			BRRef:            ts.BRRef,
+			Rule:             ts.Rule,
+			Implementation:   ts.Implementation,
+			ValidationPoints: ts.ValidationPoints,
+			DataRequirements: dataReqs,
+			ErrorHandling:    errHandling,
+			RelatedACs:       ts.RelatedACs,
+		}
 	}
-	defer f.Close()
-
-	fmt.Fprintf(f, "# Technical Specifications\n\n")
-	fmt.Fprintf(f, "Generated: %s\n\n", time.Now().Format(time.RFC3339))
-	fmt.Fprintf(f, "---\n\n")
-
-	for _, ts := range techSpecs {
-		// Add anchor: ## TS-BR-CUST-001 – Title {#ts-br-cust-001}
-		fmt.Fprintf(f, "## %s – %s {#%s}\n\n", ts.ID, ts.Name, toAnchorL2(ts.ID))
-		fmt.Fprintf(f, "**Rule:** %s\n\n", ts.Rule)
-		fmt.Fprintf(f, "**Implementation Approach:**\n%s\n\n", ts.Implementation)
-
-		if len(ts.ValidationPoints) > 0 {
-			fmt.Fprintf(f, "**Validation Points:**\n")
-			for _, vp := range ts.ValidationPoints {
-				fmt.Fprintf(f, "- %s\n", vp)
-			}
-			fmt.Fprintf(f, "\n")
-		}
-
-		if len(ts.DataRequirements) > 0 {
-			fmt.Fprintf(f, "**Data Requirements:**\n")
-			fmt.Fprintf(f, "| Field | Type | Constraints | Source |\n")
-			fmt.Fprintf(f, "|-------|------|-------------|--------|\n")
-			for _, dr := range ts.DataRequirements {
-				fmt.Fprintf(f, "| %s | %s | %s | %s |\n", dr.Field, dr.Type, dr.Constraints, dr.Source)
-			}
-			fmt.Fprintf(f, "\n")
-		}
-
-		if len(ts.ErrorHandling) > 0 {
-			fmt.Fprintf(f, "**Error Handling:**\n")
-			fmt.Fprintf(f, "| Condition | Error Code | Message | HTTP Status |\n")
-			fmt.Fprintf(f, "|-----------|------------|---------|-------------|\n")
-			for _, eh := range ts.ErrorHandling {
-				fmt.Fprintf(f, "| %s | %s | %s | %d |\n", eh.Condition, eh.ErrorCode, eh.Message, eh.HTTPStatus)
-			}
-			fmt.Fprintf(f, "\n")
-		}
-
-		fmt.Fprintf(f, "**Traceability:**\n")
-		// Link to L1 business-rules.md
-		fmt.Fprintf(f, "- BR: %s\n", toLinkL2(ts.BRRef, "../l1/business-rules.md"))
-		if len(ts.RelatedACs) > 0 {
-			fmt.Fprintf(f, "- Related ACs: ")
-			for i, ac := range ts.RelatedACs {
-				if i > 0 {
-					fmt.Fprintf(f, ", ")
-				}
-				fmt.Fprintf(f, "%s", toLinkL2(ac, "../l1/acceptance-criteria.md"))
-			}
-			fmt.Fprintf(f, "\n")
-		}
-		fmt.Fprintf(f, "\n---\n\n")
-	}
-
-	return nil
+	return result
 }
 
 func writeInterfaceContracts(path string, contracts []InterfaceContract, sharedTypes []SharedType) error {
-	f, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	fmt.Fprintf(f, "# Interface Contracts\n\n")
-	fmt.Fprintf(f, "Generated: %s\n\n", time.Now().Format(time.RFC3339))
-	fmt.Fprintf(f, "---\n\n")
-
-	// Shared Types section
-	if len(sharedTypes) > 0 {
-		fmt.Fprintf(f, "## Shared Types\n\n")
-		for _, st := range sharedTypes {
-			fmt.Fprintf(f, "### %s\n\n", st.Name)
-			fmt.Fprintf(f, "| Field | Type | Constraints |\n")
-			fmt.Fprintf(f, "|-------|------|-------------|\n")
-			for _, field := range st.Fields {
-				fmt.Fprintf(f, "| %s | %s | %s |\n", field.Name, field.Type, field.Constraints)
-			}
-			fmt.Fprintf(f, "\n")
-		}
-		fmt.Fprintf(f, "---\n\n")
-	}
-
-	// Contracts
-	for _, ic := range contracts {
-		fmt.Fprintf(f, "## %s – %s {#%s}\n\n", ic.ID, ic.ServiceName, toAnchorL2(ic.ID))
-		fmt.Fprintf(f, "**Purpose:** %s\n\n", ic.Purpose)
-		fmt.Fprintf(f, "**Base URL:** `%s`\n\n", ic.BaseURL)
-
-		if ic.SecurityRequirements.Authentication != "" {
-			fmt.Fprintf(f, "**Security:**\n")
-			fmt.Fprintf(f, "- Authentication: %s\n", ic.SecurityRequirements.Authentication)
-			fmt.Fprintf(f, "- Authorization: %s\n\n", ic.SecurityRequirements.Authorization)
-		}
-
-		// Operations
-		fmt.Fprintf(f, "### Operations\n\n")
-		for _, op := range ic.Operations {
-			fmt.Fprintf(f, "#### %s `%s %s`\n\n", op.Name, op.Method, op.Path)
-			fmt.Fprintf(f, "%s\n\n", op.Description)
-
-			if len(op.InputSchema) > 0 {
-				fmt.Fprintf(f, "**Input:**\n")
-				for name, field := range op.InputSchema {
-					req := ""
-					if field.Required {
-						req = " (required)"
-					}
-					fmt.Fprintf(f, "- `%s`: %s%s\n", name, field.Type, req)
-				}
-				fmt.Fprintf(f, "\n")
-			}
-
-			if len(op.OutputSchema) > 0 {
-				fmt.Fprintf(f, "**Output:**\n")
-				for name, field := range op.OutputSchema {
-					fmt.Fprintf(f, "- `%s`: %s\n", name, field.Type)
-				}
-				fmt.Fprintf(f, "\n")
-			}
-
-			if len(op.Errors) > 0 {
-				fmt.Fprintf(f, "**Errors:**\n")
-				fmt.Fprintf(f, "| Code | HTTP | Message |\n")
-				fmt.Fprintf(f, "|------|------|----------|\n")
-				for _, e := range op.Errors {
-					fmt.Fprintf(f, "| %s | %d | %s |\n", e.Code, e.HTTPStatus, e.Message)
-				}
-				fmt.Fprintf(f, "\n")
-			}
-
-			if len(op.Preconditions) > 0 {
-				fmt.Fprintf(f, "**Preconditions:** %v\n\n", op.Preconditions)
-			}
-			if len(op.Postconditions) > 0 {
-				fmt.Fprintf(f, "**Postconditions:** %v\n\n", op.Postconditions)
-			}
-		}
-
-		// Events
-		if len(ic.Events) > 0 {
-			fmt.Fprintf(f, "### Events\n\n")
-			for _, ev := range ic.Events {
-				fmt.Fprintf(f, "- **%s**: %s (payload: %v)\n", ev.Name, ev.Description, ev.Payload)
-			}
-			fmt.Fprintf(f, "\n")
-		}
-
-		fmt.Fprintf(f, "---\n\n")
-	}
-
-	return nil
+	timestamp := time.Now().Format(time.RFC3339)
+	fmtContracts := convertContractsToFormatter(contracts)
+	fmtSharedTypes := convertSharedTypesToFormatter(sharedTypes)
+	content := formatter.FormatInterfaceContracts(fmtContracts, fmtSharedTypes, timestamp)
+	return os.WriteFile(path, []byte(content), 0644)
 }
 
 func writeAggregateDesign(path string, aggregates []AggregateDesign) error {
-	f, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	fmt.Fprintf(f, "# Aggregate Design\n\n")
-	fmt.Fprintf(f, "Generated: %s\n\n", time.Now().Format(time.RFC3339))
-	fmt.Fprintf(f, "---\n\n")
-
-	for _, agg := range aggregates {
-		fmt.Fprintf(f, "## %s – %s {#%s}\n\n", agg.ID, agg.Name, toAnchorL2(agg.ID))
-		fmt.Fprintf(f, "**Purpose:** %s\n\n", agg.Purpose)
-
-		// Root
-		fmt.Fprintf(f, "### Aggregate Root: %s\n\n", agg.Root.Entity)
-		fmt.Fprintf(f, "**Identity:** %s\n\n", agg.Root.Identity)
-		if len(agg.Root.Attributes) > 0 {
-			fmt.Fprintf(f, "**Attributes:**\n")
-			fmt.Fprintf(f, "| Name | Type | Mutable |\n")
-			fmt.Fprintf(f, "|------|------|----------|\n")
-			for _, attr := range agg.Root.Attributes {
-				fmt.Fprintf(f, "| %s | %s | %v |\n", attr.Name, attr.Type, attr.Mutable)
-			}
-			fmt.Fprintf(f, "\n")
-		}
-
-		// Invariants
-		if len(agg.Invariants) > 0 {
-			fmt.Fprintf(f, "### Invariants\n\n")
-			for _, inv := range agg.Invariants {
-				fmt.Fprintf(f, "- **%s**: %s\n  - Enforcement: %s\n", inv.ID, inv.Rule, inv.Enforcement)
-			}
-			fmt.Fprintf(f, "\n")
-		}
-
-		// Child Entities
-		if len(agg.Entities) > 0 {
-			fmt.Fprintf(f, "### Child Entities\n\n")
-			for _, ent := range agg.Entities {
-				fmt.Fprintf(f, "#### %s\n\n", ent.Name)
-				fmt.Fprintf(f, "**Identity:** %s\n\n", ent.Identity)
-				fmt.Fprintf(f, "**Purpose:** %s\n\n", ent.Purpose)
-			}
-		}
-
-		// Value Objects
-		if len(agg.ValueObjects) > 0 {
-			fmt.Fprintf(f, "### Value Objects\n\n")
-			fmt.Fprintf(f, "%v\n\n", agg.ValueObjects)
-		}
-
-		// Behaviors
-		if len(agg.Behaviors) > 0 {
-			fmt.Fprintf(f, "### Behaviors\n\n")
-			fmt.Fprintf(f, "| Command | Pre | Post | Emits |\n")
-			fmt.Fprintf(f, "|---------|-----|------|-------|\n")
-			for _, b := range agg.Behaviors {
-				fmt.Fprintf(f, "| %s | %v | %v | %s |\n", b.Command, b.Preconditions, b.Postconditions, b.Emits)
-			}
-			fmt.Fprintf(f, "\n")
-		}
-
-		// Events
-		if len(agg.Events) > 0 {
-			fmt.Fprintf(f, "### Events\n\n")
-			for _, ev := range agg.Events {
-				fmt.Fprintf(f, "- **%s**: %v\n", ev.Name, ev.Payload)
-			}
-			fmt.Fprintf(f, "\n")
-		}
-
-		// Repository
-		fmt.Fprintf(f, "### Repository: %s\n\n", agg.Repository.Name)
-		fmt.Fprintf(f, "- Load Strategy: %s\n", agg.Repository.LoadStrategy)
-		fmt.Fprintf(f, "- Concurrency: %s\n\n", agg.Repository.Concurrency)
-
-		fmt.Fprintf(f, "---\n\n")
-	}
-
-	return nil
+	timestamp := time.Now().Format(time.RFC3339)
+	fmtAggs := convertAggregatesToFormatter(aggregates)
+	content := formatter.FormatAggregateDesign(fmtAggs, timestamp)
+	return os.WriteFile(path, []byte(content), 0644)
 }
 
 func writeSequenceDesign(path string, sequences []SequenceDesign) error {
-	f, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	fmt.Fprintf(f, "# Sequence Design\n\n")
-	fmt.Fprintf(f, "Generated: %s\n\n", time.Now().Format(time.RFC3339))
-	fmt.Fprintf(f, "---\n\n")
-
-	for _, seq := range sequences {
-		fmt.Fprintf(f, "## %s – %s {#%s}\n\n", seq.ID, seq.Name, toAnchorL2(seq.ID))
-		fmt.Fprintf(f, "%s\n\n", seq.Description)
-
-		// Trigger
-		fmt.Fprintf(f, "### Trigger\n\n")
-		fmt.Fprintf(f, "**Type:** %s\n\n", seq.Trigger.Type)
-		fmt.Fprintf(f, "%s\n\n", seq.Trigger.Description)
-
-		// Participants
-		if len(seq.Participants) > 0 {
-			fmt.Fprintf(f, "### Participants\n\n")
-			for _, p := range seq.Participants {
-				fmt.Fprintf(f, "- **%s** (%s)\n", p.Name, p.Type)
-			}
-			fmt.Fprintf(f, "\n")
-		}
-
-		// Steps
-		fmt.Fprintf(f, "### Sequence\n\n")
-		for _, step := range seq.Steps {
-			fmt.Fprintf(f, "%d. **%s** → %s: %s\n", step.Step, step.Actor, step.Target, step.Action)
-			if step.Event != "" {
-				fmt.Fprintf(f, "   - Emits: `%s`\n", step.Event)
-			}
-			if step.Returns != "" {
-				fmt.Fprintf(f, "   - Returns: %s\n", step.Returns)
-			}
-		}
-		fmt.Fprintf(f, "\n")
-
-		// Mermaid Diagram
-		fmt.Fprintf(f, "### Sequence Diagram\n\n")
-		fmt.Fprintf(f, "```mermaid\nsequenceDiagram\n")
-		for _, p := range seq.Participants {
-			fmt.Fprintf(f, "    participant %s\n", p.Name)
-		}
-		for _, step := range seq.Steps {
-			fmt.Fprintf(f, "    %s->>%s: %s\n", step.Actor, step.Target, step.Action)
-			if step.Returns != "" {
-				fmt.Fprintf(f, "    %s-->>%s: %s\n", step.Target, step.Actor, step.Returns)
-			}
-		}
-		fmt.Fprintf(f, "```\n\n")
-
-		// Outcome
-		fmt.Fprintf(f, "### Outcome\n\n")
-		fmt.Fprintf(f, "%s\n\n", seq.Outcome.Success)
-		if len(seq.Outcome.StateChanges) > 0 {
-			fmt.Fprintf(f, "**State Changes:**\n")
-			for _, sc := range seq.Outcome.StateChanges {
-				fmt.Fprintf(f, "- %s\n", sc)
-			}
-			fmt.Fprintf(f, "\n")
-		}
-
-		// Exceptions
-		if len(seq.Exceptions) > 0 {
-			fmt.Fprintf(f, "### Exceptions\n\n")
-			for _, ex := range seq.Exceptions {
-				fmt.Fprintf(f, "- **%s** (step %d): %s\n", ex.Condition, ex.Step, ex.Handling)
-			}
-			fmt.Fprintf(f, "\n")
-		}
-
-		fmt.Fprintf(f, "---\n\n")
-	}
-
-	return nil
+	timestamp := time.Now().Format(time.RFC3339)
+	fmtSeqs := convertSequencesToFormatter(sequences)
+	content := formatter.FormatSequenceDesign(fmtSeqs, timestamp)
+	return os.WriteFile(path, []byte(content), 0644)
 }
 
 func writeDataModel(path string, tables []DataTable, enums []DataEnum) error {
-	f, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	fmt.Fprintf(f, "# Initial Data Model\n\n")
-	fmt.Fprintf(f, "Generated: %s\n\n", time.Now().Format(time.RFC3339))
-	fmt.Fprintf(f, "---\n\n")
-
-	// Enums
-	if len(enums) > 0 {
-		fmt.Fprintf(f, "## Enumerations\n\n")
-		for _, enum := range enums {
-			fmt.Fprintf(f, "### %s\n\n", enum.Name)
-			fmt.Fprintf(f, "Values: `%v`\n\n", enum.Values)
-		}
-		fmt.Fprintf(f, "---\n\n")
-	}
-
-	// Tables
-	fmt.Fprintf(f, "## Tables\n\n")
-	for _, tbl := range tables {
-		fmt.Fprintf(f, "### %s – %s {#%s}\n\n", tbl.ID, tbl.Name, toAnchorL2(tbl.ID))
-		fmt.Fprintf(f, "**Aggregate:** %s\n\n", tbl.Aggregate)
-		fmt.Fprintf(f, "**Purpose:** %s\n\n", tbl.Purpose)
-
-		// Fields
-		fmt.Fprintf(f, "**Columns:**\n\n")
-		fmt.Fprintf(f, "| Name | Type | Constraints | Default |\n")
-		fmt.Fprintf(f, "|------|------|-------------|----------|\n")
-		for _, field := range tbl.Fields {
-			fmt.Fprintf(f, "| %s | %s | %s | %s |\n", field.Name, field.Type, field.Constraints, field.Default)
-		}
-		fmt.Fprintf(f, "\n")
-
-		// Primary Key
-		fmt.Fprintf(f, "**Primary Key:** %v\n\n", tbl.PrimaryKey.Columns)
-
-		// Indexes
-		if len(tbl.Indexes) > 0 {
-			fmt.Fprintf(f, "**Indexes:**\n")
-			for _, idx := range tbl.Indexes {
-				fmt.Fprintf(f, "- `%s`: %v\n", idx.Name, idx.Columns)
-			}
-			fmt.Fprintf(f, "\n")
-		}
-
-		// Foreign Keys
-		if len(tbl.ForeignKeys) > 0 {
-			fmt.Fprintf(f, "**Foreign Keys:**\n")
-			for _, fk := range tbl.ForeignKeys {
-				fmt.Fprintf(f, "- %v → %s (ON DELETE %s)\n", fk.Columns, fk.References, fk.OnDelete)
-			}
-			fmt.Fprintf(f, "\n")
-		}
-
-		// Check Constraints
-		if len(tbl.CheckConstraints) > 0 {
-			fmt.Fprintf(f, "**Constraints:**\n")
-			for _, c := range tbl.CheckConstraints {
-				fmt.Fprintf(f, "- `%s`: %s\n", c.Name, c.Expression)
-			}
-			fmt.Fprintf(f, "\n")
-		}
-
-		fmt.Fprintf(f, "---\n\n")
-	}
-
-	// ER Diagram
-	fmt.Fprintf(f, "## Entity-Relationship Diagram\n\n")
-	fmt.Fprintf(f, "```mermaid\nerDiagram\n")
-	for _, tbl := range tables {
-		fmt.Fprintf(f, "    %s {\n", tbl.Name)
-		for _, field := range tbl.Fields {
-			fmt.Fprintf(f, "        %s %s\n", field.Type, field.Name)
-		}
-		fmt.Fprintf(f, "    }\n")
-	}
-	// Add relationships
-	for _, tbl := range tables {
-		for _, fk := range tbl.ForeignKeys {
-			// Extract target table from references like "customers(id)"
-			target := fk.References
-			if idx := strings.Index(target, "("); idx > 0 {
-				target = target[:idx]
-			}
-			fmt.Fprintf(f, "    %s ||--o{ %s : \"FK\"\n", target, tbl.Name)
-		}
-	}
-	fmt.Fprintf(f, "```\n")
-
-	return nil
+	timestamp := time.Now().Format(time.RFC3339)
+	fmtTables := convertTablesToFormatter(tables)
+	fmtEnums := convertEnumsToFormatter(enums)
+	content := formatter.FormatDataModel(fmtTables, fmtEnums, timestamp)
+	return os.WriteFile(path, []byte(content), 0644)
 }
