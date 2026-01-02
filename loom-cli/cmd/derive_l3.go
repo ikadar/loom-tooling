@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/ikadar/loom-cli/internal/claude"
+	"github.com/ikadar/loom-cli/internal/formatter"
+	"github.com/ikadar/loom-cli/internal/generator"
 	"github.com/ikadar/loom-cli/prompts"
 )
 
@@ -171,20 +173,19 @@ func runDeriveL3() error {
 	fmt.Fprintln(os.Stderr, "Phase L3-0: Reading L1/L2 documents...")
 
 	// L2 docs
-	tcContent, err := os.ReadFile(filepath.Join(inputDir, "test-cases.md"))
-	if err != nil {
-		return fmt.Errorf("failed to read test-cases.md: %w", err)
-	}
-
 	tsContent, err := os.ReadFile(filepath.Join(inputDir, "tech-specs.md"))
 	if err != nil {
 		return fmt.Errorf("failed to read tech-specs.md: %w", err)
 	}
 
+	// L1 docs (required for test case generation)
 	acContent, err := os.ReadFile(filepath.Join(inputDir, "acceptance-criteria.md"))
 	if err != nil {
 		// Try parent directory (L1)
-		acContent, _ = os.ReadFile(filepath.Join(inputDir, "../acceptance-criteria.md"))
+		acContent, err = os.ReadFile(filepath.Join(inputDir, "../acceptance-criteria.md"))
+		if err != nil {
+			return fmt.Errorf("failed to read acceptance-criteria.md: %w", err)
+		}
 	}
 
 	aggContent, err := os.ReadFile(filepath.Join(inputDir, "aggregate-design.md"))
@@ -209,7 +210,6 @@ func runDeriveL3() error {
 		dmContent, _ = os.ReadFile(filepath.Join(inputDir, "../domain-model.md"))
 	}
 
-	fmt.Fprintf(os.Stderr, "  Read: test-cases.md (%d bytes)\n", len(tcContent))
 	fmt.Fprintf(os.Stderr, "  Read: tech-specs.md (%d bytes)\n", len(tsContent))
 	fmt.Fprintf(os.Stderr, "  Read: acceptance-criteria.md (%d bytes)\n", len(acContent))
 	fmt.Fprintf(os.Stderr, "  Read: aggregate-design.md (%d bytes)\n", len(aggContent))
@@ -220,8 +220,26 @@ func runDeriveL3() error {
 	// Create Claude client
 	client := claude.NewClient()
 
-	// Phase L3-1a: Generate API Spec
-	fmt.Fprintln(os.Stderr, "\nPhase L3-1a: Generating API Specification...")
+	// Phase L3-1: Generate Test Cases from Acceptance Criteria (TDAI)
+	fmt.Fprintln(os.Stderr, "\nPhase L3-1: Generating TDAI Test Cases from Acceptance Criteria...")
+
+	tcGenerator := generator.NewChunkedTestCaseGenerator(client)
+	tcResult, err := tcGenerator.Generate(string(acContent))
+	if err != nil {
+		return fmt.Errorf("failed to generate test cases: %w", err)
+	}
+
+	// Flatten test suites for output
+	allTestCases := generator.FlattenTestCases(tcResult.TestSuites)
+	fmt.Fprintf(os.Stderr, "  Generated: %d Test Cases (P:%d N:%d B:%d H:%d)\n",
+		tcResult.Summary.Total,
+		tcResult.Summary.ByCategory.Positive,
+		tcResult.Summary.ByCategory.Negative,
+		tcResult.Summary.ByCategory.Boundary,
+		tcResult.Summary.ByCategory.Hallucination)
+
+	// Phase L3-2a: Generate API Spec
+	fmt.Fprintln(os.Stderr, "\nPhase L3-2a: Generating API Specification...")
 
 	apiPrompt := prompts.DeriveL3API + "\n\n" + string(tsContent)
 
@@ -232,8 +250,8 @@ func runDeriveL3() error {
 
 	fmt.Fprintf(os.Stderr, "  Generated: %d endpoints\n", len(apiResult.Paths))
 
-	// Phase L3-1b: Generate Implementation Skeletons
-	fmt.Fprintln(os.Stderr, "\nPhase L3-1b: Generating Implementation Skeletons...")
+	// Phase L3-2b: Generate Implementation Skeletons
+	fmt.Fprintln(os.Stderr, "\nPhase L3-2b: Generating Implementation Skeletons...")
 
 	skelPrompt := prompts.DeriveL3Skeletons + "\n\n" + string(tsContent)
 
@@ -257,10 +275,11 @@ func runDeriveL3() error {
 	result.Summary.EndpointsCount = len(apiResult.Paths)
 	result.Summary.ServicesCount = len(skelResult.ImplementationSkeletons)
 
-	// Phase 2: Generate Feature Tickets
-	fmt.Fprintln(os.Stderr, "\nPhase L3-2: Generating Feature Definition Tickets...")
+	// Phase 3: Generate Feature Tickets
+	fmt.Fprintln(os.Stderr, "\nPhase L3-3: Generating Feature Definition Tickets...")
 
-	ftInput := string(acContent) + "\n\n---\n\n" + string(tcContent)
+	// Use AC + tech specs for feature tickets (test cases are now generated in this phase)
+	ftInput := string(acContent) + "\n\n---\n\n" + string(tsContent)
 	ftPrompt := prompts.DeriveFeatureTickets + ftInput
 
 	var ftResult struct {
@@ -275,8 +294,8 @@ func runDeriveL3() error {
 	}
 	fmt.Fprintf(os.Stderr, "  Generated: %d Feature Tickets\n", len(ftResult.FeatureTickets))
 
-	// Phase 3: Generate Service Boundaries
-	fmt.Fprintln(os.Stderr, "\nPhase L3-3: Generating Service Boundaries...")
+	// Phase 4: Generate Service Boundaries
+	fmt.Fprintln(os.Stderr, "\nPhase L3-4: Generating Service Boundaries...")
 
 	sbInput := string(bcContent) + "\n\n---\n\n" + string(aggContent)
 	sbPrompt := prompts.DeriveServiceBoundaries + sbInput
@@ -293,8 +312,8 @@ func runDeriveL3() error {
 	}
 	fmt.Fprintf(os.Stderr, "  Generated: %d Service Boundaries\n", len(sbResult.Services))
 
-	// Phase 4: Generate Event Design
-	fmt.Fprintln(os.Stderr, "\nPhase L3-4: Generating Event & Message Design...")
+	// Phase 5: Generate Event Design
+	fmt.Fprintln(os.Stderr, "\nPhase L3-5: Generating Event & Message Design...")
 
 	evInput := string(dmContent) + "\n\n---\n\n" + string(seqContent)
 	evPrompt := prompts.DeriveEventDesign + evInput
@@ -315,8 +334,8 @@ func runDeriveL3() error {
 	fmt.Fprintf(os.Stderr, "  Generated: %d Events, %d Commands\n",
 		len(evResult.DomainEvents), len(evResult.Commands))
 
-	// Phase 5: Generate Dependency Graph
-	fmt.Fprintln(os.Stderr, "\nPhase L3-5: Generating Dependency Graph...")
+	// Phase 6: Generate Dependency Graph
+	fmt.Fprintln(os.Stderr, "\nPhase L3-6: Generating Dependency Graph...")
 
 	dgInput := ""
 	for _, svc := range sbResult.Services {
@@ -348,8 +367,17 @@ func runDeriveL3() error {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
+	// Write output files
+	fmt.Fprintln(os.Stderr, "\nPhase L3-W: Writing output...")
+
+	// Write Test Cases (TDAI format)
+	tcPath := filepath.Join(outputDir, "test-cases.md")
+	if err := writeL3TestCases(tcPath, allTestCases, tcResult.Summary); err != nil {
+		return fmt.Errorf("failed to write test cases: %w", err)
+	}
+	fmt.Fprintf(os.Stderr, "  Written: %s\n", tcPath)
+
 	// Write API Spec (OpenAPI JSON)
-	fmt.Fprintln(os.Stderr, "\nPhase L3-2: Writing output...")
 
 	apiPath := filepath.Join(outputDir, "openapi.json")
 	apiContent, _ := json.MarshalIndent(result.APISpec, "", "  ")
@@ -408,6 +436,12 @@ func runDeriveL3() error {
 	fmt.Fprintln(os.Stderr, "========================================")
 	fmt.Fprintln(os.Stderr, "")
 	fmt.Fprintln(os.Stderr, "Generated:")
+	fmt.Fprintf(os.Stderr, "  Test Cases:          %d (P:%d N:%d B:%d H:%d)\n",
+		tcResult.Summary.Total,
+		tcResult.Summary.ByCategory.Positive,
+		tcResult.Summary.ByCategory.Negative,
+		tcResult.Summary.ByCategory.Boundary,
+		tcResult.Summary.ByCategory.Hallucination)
 	fmt.Fprintf(os.Stderr, "  API Endpoints:       %d\n", len(result.APISpec.Paths))
 	fmt.Fprintf(os.Stderr, "  Impl Skeletons:      %d\n", len(result.ImplementationSkeletons))
 
@@ -425,6 +459,7 @@ func runDeriveL3() error {
 	fmt.Fprintf(os.Stderr, "  Graph Dependencies:  %d\n", len(dgResult.Dependencies))
 	fmt.Fprintln(os.Stderr, "")
 	fmt.Fprintln(os.Stderr, "Output:")
+	fmt.Fprintf(os.Stderr, "  %s\n", tcPath)
 	fmt.Fprintf(os.Stderr, "  %s\n", apiPath)
 	fmt.Fprintf(os.Stderr, "  %s\n", implPath)
 	fmt.Fprintf(os.Stderr, "  %s\n", ftPath)
@@ -793,4 +828,49 @@ func extractDomainCode(name string) string {
 		name = name[:4]
 	}
 	return strings.ToUpper(name)
+}
+
+// writeL3TestCases writes test cases to markdown file using the formatter
+func writeL3TestCases(path string, testCases []generator.TestCase, summary generator.TDAISummary) error {
+	timestamp := time.Now().Format(time.RFC3339)
+
+	// Convert generator types to formatter types
+	fmtCases := make([]formatter.TestCase, len(testCases))
+	for i, tc := range testCases {
+		testData := make([]formatter.TestData, len(tc.TestData))
+		for j, td := range tc.TestData {
+			testData[j] = formatter.TestData{
+				Field: td.Field,
+				Value: td.Value,
+				Notes: td.Notes,
+			}
+		}
+		fmtCases[i] = formatter.TestCase{
+			ID:              tc.ID,
+			Name:            tc.Name,
+			Category:        tc.Category,
+			ACRef:           tc.ACRef,
+			BRRefs:          tc.BRRefs,
+			Preconditions:   tc.Preconditions,
+			TestData:        testData,
+			Steps:           tc.Steps,
+			ExpectedResults: tc.ExpectedResults,
+			ShouldNot:       tc.ShouldNot,
+		}
+	}
+
+	// Convert summary
+	var fmtSummary formatter.TDAISummary
+	fmtSummary.Total = summary.Total
+	fmtSummary.ByCategory.Positive = summary.ByCategory.Positive
+	fmtSummary.ByCategory.Negative = summary.ByCategory.Negative
+	fmtSummary.ByCategory.Boundary = summary.ByCategory.Boundary
+	fmtSummary.ByCategory.Hallucination = summary.ByCategory.Hallucination
+	fmtSummary.Coverage.ACsCovered = summary.Coverage.ACsCovered
+	fmtSummary.Coverage.PositiveRatio = summary.Coverage.PositiveRatio
+	fmtSummary.Coverage.NegativeRatio = summary.Coverage.NegativeRatio
+	fmtSummary.Coverage.HasHallucinationTests = summary.Coverage.HasHallucinationTests
+
+	content := formatter.FormatTestCases(fmtCases, fmtSummary, timestamp)
+	return os.WriteFile(path, []byte(content), 0644)
 }

@@ -1,0 +1,1380 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "description": "API for e-commerce order management including customers, products, cart, inventory, and orders",
+    "title": "E-Commerce Order API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/v1/cart": {
+      "get": {
+        "operationId": "getCart",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Cart"
+                }
+              }
+            },
+            "description": "Cart retrieved successfully"
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": "CART_EXPIRED",
+                  "message": "Your cart has expired. Please add items again."
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Cart expired"
+          }
+        },
+        "summary": "Get current cart with real-time prices",
+        "x-related-specs": [
+          "TS-BR-CART-001",
+          "TS-BR-CART-003"
+        ]
+      }
+    },
+    "/api/v1/cart/items": {
+      "post": {
+        "operationId": "addCartItem",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "productId": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "quantity": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "variantId": {
+                    "format": "uuid",
+                    "nullable": true,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "productId",
+                  "quantity"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Cart"
+                }
+              }
+            },
+            "description": "Item added to cart"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": "VARIANT_REQUIRED",
+                  "message": "Please select a product variant before adding to cart"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "outOfStock": {
+                    "value": {
+                      "code": "OUT_OF_STOCK",
+                      "message": "This product is currently out of stock"
+                    }
+                  },
+                  "quantityExceedsStock": {
+                    "value": {
+                      "code": "QUANTITY_EXCEEDS_STOCK",
+                      "message": "Only 5 items available. Quantity adjusted."
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Stock conflict"
+          }
+        },
+        "summary": "Add item to cart",
+        "x-related-specs": [
+          "TS-BR-STOCK-001",
+          "TS-BR-VAR-002",
+          "TS-BR-CART-002"
+        ]
+      }
+    },
+    "/api/v1/cart/items/{itemId}": {
+      "put": {
+        "operationId": "updateCartItem",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "itemId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "quantity": {
+                    "minimum": 1,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "quantity"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Cart"
+                }
+              }
+            },
+            "description": "Cart item updated"
+          },
+          "404": {
+            "description": "Cart item not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": "QUANTITY_EXCEEDS_STOCK",
+                  "message": "Only 5 items available. Quantity adjusted."
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Stock conflict"
+          }
+        },
+        "summary": "Update cart item quantity",
+        "x-related-specs": [
+          "TS-BR-CART-002"
+        ]
+      }
+    },
+    "/api/v1/categories": {
+      "post": {
+        "operationId": "createCategory",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "parentId": {
+                    "format": "uuid",
+                    "nullable": true,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Category"
+                }
+              }
+            },
+            "description": "Category created successfully"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": "CATEGORY_DEPTH_EXCEEDED",
+                  "message": "Categories cannot be nested more than 3 levels deep"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "Create a category",
+        "x-related-specs": [
+          "TS-BR-CAT-001"
+        ]
+      }
+    },
+    "/api/v1/categories/{categoryId}": {
+      "put": {
+        "operationId": "updateCategory",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "categoryId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "parentId": {
+                    "format": "uuid",
+                    "nullable": true,
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Category"
+                }
+              }
+            },
+            "description": "Category updated successfully"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": "CATEGORY_DEPTH_EXCEEDED",
+                  "message": "Categories cannot be nested more than 3 levels deep"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "404": {
+            "description": "Category not found"
+          }
+        },
+        "summary": "Update a category",
+        "x-related-specs": [
+          "TS-BR-CAT-001"
+        ]
+      }
+    },
+    "/api/v1/customers": {
+      "post": {
+        "operationId": "registerCustomer",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "email": {
+                    "format": "email",
+                    "maxLength": 255,
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "description": "Must contain at least one digit",
+                    "minLength": 8,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "email",
+                  "password",
+                  "name"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Customer"
+                }
+              }
+            },
+            "description": "Customer registered successfully"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "weakPassword": {
+                    "value": {
+                      "code": "WEAK_PASSWORD",
+                      "message": "Password must be at least 8 characters and contain at least one number"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": "EMAIL_ALREADY_REGISTERED",
+                  "message": "An account with this email already exists"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Email already registered"
+          }
+        },
+        "summary": "Register a new customer",
+        "x-related-specs": [
+          "TS-BR-CUST-001",
+          "TS-BR-CUST-002"
+        ]
+      }
+    },
+    "/api/v1/customers/{customerId}/addresses": {
+      "put": {
+        "operationId": "updateCustomerAddress",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "customerId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShippingAddress"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShippingAddress"
+                }
+              }
+            },
+            "description": "Address updated successfully"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "incompleteAddress": {
+                    "value": {
+                      "code": "INCOMPLETE_ADDRESS",
+                      "message": "Please provide all required address fields"
+                    }
+                  },
+                  "internationalShipping": {
+                    "value": {
+                      "code": "INTERNATIONAL_SHIPPING_NOT_AVAILABLE",
+                      "message": "We currently only ship within US"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "Update customer address",
+        "x-related-specs": [
+          "TS-BR-ADDR-001",
+          "TS-BR-SHIP-002"
+        ]
+      }
+    },
+    "/api/v1/customers/{customerId}/password": {
+      "put": {
+        "operationId": "updateCustomerPassword",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "customerId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "currentPassword": {
+                    "type": "string"
+                  },
+                  "newPassword": {
+                    "description": "Must contain at least one digit",
+                    "minLength": 8,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "currentPassword",
+                  "newPassword"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Password updated successfully"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": "WEAK_PASSWORD",
+                  "message": "Password must be at least 8 characters and contain at least one number"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "summary": "Update customer password",
+        "x-related-specs": [
+          "TS-BR-CUST-002"
+        ]
+      }
+    },
+    "/api/v1/inventory/{productId}": {
+      "put": {
+        "operationId": "adjustInventory",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "productId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "adjustment": {
+                    "description": "Positive to add stock, negative to remove",
+                    "type": "integer"
+                  },
+                  "reason": {
+                    "enum": [
+                      "manual_adjustment",
+                      "restock",
+                      "damage",
+                      "return"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "adjustment",
+                  "reason"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Inventory"
+                }
+              }
+            },
+            "description": "Inventory adjusted successfully"
+          },
+          "404": {
+            "description": "Product not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": "INSUFFICIENT_STOCK",
+                  "message": "Insufficient stock to complete this operation"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Insufficient stock"
+          }
+        },
+        "summary": "Adjust inventory stock",
+        "x-related-specs": [
+          "TS-BR-INV-001",
+          "TS-BR-AUDIT-002"
+        ]
+      }
+    },
+    "/api/v1/orders": {
+      "post": {
+        "operationId": "createOrder",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "paymentMethod": {
+                    "properties": {
+                      "token": {
+                        "type": "string"
+                      },
+                      "type": {
+                        "enum": [
+                          "credit_card",
+                          "debit_card"
+                        ],
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "token"
+                    ],
+                    "type": "object"
+                  },
+                  "shippingAddress": {
+                    "$ref": "#/components/schemas/ShippingAddress"
+                  }
+                },
+                "required": [
+                  "shippingAddress",
+                  "paymentMethod"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            },
+            "description": "Order created successfully"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "incompleteAddress": {
+                    "value": {
+                      "code": "INCOMPLETE_ADDRESS",
+                      "message": "Please provide all required address fields"
+                    }
+                  },
+                  "internationalShipping": {
+                    "value": {
+                      "code": "INTERNATIONAL_SHIPPING_NOT_AVAILABLE",
+                      "message": "We currently only ship within US"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": "REGISTRATION_REQUIRED",
+                  "message": "You must be registered to place an order"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Not authenticated"
+          },
+          "402": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": "PAYMENT_REQUIRED",
+                  "message": "Payment could not be authorized. Please try again."
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Payment required"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": "EMAIL_NOT_VERIFIED",
+                  "message": "Please verify your email before placing an order"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Email not verified"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "backorderNotSupported": {
+                    "value": {
+                      "code": "BACKORDER_NOT_SUPPORTED",
+                      "message": "Cannot order more items than currently in stock"
+                    }
+                  },
+                  "insufficientStock": {
+                    "value": {
+                      "code": "INSUFFICIENT_STOCK",
+                      "message": "Insufficient stock to complete this operation"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Stock conflict"
+          }
+        },
+        "summary": "Place a new order",
+        "x-related-specs": [
+          "TS-BR-AUTH-001",
+          "TS-BR-CUST-003",
+          "TS-BR-STOCK-001",
+          "TS-BR-SHIP-001",
+          "TS-BR-SHIP-002",
+          "TS-BR-ADDR-001",
+          "TS-BR-INV-001",
+          "TS-BR-INV-002",
+          "TS-BR-PRICE-002",
+          "TS-BR-PAY-001",
+          "TS-BR-AUDIT-001"
+        ]
+      }
+    },
+    "/api/v1/orders/{orderId}/cancel": {
+      "post": {
+        "operationId": "cancelOrder",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orderId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            },
+            "description": "Order cancelled successfully"
+          },
+          "404": {
+            "description": "Order not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": "CANCELLATION_NOT_ALLOWED",
+                  "message": "This order cannot be cancelled as it has already been shipped"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Cancellation not allowed"
+          }
+        },
+        "summary": "Cancel an order",
+        "x-related-specs": [
+          "TS-BR-CANCEL-001",
+          "TS-BR-INV-003",
+          "TS-BR-PAY-002",
+          "TS-BR-AUDIT-001"
+        ]
+      }
+    },
+    "/api/v1/orders/{orderId}/status": {
+      "put": {
+        "operationId": "updateOrderStatus",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orderId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "confirmed",
+                      "shipped",
+                      "delivered"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "status"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            },
+            "description": "Order status updated"
+          },
+          "404": {
+            "description": "Order not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "invalidTransition": {
+                    "value": {
+                      "code": "INVALID_STATUS_TRANSITION",
+                      "message": "Cannot transition order from pending to delivered"
+                    }
+                  },
+                  "modificationNotAllowed": {
+                    "value": {
+                      "code": "ORDER_MODIFICATION_NOT_ALLOWED",
+                      "message": "Orders cannot be modified after placement. Please cancel and place a new order."
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Invalid status transition"
+          }
+        },
+        "summary": "Update order status",
+        "x-related-specs": [
+          "TS-BR-ORDER-001",
+          "TS-BR-ORDER-002",
+          "TS-BR-AUDIT-001"
+        ]
+      }
+    },
+    "/api/v1/products": {
+      "post": {
+        "operationId": "createProduct",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "categoryId": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "description": {
+                    "maxLength": 5000,
+                    "type": "string"
+                  },
+                  "name": {
+                    "maxLength": 200,
+                    "minLength": 2,
+                    "type": "string"
+                  },
+                  "price": {
+                    "format": "decimal",
+                    "minimum": 0.01,
+                    "multipleOf": 0.01,
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "name",
+                  "price"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              }
+            },
+            "description": "Product created successfully"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "descriptionTooLong": {
+                    "value": {
+                      "code": "DESCRIPTION_TOO_LONG",
+                      "message": "Product description cannot exceed 5000 characters"
+                    }
+                  },
+                  "invalidName": {
+                    "value": {
+                      "code": "INVALID_PRODUCT_NAME",
+                      "message": "Product name must be between 2 and 200 characters"
+                    }
+                  },
+                  "invalidPrice": {
+                    "value": {
+                      "code": "INVALID_PRICE",
+                      "message": "Product price must be at least $0.01"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "Create a new product",
+        "x-related-specs": [
+          "TS-BR-PRICE-001",
+          "TS-BR-PROD-002",
+          "TS-BR-PROD-003"
+        ]
+      }
+    },
+    "/api/v1/products/{productId}": {
+      "delete": {
+        "operationId": "deleteProduct",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "productId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Product deleted successfully"
+          },
+          "404": {
+            "description": "Product not found"
+          }
+        },
+        "summary": "Delete a product (soft delete if has order history)",
+        "x-related-specs": [
+          "TS-BR-PROD-001"
+        ]
+      },
+      "put": {
+        "operationId": "updateProduct",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "productId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "categoryId": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "description": {
+                    "maxLength": 5000,
+                    "type": "string"
+                  },
+                  "name": {
+                    "maxLength": 200,
+                    "minLength": 2,
+                    "type": "string"
+                  },
+                  "price": {
+                    "format": "decimal",
+                    "minimum": 0.01,
+                    "multipleOf": 0.01,
+                    "type": "number"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              }
+            },
+            "description": "Product updated successfully"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "descriptionTooLong": {
+                    "value": {
+                      "code": "DESCRIPTION_TOO_LONG",
+                      "message": "Product description cannot exceed 5000 characters"
+                    }
+                  },
+                  "invalidName": {
+                    "value": {
+                      "code": "INVALID_PRODUCT_NAME",
+                      "message": "Product name must be between 2 and 200 characters"
+                    }
+                  },
+                  "invalidPrice": {
+                    "value": {
+                      "code": "INVALID_PRICE",
+                      "message": "Product price must be at least $0.01"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "404": {
+            "description": "Product not found"
+          }
+        },
+        "summary": "Update a product",
+        "x-related-specs": [
+          "TS-BR-PRICE-001",
+          "TS-BR-PROD-002",
+          "TS-BR-PROD-003",
+          "TS-BR-AUDIT-003"
+        ]
+      }
+    },
+    "/api/v1/products/{productId}/images": {
+      "post": {
+        "operationId": "addProductImage",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "productId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "altText": {
+                    "type": "string"
+                  },
+                  "isPrimary": {
+                    "default": false,
+                    "type": "boolean"
+                  },
+                  "url": {
+                    "format": "uri",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "url"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductImage"
+                }
+              }
+            },
+            "description": "Image added successfully"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "imageLimitExceeded": {
+                    "value": {
+                      "code": "IMAGE_LIMIT_EXCEEDED",
+                      "message": "Products cannot have more than 10 images"
+                    }
+                  },
+                  "primaryImageRequired": {
+                    "value": {
+                      "code": "PRIMARY_IMAGE_REQUIRED",
+                      "message": "Product must have exactly one primary image"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "404": {
+            "description": "Product not found"
+          }
+        },
+        "summary": "Add image to product",
+        "x-related-specs": [
+          "TS-BR-PROD-004"
+        ]
+      }
+    },
+    "/api/v1/products/{productId}/images/{imageId}": {
+      "put": {
+        "operationId": "updateProductImage",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "productId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "imageId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "altText": {
+                    "type": "string"
+                  },
+                  "isPrimary": {
+                    "type": "boolean"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductImage"
+                }
+              }
+            },
+            "description": "Image updated successfully"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": "PRIMARY_IMAGE_REQUIRED",
+                  "message": "Product must have exactly one primary image"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "404": {
+            "description": "Product or image not found"
+          }
+        },
+        "summary": "Update product image",
+        "x-related-specs": [
+          "TS-BR-PROD-004"
+        ]
+      }
+    },
+    "/api/v1/products/{productId}/variants": {
+      "post": {
+        "operationId": "createProductVariant",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "productId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "attributes": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "type": "object"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "price": {
+                    "format": "decimal",
+                    "minimum": 0.01,
+                    "multipleOf": 0.01,
+                    "type": "number"
+                  },
+                  "sku": {
+                    "maxLength": 100,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "sku",
+                  "name"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductVariant"
+                }
+              }
+            },
+            "description": "Variant created successfully"
+          },
+          "404": {
+            "description": "Product not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": "DUPLICATE_SKU",
+                  "message": "A product variant with this SKU already exists"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Duplicate SKU"
+          }
+        },
+        "summary": "Create a product variant",
+        "x-related-specs": [
+          "TS-BR-VAR-001"
+        ]
+      }
+    }
+  }
+}

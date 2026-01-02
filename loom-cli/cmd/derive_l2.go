@@ -16,6 +16,8 @@ import (
 	"github.com/ikadar/loom-cli/prompts"
 )
 
+// Note: generator package is still imported for ParallelExecutor
+
 // toAnchorL2 converts an ID to a lowercase anchor (e.g., "TC-AC-CUST-001-P01" -> "tc-ac-cust-001-p01")
 func toAnchorL2(id string) string {
 	return strings.ToLower(id)
@@ -37,115 +39,15 @@ func toLinkL2(id, file string) string {
 
 // L2Result is the output of the derive-l2 command
 type L2Result struct {
-	Summary    L2Summary    `json:"summary"`
-	TestCases  []TestCase   `json:"test_cases"`
-	TechSpecs  []TechSpec   `json:"tech_specs"`
+	Summary   L2Summary  `json:"summary"`
+	TechSpecs []TechSpec `json:"tech_specs"`
 }
 
 type L2Summary struct {
-	TestCasesGenerated int         `json:"test_cases_generated"`
-	TechSpecsGenerated int         `json:"tech_specs_generated"`
-	Coverage           L2Coverage  `json:"coverage"`
+	TechSpecsGenerated int `json:"tech_specs_generated"`
+	BRsCovered         int `json:"brs_covered"`
 }
 
-type L2Coverage struct {
-	ACsCovered      int `json:"acs_covered"`
-	BRsCovered      int `json:"brs_covered"`
-	HappyPathTests  int `json:"happy_path_tests"`
-	ErrorTests      int `json:"error_tests"`
-	EdgeCaseTests   int `json:"edge_case_tests"`
-}
-
-type TestCase struct {
-	ID              string     `json:"id"`
-	Name            string     `json:"name"`
-	Category        string     `json:"category"` // positive, negative, boundary, hallucination
-	ACRef           string     `json:"ac_ref"`
-	BRRefs          []string   `json:"br_refs"`
-	Preconditions   []string   `json:"preconditions"`
-	TestData        []TestData `json:"test_data"`
-	Steps           []string   `json:"steps"`
-	ExpectedResults []string   `json:"expected_results"`
-	ShouldNot       string     `json:"should_not,omitempty"` // For hallucination prevention tests
-}
-
-type TestSuite struct {
-	ACRef   string     `json:"ac_ref"`
-	ACTitle string     `json:"ac_title"`
-	Tests   []TestCase `json:"tests"`
-}
-
-type TestData struct {
-	Field string      `json:"field"`
-	Value interface{} `json:"value"`
-	Notes string      `json:"notes"`
-}
-
-type TDAISummary struct {
-	Total      int `json:"total"`
-	ByCategory struct {
-		Positive      int `json:"positive"`
-		Negative      int `json:"negative"`
-		Boundary      int `json:"boundary"`
-		Hallucination int `json:"hallucination"`
-	} `json:"by_category"`
-	Coverage struct {
-		ACsCovered            int     `json:"acs_covered"`
-		PositiveRatio         float64 `json:"positive_ratio"`
-		NegativeRatio         float64 `json:"negative_ratio"`
-		HasHallucinationTests bool    `json:"has_hallucination_tests"`
-	} `json:"coverage"`
-}
-
-// flattenTestSuites converts generator.TestSuite to local TestCase slice
-func flattenTestSuites(suites []generator.TestSuite) []TestCase {
-	var result []TestCase
-	for _, suite := range suites {
-		for _, tc := range suite.Tests {
-			result = append(result, TestCase{
-				ID:              tc.ID,
-				Name:            tc.Name,
-				Category:        tc.Category,
-				ACRef:           tc.ACRef,
-				BRRefs:          tc.BRRefs,
-				Preconditions:   tc.Preconditions,
-				TestData:        convertTestData(tc.TestData),
-				Steps:           tc.Steps,
-				ExpectedResults: tc.ExpectedResults,
-				ShouldNot:       tc.ShouldNot,
-			})
-		}
-	}
-	return result
-}
-
-// convertTestData converts generator.TestData to local TestData
-func convertTestData(data []generator.TestData) []TestData {
-	result := make([]TestData, len(data))
-	for i, d := range data {
-		result[i] = TestData{
-			Field: d.Field,
-			Value: d.Value,
-			Notes: d.Notes,
-		}
-	}
-	return result
-}
-
-// convertTDAISummary converts generator.TDAISummary to local TDAISummary
-func convertTDAISummary(s generator.TDAISummary) TDAISummary {
-	var result TDAISummary
-	result.Total = s.Total
-	result.ByCategory.Positive = s.ByCategory.Positive
-	result.ByCategory.Negative = s.ByCategory.Negative
-	result.ByCategory.Boundary = s.ByCategory.Boundary
-	result.ByCategory.Hallucination = s.ByCategory.Hallucination
-	result.Coverage.ACsCovered = s.Coverage.ACsCovered
-	result.Coverage.PositiveRatio = s.Coverage.PositiveRatio
-	result.Coverage.NegativeRatio = s.Coverage.NegativeRatio
-	result.Coverage.HasHallucinationTests = s.Coverage.HasHallucinationTests
-	return result
-}
 
 type TechSpec struct {
 	ID               string          `json:"id"`
@@ -485,49 +387,6 @@ func runDeriveL2() error {
 	// Create Claude client
 	client := claude.NewClient()
 
-	// Phase 1: Generate Test Cases from ACs (TDAI methodology) - CHUNKED
-	var tcResult *generator.TestCaseResult
-	var allTestCases []TestCase
-
-	if resume && cpMgr.IsPhaseCompleted("TestCases") {
-		fmt.Fprintln(os.Stderr, "\nPhase L2-1: Test Cases (skipped - loaded from checkpoint)")
-		// Load from checkpoint
-		if data, ok := cpMgr.GetPhaseData("TestCases"); ok {
-			if jsonData, err := json.Marshal(data); err == nil {
-				var stored generator.TestCaseResult
-				if err := json.Unmarshal(jsonData, &stored); err == nil {
-					tcResult = &stored
-					allTestCases = flattenTestSuites(tcResult.TestSuites)
-				}
-			}
-		}
-		if tcResult == nil {
-			return fmt.Errorf("failed to restore TestCases from checkpoint")
-		}
-	} else {
-		fmt.Fprintln(os.Stderr, "\nPhase L2-1: Generating TDAI Test Cases from Acceptance Criteria...")
-		cpMgr.StartPhase("TestCases")
-
-		tcGenerator := generator.NewChunkedTestCaseGenerator(client)
-		var err error
-		tcResult, err = tcGenerator.Generate(string(acContent))
-		if err != nil {
-			cpMgr.FailPhase("TestCases", err)
-			return fmt.Errorf("failed to generate test cases: %w", err)
-		}
-
-		// Flatten test suites into test cases for compatibility
-		allTestCases = flattenTestSuites(tcResult.TestSuites)
-		cpMgr.CompletePhase("TestCases", tcResult)
-	}
-
-	fmt.Fprintf(os.Stderr, "  Generated: %d Test Cases (P:%d N:%d B:%d H:%d)\n",
-		tcResult.Summary.Total,
-		tcResult.Summary.ByCategory.Positive,
-		tcResult.Summary.ByCategory.Negative,
-		tcResult.Summary.ByCategory.Boundary,
-		tcResult.Summary.ByCategory.Hallucination)
-
 	// Define result types for parallel phases (need to be defined before checkpoint restore)
 	type TechSpecsResult struct {
 		TechSpecs []TechSpec `json:"tech_specs"`
@@ -726,45 +585,17 @@ func runDeriveL2() error {
 
 	// Combine results
 	var result L2Result
-	result.TestCases = allTestCases
 	result.TechSpecs = tsResult.TechSpecs
 	result.Summary = L2Summary{
-		TestCasesGenerated: len(allTestCases),
 		TechSpecsGenerated: len(tsResult.TechSpecs),
-		Coverage: L2Coverage{
-			ACsCovered:     tcResult.Summary.Coverage.ACsCovered,
-			BRsCovered:     tsResult.Summary.Total,
-			HappyPathTests: tcResult.Summary.ByCategory.Positive,
-			ErrorTests:     tcResult.Summary.ByCategory.Negative,
-			EdgeCaseTests:  tcResult.Summary.ByCategory.Boundary,
-		},
+		BRsCovered:         tsResult.Summary.Total,
 	}
-
-	// Store TDAI summary for output (convert from generator type)
-	tdaiSummary := convertTDAISummary(tcResult.Summary)
 
 	// Track which files were written (for interactive mode skips)
 	writtenFiles := make(map[string]bool)
 
-	// Write Test Cases (TDAI format)
-	fmt.Fprintln(os.Stderr, "\nPhase L2-W1: Writing Test Cases...")
-
-	tcPath := filepath.Join(outputDir, "test-cases.md")
-	if err := writeTestCases(tcPath, result.TestCases, tdaiSummary); err != nil {
-		return fmt.Errorf("failed to write test cases: %w", err)
-	}
-
-	tcSummaryStr := fmt.Sprintf("(P:%d N:%d B:%d H:%d)", tdaiSummary.ByCategory.Positive, tdaiSummary.ByCategory.Negative, tdaiSummary.ByCategory.Boundary, tdaiSummary.ByCategory.Hallucination)
-	tcWriteResult, _, err := workflow.HandleFileApproval(tcPath, "Test Cases (TDAI)", len(result.TestCases), "test cases", tcSummaryStr, interactive)
-	if err != nil {
-		return err
-	}
-	if tcWriteResult.Written {
-		writtenFiles[tcPath] = true
-	}
-
 	// Write Tech Specs
-	fmt.Fprintln(os.Stderr, "\nPhase L2-W2: Writing Tech Specs...")
+	fmt.Fprintln(os.Stderr, "\nPhase L2-W1: Writing Tech Specs...")
 
 	tsPath := filepath.Join(outputDir, "tech-specs.md")
 	if err := writeTechSpecs(tsPath, result.TechSpecs); err != nil {
@@ -780,7 +611,7 @@ func runDeriveL2() error {
 	}
 
 	// Write Interface Contracts
-	fmt.Fprintln(os.Stderr, "\nPhase L2-W3: Writing Interface Contracts...")
+	fmt.Fprintln(os.Stderr, "\nPhase L2-W2: Writing Interface Contracts...")
 
 	icPath := filepath.Join(outputDir, "interface-contracts.md")
 	if err := writeInterfaceContracts(icPath, icResult.InterfaceContracts, icResult.SharedTypes); err != nil {
@@ -797,7 +628,7 @@ func runDeriveL2() error {
 	}
 
 	// Write Aggregate Design
-	fmt.Fprintln(os.Stderr, "\nPhase L2-W4: Writing Aggregate Design...")
+	fmt.Fprintln(os.Stderr, "\nPhase L2-W3: Writing Aggregate Design...")
 
 	aggPath := filepath.Join(outputDir, "aggregate-design.md")
 	if err := writeAggregateDesign(aggPath, aggResult.Aggregates); err != nil {
@@ -814,7 +645,7 @@ func runDeriveL2() error {
 	}
 
 	// Write Sequence Design
-	fmt.Fprintln(os.Stderr, "\nPhase L2-W5: Writing Sequence Design...")
+	fmt.Fprintln(os.Stderr, "\nPhase L2-W4: Writing Sequence Design...")
 
 	seqPath := filepath.Join(outputDir, "sequence-design.md")
 	if err := writeSequenceDesign(seqPath, seqResult.Sequences); err != nil {
@@ -830,7 +661,7 @@ func runDeriveL2() error {
 	}
 
 	// Write Data Model
-	fmt.Fprintln(os.Stderr, "\nPhase L2-W6: Writing Data Model...")
+	fmt.Fprintln(os.Stderr, "\nPhase L2-W5: Writing Data Model...")
 
 	dataPath := filepath.Join(outputDir, "initial-data-model.md")
 	if err := writeDataModel(dataPath, dataResult.Tables, dataResult.Enums); err != nil {
@@ -849,7 +680,6 @@ func runDeriveL2() error {
 	// Write JSON for further processing
 	jsonPath := filepath.Join(outputDir, "l2-output.json")
 	l2Output := map[string]interface{}{
-		"test_cases":          result.TestCases,
 		"tech_specs":          result.TechSpecs,
 		"interface_contracts": icResult.InterfaceContracts,
 		"shared_types":        icResult.SharedTypes,
@@ -871,7 +701,6 @@ func runDeriveL2() error {
 	fmt.Fprintln(os.Stderr, "========================================")
 	fmt.Fprintln(os.Stderr, "")
 	fmt.Fprintln(os.Stderr, "Generated:")
-	fmt.Fprintf(os.Stderr, "  Test Cases:           %d\n", len(result.TestCases))
 	fmt.Fprintf(os.Stderr, "  Tech Specs:           %d\n", len(result.TechSpecs))
 	fmt.Fprintf(os.Stderr, "  Interface Contracts:  %d (%d operations)\n", len(icResult.InterfaceContracts), icResult.Summary.TotalOperations)
 	fmt.Fprintf(os.Stderr, "  Aggregates:           %d (%d behaviors)\n", len(aggResult.Aggregates), aggResult.Summary.TotalBehaviors)
@@ -879,7 +708,6 @@ func runDeriveL2() error {
 	fmt.Fprintf(os.Stderr, "  Data Tables:          %d\n", len(dataResult.Tables))
 	fmt.Fprintln(os.Stderr, "")
 	fmt.Fprintln(os.Stderr, "Output Files:")
-	fmt.Fprintf(os.Stderr, "  %s\n", tcPath)
 	fmt.Fprintf(os.Stderr, "  %s\n", tsPath)
 	fmt.Fprintf(os.Stderr, "  %s\n", icPath)
 	fmt.Fprintf(os.Stderr, "  %s\n", aggPath)
@@ -892,60 +720,6 @@ func runDeriveL2() error {
 	}
 
 	return nil
-}
-
-func writeTestCases(path string, testCases []TestCase, summary TDAISummary) error {
-	timestamp := time.Now().Format(time.RFC3339)
-
-	// Convert to formatter types
-	fmtCases := convertTestCasesToFormatter(testCases)
-	fmtSummary := convertSummaryToFormatter(summary)
-
-	content := formatter.FormatTestCases(fmtCases, fmtSummary, timestamp)
-	return os.WriteFile(path, []byte(content), 0644)
-}
-
-// convertTestCasesToFormatter converts local TestCase slice to formatter types
-func convertTestCasesToFormatter(testCases []TestCase) []formatter.TestCase {
-	result := make([]formatter.TestCase, len(testCases))
-	for i, tc := range testCases {
-		testData := make([]formatter.TestData, len(tc.TestData))
-		for j, td := range tc.TestData {
-			testData[j] = formatter.TestData{
-				Field: td.Field,
-				Value: td.Value,
-				Notes: td.Notes,
-			}
-		}
-		result[i] = formatter.TestCase{
-			ID:              tc.ID,
-			Name:            tc.Name,
-			Category:        tc.Category,
-			ACRef:           tc.ACRef,
-			BRRefs:          tc.BRRefs,
-			Preconditions:   tc.Preconditions,
-			TestData:        testData,
-			Steps:           tc.Steps,
-			ExpectedResults: tc.ExpectedResults,
-			ShouldNot:       tc.ShouldNot,
-		}
-	}
-	return result
-}
-
-// convertSummaryToFormatter converts local TDAISummary to formatter type
-func convertSummaryToFormatter(s TDAISummary) formatter.TDAISummary {
-	var result formatter.TDAISummary
-	result.Total = s.Total
-	result.ByCategory.Positive = s.ByCategory.Positive
-	result.ByCategory.Negative = s.ByCategory.Negative
-	result.ByCategory.Boundary = s.ByCategory.Boundary
-	result.ByCategory.Hallucination = s.ByCategory.Hallucination
-	result.Coverage.ACsCovered = s.Coverage.ACsCovered
-	result.Coverage.PositiveRatio = s.Coverage.PositiveRatio
-	result.Coverage.NegativeRatio = s.Coverage.NegativeRatio
-	result.Coverage.HasHallucinationTests = s.Coverage.HasHallucinationTests
-	return result
 }
 
 func writeTechSpecs(path string, techSpecs []TechSpec) error {
