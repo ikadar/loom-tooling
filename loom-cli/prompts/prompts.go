@@ -34,6 +34,12 @@ var DeriveTechSpecs string
 //go:embed derive-l3.md
 var DeriveL3 string
 
+//go:embed derive-l3-api.md
+var DeriveL3API string
+
+//go:embed derive-l3-skeletons.md
+var DeriveL3Skeletons string
+
 //go:embed derive-domain-model.md
 var DeriveDomainModel string
 

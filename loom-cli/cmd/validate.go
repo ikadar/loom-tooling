@@ -64,19 +64,29 @@ const (
 
 // ID patterns for validation
 var idPatterns = map[string]*regexp.Regexp{
+	// L1 patterns
 	"AC":  regexp.MustCompile(`AC-[A-Z]+-\d{3}`),
 	"BR":  regexp.MustCompile(`BR-[A-Z]+-\d{3}`),
+	"ENT": regexp.MustCompile(`ENT-[A-Z]+`),
+	"BC":  regexp.MustCompile(`BC-[A-Z]+`),
+	// L2 patterns
 	"TC":  regexp.MustCompile(`TC-AC-[A-Z]+-\d{3}-[PNBH]\d{2}`),
 	"TS":  regexp.MustCompile(`TS-[A-Z]+-\d{3}`),
 	"IC":  regexp.MustCompile(`IC-[A-Z]+-\d{3}`),
 	"AGG": regexp.MustCompile(`AGG-[A-Z]+-\d{3}`),
 	"SEQ": regexp.MustCompile(`SEQ-[A-Z]+-\d{3}`),
-	"ENT": regexp.MustCompile(`ENT-[A-Z]+`),
-	"BC":  regexp.MustCompile(`BC-[A-Z]+`),
+	// L3 patterns
+	"EVT":  regexp.MustCompile(`EVT-[A-Z]+-\d{3}`),
+	"CMD":  regexp.MustCompile(`CMD-[A-Z]+-\d{3}`),
+	"INT":  regexp.MustCompile(`INT-[A-Z]+-\d{3}`),
+	"SVC":  regexp.MustCompile(`SVC-[A-Z]+`),
+	"FDT":  regexp.MustCompile(`FDT-\d{3}`),
+	"SKEL": regexp.MustCompile(`SKEL-[A-Z]+-\d{3}`),
+	"DEP":  regexp.MustCompile(`DEP-[A-Z]+-\d{3}`),
 }
 
 // Generic ID pattern to find any ID-like string
-var genericIDPattern = regexp.MustCompile(`\b(AC|BR|TC|TS|IC|AGG|SEQ|ENT|BC)-[A-Z]+-?\d*`)
+var genericIDPattern = regexp.MustCompile(`\b(AC|BR|TC|TS|IC|AGG|SEQ|ENT|BC|EVT|CMD|INT|SVC|FDT|SKEL|DEP)-[A-Z]*-?\d*`)
 
 func runValidate() error {
 	args := os.Args[2:]
@@ -312,10 +322,10 @@ func extractIDsAndRefs(file string) (map[string]int, map[string][]string, error)
 	lineNum := 0
 	currentID := ""
 
-	// Pattern to find IDs in headers: ## AC-CUST-001 – Title
-	headerPattern := regexp.MustCompile(`^#{1,4}\s+((?:AC|BR|TC|TS|IC|AGG|SEQ|ENT|BC)-[A-Z]+-?\d*(?:-[A-Z]\d{2})?)`)
+	// Pattern to find IDs in headers: ## AC-CUST-001 – Title or ### EVT-CUST-001: EventName
+	headerPattern := regexp.MustCompile(`^#{1,4}\s+((?:AC|BR|TC|TS|IC|AGG|SEQ|ENT|BC|EVT|CMD|INT|SVC|FDT|SKEL|DEP)-[A-Z]*-?\d*(?:-[A-Z]\d{2})?)`)
 	// Pattern to find refs in traceability sections
-	refPattern := regexp.MustCompile(`(?:AC|BR|TC|TS|IC|AGG|SEQ|ENT|BC)-[A-Z]+-?\d*(?:-[A-Z]\d{2})?`)
+	refPattern := regexp.MustCompile(`(?:AC|BR|TC|TS|IC|AGG|SEQ|ENT|BC|EVT|CMD|INT|SVC|FDT|SKEL|DEP)-[A-Z]*-?\d*(?:-[A-Z]\d{2})?`)
 
 	for scanner.Scan() {
 		lineNum++

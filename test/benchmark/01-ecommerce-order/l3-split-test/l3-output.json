@@ -1,0 +1,2627 @@
+{
+  "api_spec": {
+    "openapi": "3.0.0",
+    "info": {
+      "description": "API for e-commerce platform with customer management, products, cart, orders, and inventory",
+      "title": "E-Commerce API",
+      "version": "1.0.0"
+    },
+    "paths": {
+      "/api/v1/addresses": {
+        "get": {
+          "operationId": "listAddresses",
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "items": {
+                      "$ref": "#/components/schemas/ShippingAddress"
+                    },
+                    "type": "array"
+                  }
+                }
+              },
+              "description": "List of addresses"
+            }
+          },
+          "summary": "List customer addresses",
+          "x-related-specs": []
+        },
+        "post": {
+          "operationId": "createAddress",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShippingAddressInput"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "201": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/ShippingAddress"
+                  }
+                }
+              },
+              "description": "Address created successfully"
+            },
+            "400": {
+              "content": {
+                "application/json": {
+                  "examples": {
+                    "incompleteAddress": {
+                      "value": {
+                        "code": "INCOMPLETE_ADDRESS",
+                        "message": "Please provide all required address fields: name, street, city, state, postal code, and country"
+                      }
+                    },
+                    "internationalShipping": {
+                      "value": {
+                        "code": "INTERNATIONAL_SHIPPING_NOT_AVAILABLE",
+                        "message": "We currently only ship within US. International shipping is not available."
+                      }
+                    }
+                  },
+                  "schema": {
+                    "$ref": "#/components/schemas/Error"
+                  }
+                }
+              },
+              "description": "Validation error"
+            }
+          },
+          "summary": "Create shipping address",
+          "x-related-specs": [
+            "TS-BR-ADDR-001",
+            "TS-BR-SHIP-002"
+          ]
+        }
+      },
+      "/api/v1/addresses/{addressId}": {
+        "delete": {
+          "operationId": "deleteAddress",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "addressId",
+              "required": true,
+              "schema": {
+                "format": "uuid",
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "204": {
+              "description": "Address deleted successfully"
+            },
+            "404": {
+              "description": "Address not found"
+            }
+          },
+          "summary": "Delete shipping address",
+          "x-related-specs": []
+        },
+        "put": {
+          "operationId": "updateAddress",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "addressId",
+              "required": true,
+              "schema": {
+                "format": "uuid",
+                "type": "string"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShippingAddressInput"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/ShippingAddress"
+                  }
+                }
+              },
+              "description": "Address updated successfully"
+            },
+            "400": {
+              "content": {
+                "application/json": {
+                  "examples": {
+                    "incompleteAddress": {
+                      "value": {
+                        "code": "INCOMPLETE_ADDRESS",
+                        "message": "Please provide all required address fields: name, street, city, state, postal code, and country"
+                      }
+                    },
+                    "internationalShipping": {
+                      "value": {
+                        "code": "INTERNATIONAL_SHIPPING_NOT_AVAILABLE",
+                        "message": "We currently only ship within US. International shipping is not available."
+                      }
+                    }
+                  },
+                  "schema": {
+                    "$ref": "#/components/schemas/Error"
+                  }
+                }
+              },
+              "description": "Validation error"
+            },
+            "404": {
+              "description": "Address not found"
+            }
+          },
+          "summary": "Update shipping address",
+          "x-related-specs": [
+            "TS-BR-ADDR-001",
+            "TS-BR-SHIP-002"
+          ]
+        }
+      },
+      "/api/v1/cart": {
+        "delete": {
+          "operationId": "clearCart",
+          "responses": {
+            "204": {
+              "description": "Cart cleared successfully"
+            }
+          },
+          "summary": "Clear cart",
+          "x-related-specs": []
+        },
+        "get": {
+          "description": "Returns cart with current product prices and price change flags",
+          "operationId": "getCart",
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Cart"
+                  }
+                }
+              },
+              "description": "Cart details with current prices"
+            },
+            "410": {
+              "content": {
+                "application/json": {
+                  "example": {
+                    "code": "CART_EXPIRED",
+                    "message": "Your cart has expired due to inactivity"
+                  },
+                  "schema": {
+                    "$ref": "#/components/schemas/Error"
+                  }
+                }
+              },
+              "description": "Cart expired"
+            }
+          },
+          "summary": "Get current cart",
+          "x-related-specs": [
+            "TS-BR-CART-001",
+            "TS-BR-CART-003"
+          ]
+        }
+      },
+      "/api/v1/cart/items": {
+        "post": {
+          "operationId": "addCartItem",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "productId": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "quantity": {
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "variantId": {
+                      "description": "Required if product has variants",
+                      "format": "uuid",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "productId",
+                    "quantity"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "properties": {
+                      "actualQuantity": {
+                        "type": "integer"
+                      },
+                      "cart": {
+                        "$ref": "#/components/schemas/Cart"
+                      },
+                      "quantityAdjusted": {
+                        "type": "boolean"
+                      },
+                      "requestedQuantity": {
+                        "type": "integer"
+                      }
+                    },
+                    "type": "object"
+                  }
+                }
+              },
+              "description": "Item added (quantity may be adjusted to available stock)"
+            },
+            "400": {
+              "content": {
+                "application/json": {
+                  "example": {
+                    "code": "VARIANT_REQUIRED",
+                    "message": "Please select a variant before adding to cart"
+                  },
+                  "schema": {
+                    "$ref": "#/components/schemas/Error"
+                  }
+                }
+              },
+              "description": "Validation error"
+            },
+            "409": {
+              "content": {
+                "application/json": {
+                  "example": {
+                    "code": "OUT_OF_STOCK",
+                    "message": "This product is currently out of stock"
+                  },
+                  "schema": {
+                    "$ref": "#/components/schemas/Error"
+                  }
+                }
+              },
+              "description": "Stock conflict"
+            }
+          },
+          "summary": "Add item to cart",
+          "x-related-specs": [
+            "TS-BR-STOCK-001",
+            "TS-BR-VAR-002",
+            "TS-BR-CART-002"
+          ]
+        }
+      },
+      "/api/v1/cart/items/{itemId}": {
+        "delete": {
+          "operationId": "removeCartItem",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "itemId",
+              "required": true,
+              "schema": {
+                "format": "uuid",
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "204": {
+              "description": "Item removed successfully"
+            },
+            "404": {
+              "description": "Cart item not found"
+            }
+          },
+          "summary": "Remove item from cart",
+          "x-related-specs": []
+        },
+        "put": {
+          "operationId": "updateCartItem",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "itemId",
+              "required": true,
+              "schema": {
+                "format": "uuid",
+                "type": "string"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "quantity": {
+                      "minimum": 1,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "quantity"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "properties": {
+                      "actualQuantity": {
+                        "type": "integer"
+                      },
+                      "cart": {
+                        "$ref": "#/components/schemas/Cart"
+                      },
+                      "quantityAdjusted": {
+                        "type": "boolean"
+                      },
+                      "requestedQuantity": {
+                        "type": "integer"
+                      }
+                    },
+                    "type": "object"
+                  }
+                }
+              },
+              "description": "Item updated (quantity may be adjusted to available stock)"
+            },
+            "404": {
+              "description": "Cart item not found"
+            }
+          },
+          "summary": "Update cart item quantity",
+          "x-related-specs": [
+            "TS-BR-CART-002"
+          ]
+        }
+      },
+      "/api/v1/categories": {
+        "get": {
+          "operationId": "listCategories",
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "items": {
+                      "$ref": "#/components/schemas/Category"
+                    },
+                    "type": "array"
+                  }
+                }
+              },
+              "description": "List of categories"
+            }
+          },
+          "summary": "List categories",
+          "x-related-specs": []
+        },
+        "post": {
+          "operationId": "createCategory",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "parentId": {
+                      "format": "uuid",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "201": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Category"
+                  }
+                }
+              },
+              "description": "Category created successfully"
+            },
+            "400": {
+              "content": {
+                "application/json": {
+                  "example": {
+                    "code": "CATEGORY_DEPTH_EXCEEDED",
+                    "message": "Categories cannot be nested more than 3 levels deep"
+                  },
+                  "schema": {
+                    "$ref": "#/components/schemas/Error"
+                  }
+                }
+              },
+              "description": "Validation error"
+            }
+          },
+          "summary": "Create category",
+          "x-related-specs": [
+            "TS-BR-CAT-001"
+          ]
+        }
+      },
+      "/api/v1/customers": {
+        "post": {
+          "operationId": "registerCustomer",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "email": {
+                      "format": "email",
+                      "maxLength": 255,
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "password": {
+                      "description": "Must be at least 8 characters and contain at least one number",
+                      "minLength": 8,
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "email",
+                    "password",
+                    "name"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "201": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Customer"
+                  }
+                }
+              },
+              "description": "Customer registered successfully"
+            },
+            "400": {
+              "content": {
+                "application/json": {
+                  "examples": {
+                    "weakPassword": {
+                      "value": {
+                        "code": "WEAK_PASSWORD",
+                        "message": "Password must be at least 8 characters and contain at least one number"
+                      }
+                    }
+                  },
+                  "schema": {
+                    "$ref": "#/components/schemas/Error"
+                  }
+                }
+              },
+              "description": "Validation error"
+            },
+            "409": {
+              "content": {
+                "application/json": {
+                  "example": {
+                    "code": "EMAIL_ALREADY_REGISTERED",
+                    "message": "An account with this email address already exists"
+                  },
+                  "schema": {
+                    "$ref": "#/components/schemas/Error"
+                  }
+                }
+              },
+              "description": "Email already registered"
+            }
+          },
+          "summary": "Register a new customer",
+          "x-related-specs": [
+            "TS-BR-CUST-001",
+            "TS-BR-CUST-002"
+          ]
+        }
+      },
+      "/api/v1/customers/{customerId}/password": {
+        "put": {
+          "operationId": "changeCustomerPassword",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "customerId",
+              "required": true,
+              "schema": {
+                "format": "uuid",
+                "type": "string"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "currentPassword": {
+                      "type": "string"
+                    },
+                    "newPassword": {
+                      "description": "Must be at least 8 characters and contain at least one number",
+                      "minLength": 8,
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "currentPassword",
+                    "newPassword"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "description": "Password changed successfully"
+            },
+            "400": {
+              "content": {
+                "application/json": {
+                  "example": {
+                    "code": "WEAK_PASSWORD",
+                    "message": "Password must be at least 8 characters and contain at least one number"
+                  },
+                  "schema": {
+                    "$ref": "#/components/schemas/Error"
+                  }
+                }
+              },
+              "description": "Weak password"
+            },
+            "401": {
+              "description": "Current password incorrect"
+            }
+          },
+          "summary": "Change customer password",
+          "x-related-specs": [
+            "TS-BR-CUST-002"
+          ]
+        }
+      },
+      "/api/v1/customers/{customerId}/verify-email": {
+        "post": {
+          "operationId": "verifyCustomerEmail",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "customerId",
+              "required": true,
+              "schema": {
+                "format": "uuid",
+                "type": "string"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "verificationToken": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "verificationToken"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "description": "Email verified successfully"
+            },
+            "400": {
+              "description": "Invalid or expired verification token"
+            }
+          },
+          "summary": "Verify customer email address",
+          "x-related-specs": [
+            "TS-BR-AUTH-001",
+            "TS-BR-CUST-003"
+          ]
+        }
+      },
+      "/api/v1/inventory/{productId}": {
+        "get": {
+          "operationId": "getProductInventory",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "productId",
+              "required": true,
+              "schema": {
+                "format": "uuid",
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Inventory"
+                  }
+                }
+              },
+              "description": "Inventory details"
+            },
+            "404": {
+              "description": "Product not found"
+            }
+          },
+          "summary": "Get inventory for product",
+          "x-related-specs": [
+            "TS-BR-STOCK-001",
+            "TS-BR-INV-001"
+          ]
+        }
+      },
+      "/api/v1/inventory/{productId}/adjust": {
+        "post": {
+          "operationId": "adjustInventory",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "productId",
+              "required": true,
+              "schema": {
+                "format": "uuid",
+                "type": "string"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "adjustment": {
+                      "description": "Positive to increase, negative to decrease",
+                      "type": "integer"
+                    },
+                    "reason": {
+                      "maxLength": 200,
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "adjustment",
+                    "reason"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Inventory"
+                  }
+                }
+              },
+              "description": "Inventory adjusted successfully"
+            },
+            "404": {
+              "description": "Product not found"
+            },
+            "409": {
+              "content": {
+                "application/json": {
+                  "example": {
+                    "code": "INSUFFICIENT_STOCK",
+                    "message": "Insufficient stock available"
+                  },
+                  "schema": {
+                    "$ref": "#/components/schemas/Error"
+                  }
+                }
+              },
+              "description": "Insufficient stock"
+            }
+          },
+          "summary": "Adjust inventory stock level",
+          "x-related-specs": [
+            "TS-BR-INV-001",
+            "TS-BR-AUDIT-002"
+          ]
+        }
+      },
+      "/api/v1/orders": {
+        "get": {
+          "operationId": "listOrders",
+          "parameters": [
+            {
+              "in": "query",
+              "name": "status",
+              "schema": {
+                "enum": [
+                  "pending",
+                  "confirmed",
+                  "shipped",
+                  "delivered",
+                  "cancelled"
+                ],
+                "type": "string"
+              }
+            },
+            {
+              "in": "query",
+              "name": "page",
+              "schema": {
+                "default": 1,
+                "type": "integer"
+              }
+            },
+            {
+              "in": "query",
+              "name": "limit",
+              "schema": {
+                "default": 20,
+                "type": "integer"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "properties": {
+                      "items": {
+                        "items": {
+                          "$ref": "#/components/schemas/Order"
+                        },
+                        "type": "array"
+                      },
+                      "limit": {
+                        "type": "integer"
+                      },
+                      "page": {
+                        "type": "integer"
+                      },
+                      "total": {
+                        "type": "integer"
+                      }
+                    },
+                    "type": "object"
+                  }
+                }
+              },
+              "description": "List of orders"
+            }
+          },
+          "summary": "List customer orders",
+          "x-related-specs": []
+        },
+        "post": {
+          "description": "Creates order from cart, validates stock, authorizes payment, captures prices at order time",
+          "operationId": "createOrder",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "paymentMethodId": {
+                      "type": "string"
+                    },
+                    "shippingAddressId": {
+                      "format": "uuid",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "shippingAddressId",
+                    "paymentMethodId"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "201": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Order"
+                  }
+                }
+              },
+              "description": "Order created successfully"
+            },
+            "400": {
+              "description": "Validation error"
+            },
+            "401": {
+              "content": {
+                "application/json": {
+                  "example": {
+                    "code": "REGISTRATION_REQUIRED",
+                    "message": "You must be registered to place an order"
+                  },
+                  "schema": {
+                    "$ref": "#/components/schemas/Error"
+                  }
+                }
+              },
+              "description": "Not authenticated"
+            },
+            "402": {
+              "content": {
+                "application/json": {
+                  "example": {
+                    "code": "PAYMENT_REQUIRED",
+                    "message": "Payment authorization failed. Please try again or use a different payment method."
+                  },
+                  "schema": {
+                    "$ref": "#/components/schemas/Error"
+                  }
+                }
+              },
+              "description": "Payment required"
+            },
+            "403": {
+              "content": {
+                "application/json": {
+                  "example": {
+                    "code": "EMAIL_NOT_VERIFIED",
+                    "message": "Please verify your email address before placing an order"
+                  },
+                  "schema": {
+                    "$ref": "#/components/schemas/Error"
+                  }
+                }
+              },
+              "description": "Email not verified"
+            },
+            "409": {
+              "content": {
+                "application/json": {
+                  "examples": {
+                    "backorderNotSupported": {
+                      "value": {
+                        "code": "BACKORDER_NOT_SUPPORTED",
+                        "message": "One or more items exceed available stock. Backorders are not supported."
+                      }
+                    },
+                    "insufficientStock": {
+                      "value": {
+                        "code": "INSUFFICIENT_STOCK",
+                        "message": "Not enough stock available for checkout"
+                      }
+                    }
+                  },
+                  "schema": {
+                    "$ref": "#/components/schemas/Error"
+                  }
+                }
+              },
+              "description": "Stock conflict"
+            }
+          },
+          "summary": "Create order (checkout)",
+          "x-related-specs": [
+            "TS-BR-AUTH-001",
+            "TS-BR-STOCK-001",
+            "TS-BR-CUST-003",
+            "TS-BR-PRICE-002",
+            "TS-BR-INV-002",
+            "TS-BR-PAY-001",
+            "TS-BR-AUDIT-001"
+          ]
+        }
+      },
+      "/api/v1/orders/{orderId}": {
+        "get": {
+          "operationId": "getOrder",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "orderId",
+              "required": true,
+              "schema": {
+                "format": "uuid",
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Order"
+                  }
+                }
+              },
+              "description": "Order details"
+            },
+            "404": {
+              "description": "Order not found"
+            }
+          },
+          "summary": "Get order by ID",
+          "x-related-specs": []
+        }
+      },
+      "/api/v1/orders/{orderId}/cancel": {
+        "post": {
+          "description": "Cancels order, restores inventory, and initiates refund",
+          "operationId": "cancelOrder",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "orderId",
+              "required": true,
+              "schema": {
+                "format": "uuid",
+                "type": "string"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "reason": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Order"
+                  }
+                }
+              },
+              "description": "Order cancelled successfully"
+            },
+            "404": {
+              "description": "Order not found"
+            },
+            "409": {
+              "content": {
+                "application/json": {
+                  "example": {
+                    "code": "CANCELLATION_NOT_ALLOWED",
+                    "message": "This order cannot be cancelled as it has already been shipped"
+                  },
+                  "schema": {
+                    "$ref": "#/components/schemas/Error"
+                  }
+                }
+              },
+              "description": "Cancellation not allowed"
+            }
+          },
+          "summary": "Cancel order",
+          "x-related-specs": [
+            "TS-BR-CANCEL-001",
+            "TS-BR-INV-003",
+            "TS-BR-PAY-002",
+            "TS-BR-AUDIT-001"
+          ]
+        }
+      },
+      "/api/v1/orders/{orderId}/status": {
+        "put": {
+          "description": "Transitions order to new status following state machine rules",
+          "operationId": "updateOrderStatus",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "orderId",
+              "required": true,
+              "schema": {
+                "format": "uuid",
+                "type": "string"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "status": {
+                      "enum": [
+                        "confirmed",
+                        "shipped",
+                        "delivered"
+                      ],
+                      "type": "string"
+                    },
+                    "trackingNumber": {
+                      "description": "Required when transitioning to shipped",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Order"
+                  }
+                }
+              },
+              "description": "Order status updated"
+            },
+            "403": {
+              "content": {
+                "application/json": {
+                  "example": {
+                    "code": "ORDER_MODIFICATION_NOT_ALLOWED",
+                    "message": "Orders cannot be modified after placement. Please cancel and create a new order."
+                  },
+                  "schema": {
+                    "$ref": "#/components/schemas/Error"
+                  }
+                }
+              },
+              "description": "Modification not allowed"
+            },
+            "404": {
+              "description": "Order not found"
+            },
+            "409": {
+              "content": {
+                "application/json": {
+                  "example": {
+                    "code": "INVALID_STATUS_TRANSITION",
+                    "message": "Cannot transition order from pending to delivered"
+                  },
+                  "schema": {
+                    "$ref": "#/components/schemas/Error"
+                  }
+                }
+              },
+              "description": "Invalid status transition"
+            }
+          },
+          "summary": "Update order status",
+          "x-related-specs": [
+            "TS-BR-ORDER-001",
+            "TS-BR-ORDER-002",
+            "TS-BR-ORDER-003",
+            "TS-BR-AUDIT-001"
+          ]
+        }
+      },
+      "/api/v1/products": {
+        "get": {
+          "operationId": "listProducts",
+          "parameters": [
+            {
+              "in": "query",
+              "name": "categoryId",
+              "schema": {
+                "format": "uuid",
+                "type": "string"
+              }
+            },
+            {
+              "in": "query",
+              "name": "page",
+              "schema": {
+                "default": 1,
+                "type": "integer"
+              }
+            },
+            {
+              "in": "query",
+              "name": "limit",
+              "schema": {
+                "default": 20,
+                "type": "integer"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "properties": {
+                      "items": {
+                        "items": {
+                          "$ref": "#/components/schemas/Product"
+                        },
+                        "type": "array"
+                      },
+                      "limit": {
+                        "type": "integer"
+                      },
+                      "page": {
+                        "type": "integer"
+                      },
+                      "total": {
+                        "type": "integer"
+                      }
+                    },
+                    "type": "object"
+                  }
+                }
+              },
+              "description": "List of products"
+            }
+          },
+          "summary": "List products",
+          "x-related-specs": []
+        },
+        "post": {
+          "operationId": "createProduct",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "categoryId": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "description": {
+                      "maxLength": 5000,
+                      "type": "string"
+                    },
+                    "name": {
+                      "maxLength": 200,
+                      "minLength": 2,
+                      "type": "string"
+                    },
+                    "price": {
+                      "format": "decimal",
+                      "minimum": 0.01,
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "price"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "201": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Product"
+                  }
+                }
+              },
+              "description": "Product created successfully"
+            },
+            "400": {
+              "content": {
+                "application/json": {
+                  "examples": {
+                    "descriptionTooLong": {
+                      "value": {
+                        "code": "DESCRIPTION_TOO_LONG",
+                        "message": "Product description cannot exceed 5000 characters"
+                      }
+                    },
+                    "invalidName": {
+                      "value": {
+                        "code": "INVALID_PRODUCT_NAME",
+                        "message": "Product name must be between 2 and 200 characters"
+                      }
+                    },
+                    "invalidPrice": {
+                      "value": {
+                        "code": "INVALID_PRICE",
+                        "message": "Product price must be at least $0.01"
+                      }
+                    }
+                  },
+                  "schema": {
+                    "$ref": "#/components/schemas/Error"
+                  }
+                }
+              },
+              "description": "Validation error"
+            }
+          },
+          "summary": "Create a new product",
+          "x-related-specs": [
+            "TS-BR-PRICE-001",
+            "TS-BR-PROD-002",
+            "TS-BR-PROD-003"
+          ]
+        }
+      },
+      "/api/v1/products/{productId}": {
+        "delete": {
+          "description": "Soft-deletes product if it has order history, otherwise hard-deletes",
+          "operationId": "deleteProduct",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "productId",
+              "required": true,
+              "schema": {
+                "format": "uuid",
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "204": {
+              "description": "Product deleted successfully"
+            },
+            "404": {
+              "description": "Product not found"
+            }
+          },
+          "summary": "Delete product",
+          "x-related-specs": [
+            "TS-BR-PROD-001"
+          ]
+        },
+        "get": {
+          "operationId": "getProduct",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "productId",
+              "required": true,
+              "schema": {
+                "format": "uuid",
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Product"
+                  }
+                }
+              },
+              "description": "Product details"
+            },
+            "404": {
+              "description": "Product not found"
+            }
+          },
+          "summary": "Get product by ID",
+          "x-related-specs": []
+        },
+        "put": {
+          "operationId": "updateProduct",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "productId",
+              "required": true,
+              "schema": {
+                "format": "uuid",
+                "type": "string"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "categoryId": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "description": {
+                      "maxLength": 5000,
+                      "type": "string"
+                    },
+                    "name": {
+                      "maxLength": 200,
+                      "minLength": 2,
+                      "type": "string"
+                    },
+                    "price": {
+                      "format": "decimal",
+                      "minimum": 0.01,
+                      "type": "number"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Product"
+                  }
+                }
+              },
+              "description": "Product updated successfully"
+            },
+            "400": {
+              "content": {
+                "application/json": {
+                  "examples": {
+                    "descriptionTooLong": {
+                      "value": {
+                        "code": "DESCRIPTION_TOO_LONG",
+                        "message": "Product description cannot exceed 5000 characters"
+                      }
+                    },
+                    "invalidName": {
+                      "value": {
+                        "code": "INVALID_PRODUCT_NAME",
+                        "message": "Product name must be between 2 and 200 characters"
+                      }
+                    },
+                    "invalidPrice": {
+                      "value": {
+                        "code": "INVALID_PRICE",
+                        "message": "Product price must be at least $0.01"
+                      }
+                    }
+                  },
+                  "schema": {
+                    "$ref": "#/components/schemas/Error"
+                  }
+                }
+              },
+              "description": "Validation error"
+            },
+            "404": {
+              "description": "Product not found"
+            }
+          },
+          "summary": "Update product",
+          "x-related-specs": [
+            "TS-BR-PRICE-001",
+            "TS-BR-PROD-002",
+            "TS-BR-PROD-003",
+            "TS-BR-AUDIT-003"
+          ]
+        }
+      },
+      "/api/v1/products/{productId}/images": {
+        "post": {
+          "operationId": "uploadProductImage",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "productId",
+              "required": true,
+              "schema": {
+                "format": "uuid",
+                "type": "string"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "multipart/form-data": {
+                "schema": {
+                  "properties": {
+                    "image": {
+                      "format": "binary",
+                      "type": "string"
+                    },
+                    "isPrimary": {
+                      "default": false,
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "image"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "201": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/ProductImage"
+                  }
+                }
+              },
+              "description": "Image uploaded successfully"
+            },
+            "400": {
+              "content": {
+                "application/json": {
+                  "examples": {
+                    "imageLimitExceeded": {
+                      "value": {
+                        "code": "IMAGE_LIMIT_EXCEEDED",
+                        "message": "Products cannot have more than 10 images"
+                      }
+                    },
+                    "primaryImageRequired": {
+                      "value": {
+                        "code": "PRIMARY_IMAGE_REQUIRED",
+                        "message": "Product must have exactly one primary image"
+                      }
+                    }
+                  },
+                  "schema": {
+                    "$ref": "#/components/schemas/Error"
+                  }
+                }
+              },
+              "description": "Validation error"
+            },
+            "404": {
+              "description": "Product not found"
+            }
+          },
+          "summary": "Upload product image",
+          "x-related-specs": [
+            "TS-BR-PROD-004"
+          ]
+        }
+      },
+      "/api/v1/products/{productId}/images/{imageId}/primary": {
+        "put": {
+          "operationId": "setPrimaryProductImage",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "productId",
+              "required": true,
+              "schema": {
+                "format": "uuid",
+                "type": "string"
+              }
+            },
+            {
+              "in": "path",
+              "name": "imageId",
+              "required": true,
+              "schema": {
+                "format": "uuid",
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Primary image set successfully"
+            },
+            "404": {
+              "description": "Product or image not found"
+            }
+          },
+          "summary": "Set primary product image",
+          "x-related-specs": [
+            "TS-BR-PROD-004"
+          ]
+        }
+      },
+      "/api/v1/products/{productId}/variants": {
+        "post": {
+          "operationId": "createProductVariant",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "productId",
+              "required": true,
+              "schema": {
+                "format": "uuid",
+                "type": "string"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "attributes": {
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "type": "object"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "price": {
+                      "format": "decimal",
+                      "minimum": 0.01,
+                      "type": "number"
+                    },
+                    "sku": {
+                      "maxLength": 100,
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "sku",
+                    "name",
+                    "price"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "201": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/ProductVariant"
+                  }
+                }
+              },
+              "description": "Variant created successfully"
+            },
+            "400": {
+              "description": "Validation error"
+            },
+            "404": {
+              "description": "Product not found"
+            },
+            "409": {
+              "content": {
+                "application/json": {
+                  "example": {
+                    "code": "DUPLICATE_SKU",
+                    "message": "A variant with this SKU already exists"
+                  },
+                  "schema": {
+                    "$ref": "#/components/schemas/Error"
+                  }
+                }
+              },
+              "description": "Duplicate SKU"
+            }
+          },
+          "summary": "Create product variant",
+          "x-related-specs": [
+            "TS-BR-VAR-001"
+          ]
+        }
+      },
+      "/api/v1/shipping/estimate": {
+        "post": {
+          "description": "Returns shipping cost based on subtotal (free shipping for orders \u003e= $50)",
+          "operationId": "calculateShippingEstimate",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "addressId": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "subtotal": {
+                      "format": "decimal",
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "subtotal"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "properties": {
+                      "freeShippingThreshold": {
+                        "format": "decimal",
+                        "type": "number"
+                      },
+                      "qualifiesForFreeShipping": {
+                        "type": "boolean"
+                      },
+                      "shippingCost": {
+                        "format": "decimal",
+                        "type": "number"
+                      }
+                    },
+                    "type": "object"
+                  }
+                }
+              },
+              "description": "Shipping estimate"
+            }
+          },
+          "summary": "Calculate shipping cost estimate",
+          "x-related-specs": [
+            "TS-BR-SHIP-001"
+          ]
+        }
+      },
+      "/api/v1/variants/{variantId}": {
+        "put": {
+          "operationId": "updateProductVariant",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "variantId",
+              "required": true,
+              "schema": {
+                "format": "uuid",
+                "type": "string"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "attributes": {
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "type": "object"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "price": {
+                      "format": "decimal",
+                      "minimum": 0.01,
+                      "type": "number"
+                    },
+                    "sku": {
+                      "maxLength": 100,
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/ProductVariant"
+                  }
+                }
+              },
+              "description": "Variant updated successfully"
+            },
+            "400": {
+              "description": "Validation error"
+            },
+            "404": {
+              "description": "Variant not found"
+            },
+            "409": {
+              "content": {
+                "application/json": {
+                  "example": {
+                    "code": "DUPLICATE_SKU",
+                    "message": "A variant with this SKU already exists"
+                  },
+                  "schema": {
+                    "$ref": "#/components/schemas/Error"
+                  }
+                }
+              },
+              "description": "Duplicate SKU"
+            }
+          },
+          "summary": "Update product variant",
+          "x-related-specs": [
+            "TS-BR-VAR-001"
+          ]
+        }
+      }
+    }
+  },
+  "implementation_skeletons": [
+    {
+      "name": "CustomerService",
+      "type": "service",
+      "functions": [
+        {
+          "name": "register",
+          "signature": "register(data: RegisterDTO): Promise\u003cCustomer\u003e",
+          "description": "Register a new customer with email and password",
+          "steps": [
+            "Validate email format using regex",
+            "Check email uniqueness in database",
+            "Validate password strength (min 8 chars, at least one digit)",
+            "Hash password using bcrypt",
+            "Create customer record with emailVerified=false",
+            "Send verification email",
+            "Return customer object"
+          ],
+          "error_cases": [
+            "EMAIL_ALREADY_REGISTERED",
+            "WEAK_PASSWORD"
+          ]
+        },
+        {
+          "name": "verifyEmail",
+          "signature": "verifyEmail(token: string): Promise\u003cCustomer\u003e",
+          "description": "Verify customer email address using verification token",
+          "steps": [
+            "Find customer by verification token",
+            "Check token validity and expiration",
+            "Set emailVerified=true",
+            "Clear verification token",
+            "Return updated customer"
+          ],
+          "error_cases": []
+        },
+        {
+          "name": "changePassword",
+          "signature": "changePassword(customerId: UUID, currentPassword: string, newPassword: string): Promise\u003cvoid\u003e",
+          "description": "Change customer password with validation",
+          "steps": [
+            "Find customer by ID",
+            "Verify current password matches",
+            "Validate new password strength (min 8 chars, at least one digit)",
+            "Hash new password",
+            "Update customer password",
+            "Return success"
+          ],
+          "error_cases": [
+            "WEAK_PASSWORD"
+          ]
+        }
+      ],
+      "dependencies": [
+        "EmailService",
+        "PasswordHashService"
+      ],
+      "related_specs": [
+        "TS-BR-AUTH-001",
+        "TS-BR-CUST-001",
+        "TS-BR-CUST-002",
+        "TS-BR-CUST-003"
+      ]
+    },
+    {
+      "name": "ProductService",
+      "type": "service",
+      "functions": [
+        {
+          "name": "create",
+          "signature": "create(data: CreateProductDTO): Promise\u003cProduct\u003e",
+          "description": "Create a new product with validation",
+          "steps": [
+            "Validate name length (2-200 characters)",
+            "Validate description length (max 5000 characters)",
+            "Validate price \u003e= 0.01",
+            "Create product record",
+            "Return created product"
+          ],
+          "error_cases": [
+            "INVALID_PRODUCT_NAME",
+            "DESCRIPTION_TOO_LONG",
+            "INVALID_PRICE"
+          ]
+        },
+        {
+          "name": "update",
+          "signature": "update(productId: UUID, data: UpdateProductDTO): Promise\u003cProduct\u003e",
+          "description": "Update existing product with validation and price audit",
+          "steps": [
+            "Find product by ID",
+            "Validate name length if provided (2-200 characters)",
+            "Validate description length if provided (max 5000 characters)",
+            "Validate price \u003e= 0.01 if provided",
+            "Check if price changed for audit logging",
+            "Update product record",
+            "If price changed, log to audit via AuditLogService",
+            "Return updated product"
+          ],
+          "error_cases": [
+            "INVALID_PRODUCT_NAME",
+            "DESCRIPTION_TOO_LONG",
+            "INVALID_PRICE"
+          ]
+        },
+        {
+          "name": "delete",
+          "signature": "delete(productId: UUID): Promise\u003cvoid\u003e",
+          "description": "Soft delete product if has order history, otherwise hard delete",
+          "steps": [
+            "Find product by ID",
+            "Check if product has OrderItem references",
+            "If has orders: set deletedAt timestamp (soft delete)",
+            "If no orders: perform hard delete",
+            "Return success"
+          ],
+          "error_cases": []
+        },
+        {
+          "name": "addImage",
+          "signature": "addImage(productId: UUID, image: ImageDTO): Promise\u003cProductImage\u003e",
+          "description": "Add image to product with limit validation",
+          "steps": [
+            "Find product by ID",
+            "Count existing images",
+            "Validate count \u003c 10",
+            "If first image, set as primary",
+            "Save image record",
+            "Return created image"
+          ],
+          "error_cases": [
+            "IMAGE_LIMIT_EXCEEDED"
+          ]
+        },
+        {
+          "name": "setPrimaryImage",
+          "signature": "setPrimaryImage(productId: UUID, imageId: UUID): Promise\u003cvoid\u003e",
+          "description": "Set specified image as primary, unsetting others",
+          "steps": [
+            "Find product by ID",
+            "Find image by ID",
+            "Unset isPrimary on all product images",
+            "Set isPrimary on target image",
+            "Return success"
+          ],
+          "error_cases": [
+            "PRIMARY_IMAGE_REQUIRED"
+          ]
+        }
+      ],
+      "dependencies": [
+        "AuditLogService"
+      ],
+      "related_specs": [
+        "TS-BR-PRICE-001",
+        "TS-BR-PROD-001",
+        "TS-BR-PROD-002",
+        "TS-BR-PROD-003",
+        "TS-BR-PROD-004",
+        "TS-BR-AUDIT-003"
+      ]
+    },
+    {
+      "name": "VariantService",
+      "type": "service",
+      "functions": [
+        {
+          "name": "create",
+          "signature": "create(productId: UUID, data: CreateVariantDTO): Promise\u003cProductVariant\u003e",
+          "description": "Create a new product variant with unique SKU",
+          "steps": [
+            "Find product by ID",
+            "Validate SKU uniqueness across all variants",
+            "Create variant record linked to product",
+            "Return created variant"
+          ],
+          "error_cases": [
+            "DUPLICATE_SKU"
+          ]
+        },
+        {
+          "name": "update",
+          "signature": "update(variantId: UUID, data: UpdateVariantDTO): Promise\u003cProductVariant\u003e",
+          "description": "Update existing variant with SKU uniqueness check",
+          "steps": [
+            "Find variant by ID",
+            "If SKU changed, validate uniqueness",
+            "Update variant record",
+            "Return updated variant"
+          ],
+          "error_cases": [
+            "DUPLICATE_SKU"
+          ]
+        }
+      ],
+      "dependencies": [
+        "ProductService"
+      ],
+      "related_specs": [
+        "TS-BR-VAR-001"
+      ]
+    },
+    {
+      "name": "InventoryService",
+      "type": "service",
+      "functions": [
+        {
+          "name": "adjust",
+          "signature": "adjust(productId: UUID, variantId: UUID | null, quantity: number, reason: string): Promise\u003cInventory\u003e",
+          "description": "Adjust inventory stock level with audit logging",
+          "steps": [
+            "Find inventory record for product/variant",
+            "Calculate new stock level",
+            "Validate resulting quantity \u003e= 0",
+            "Update availableStock atomically",
+            "Log adjustment to audit via AuditLogService",
+            "Return updated inventory"
+          ],
+          "error_cases": [
+            "INSUFFICIENT_STOCK"
+          ]
+        },
+        {
+          "name": "decrement",
+          "signature": "decrement(productId: UUID, variantId: UUID | null, quantity: number): Promise\u003cInventory\u003e",
+          "description": "Decrement inventory for order placement",
+          "steps": [
+            "Find inventory record for product/variant",
+            "Validate availableStock \u003e= quantity",
+            "Atomically decrement availableStock with DB check constraint",
+            "Log decrement to audit via AuditLogService",
+            "Return updated inventory"
+          ],
+          "error_cases": [
+            "INSUFFICIENT_STOCK"
+          ]
+        },
+        {
+          "name": "restore",
+          "signature": "restore(orderItems: OrderItem[]): Promise\u003cvoid\u003e",
+          "description": "Restore inventory for cancelled order items",
+          "steps": [
+            "For each OrderItem in list",
+            "Find inventory record for product/variant",
+            "Increment availableStock by item quantity",
+            "Log restoration to audit via AuditLogService",
+            "Return success"
+          ],
+          "error_cases": []
+        },
+        {
+          "name": "checkAvailability",
+          "signature": "checkAvailability(productId: UUID, variantId: UUID | null): Promise\u003cnumber\u003e",
+          "description": "Get available stock for a product/variant",
+          "steps": [
+            "Find inventory record for product/variant",
+            "Return availableStock value"
+          ],
+          "error_cases": []
+        }
+      ],
+      "dependencies": [
+        "AuditLogService"
+      ],
+      "related_specs": [
+        "TS-BR-STOCK-001",
+        "TS-BR-INV-001",
+        "TS-BR-INV-002",
+        "TS-BR-INV-003",
+        "TS-BR-AUDIT-002"
+      ]
+    },
+    {
+      "name": "CartService",
+      "type": "service",
+      "functions": [
+        {
+          "name": "getCart",
+          "signature": "getCart(cartId: UUID): Promise\u003cCart\u003e",
+          "description": "Get cart with current prices and expiration check",
+          "steps": [
+            "Find cart by ID",
+            "Check if cart expired based on lastActivityAt and user type",
+            "If expired, throw CART_EXPIRED error",
+            "For each cart item, fetch current product price",
+            "Calculate totals using current prices",
+            "Flag any items with price changes since addition",
+            "Return cart with calculated totals"
+          ],
+          "error_cases": [
+            "CART_EXPIRED"
+          ]
+        },
+        {
+          "name": "addItem",
+          "signature": "addItem(cartId: UUID, productId: UUID, variantId: UUID | null, quantity: number): Promise\u003cCartItem\u003e",
+          "description": "Add item to cart with stock and variant validation",
+          "steps": [
+            "Find cart by ID",
+            "Find product by ID",
+            "If product has variants and variantId is null, throw VARIANT_REQUIRED",
+            "Check inventory availableStock",
+            "If availableStock == 0, throw OUT_OF_STOCK",
+            "Cap quantity at availableStock if exceeded",
+            "Store current price as priceAtAdd",
+            "Create or update cart item",
+            "Update cart lastActivityAt",
+            "Return cart item with actual quantity added"
+          ],
+          "error_cases": [
+            "VARIANT_REQUIRED",
+            "OUT_OF_STOCK",
+            "QUANTITY_EXCEEDS_STOCK"
+          ]
+        },
+        {
+          "name": "updateQuantity",
+          "signature": "updateQuantity(cartItemId: UUID, quantity: number): Promise\u003cCartItem\u003e",
+          "description": "Update cart item quantity with stock validation",
+          "steps": [
+            "Find cart item by ID",
+            "Check inventory availableStock",
+            "Cap quantity at availableStock if exceeded",
+            "Update cart item quantity",
+            "Update cart lastActivityAt",
+            "Return updated cart item"
+          ],
+          "error_cases": [
+            "QUANTITY_EXCEEDS_STOCK"
+          ]
+        },
+        {
+          "name": "removeItem",
+          "signature": "removeItem(cartItemId: UUID): Promise\u003cvoid\u003e",
+          "description": "Remove item from cart",
+          "steps": [
+            "Find cart item by ID",
+            "Delete cart item",
+            "Update cart lastActivityAt",
+            "Return success"
+          ],
+          "error_cases": []
+        },
+        {
+          "name": "calculateTotal",
+          "signature": "calculateTotal(cart: Cart): Promise\u003cCartTotals\u003e",
+          "description": "Calculate cart totals with current prices",
+          "steps": [
+            "For each cart item, fetch current product/variant price",
+            "Calculate line totals (price * quantity)",
+            "Sum subtotal from all line items",
+            "Calculate shipping using ShippingService",
+            "Return totals object with subtotal, shipping, total"
+          ],
+          "error_cases": []
+        }
+      ],
+      "dependencies": [
+        "InventoryService",
+        "ShippingService"
+      ],
+      "related_specs": [
+        "TS-BR-STOCK-001",
+        "TS-BR-CART-001",
+        "TS-BR-CART-002",
+        "TS-BR-CART-003",
+        "TS-BR-VAR-002"
+      ]
+    },
+    {
+      "name": "ShippingService",
+      "type": "service",
+      "functions": [
+        {
+          "name": "calculateCost",
+          "signature": "calculateCost(subtotal: number): Promise\u003cnumber\u003e",
+          "description": "Calculate shipping cost based on free shipping threshold",
+          "steps": [
+            "Check if subtotal \u003e= 50.00",
+            "If yes, return 0.00 (free shipping)",
+            "Otherwise, return 5.99"
+          ],
+          "error_cases": []
+        },
+        {
+          "name": "validateAddress",
+          "signature": "validateAddress(address: ShippingAddressDTO): Promise\u003cvoid\u003e",
+          "description": "Validate shipping address for domestic delivery",
+          "steps": [
+            "Validate all required fields are present and non-empty",
+            "Validate country is ISO 3166-1 alpha-2 format",
+            "Check country matches DOMESTIC_COUNTRY config",
+            "If validation fails, throw appropriate error"
+          ],
+          "error_cases": [
+            "INCOMPLETE_ADDRESS",
+            "INTERNATIONAL_SHIPPING_NOT_AVAILABLE"
+          ]
+        }
+      ],
+      "dependencies": [],
+      "related_specs": [
+        "TS-BR-SHIP-001",
+        "TS-BR-SHIP-002",
+        "TS-BR-ADDR-001"
+      ]
+    },
+    {
+      "name": "OrderService",
+      "type": "service",
+      "functions": [
+        {
+          "name": "create",
+          "signature": "create(customerId: UUID, cartId: UUID, paymentAuthorizationId: string, shippingAddress: ShippingAddress): Promise\u003cOrder\u003e",
+          "description": "Create order from cart with price snapshot",
+          "steps": [
+            "Find customer by ID",
+            "Validate customer.emailVerified == true",
+            "Find cart by ID",
+            "Validate all cart items have sufficient stock",
+            "For each cart item, create OrderItem with current price as unitPrice",
+            "Calculate line totals (unitPrice * quantity)",
+            "Calculate subtotal, shipping, and total",
+            "Decrement inventory for all items via InventoryService",
+            "Create order with status='pending'",
+            "Store paymentAuthorizationId",
+            "Clear cart",
+            "Log order creation to audit via AuditLogService",
+            "Return created order"
+          ],
+          "error_cases": [
+            "REGISTRATION_REQUIRED",
+            "EMAIL_NOT_VERIFIED",
+            "INSUFFICIENT_STOCK",
+            "BACKORDER_NOT_SUPPORTED"
+          ]
+        },
+        {
+          "name": "updateStatus",
+          "signature": "updateStatus(orderId: UUID, newStatus: OrderStatus): Promise\u003cOrder\u003e",
+          "description": "Update order status following state machine rules",
+          "steps": [
+            "Find order by ID",
+            "Get current status",
+            "Validate transition is allowed per state machine",
+            "Update order status",
+            "Log status change to audit via AuditLogService",
+            "Return updated order"
+          ],
+          "error_cases": [
+            "INVALID_STATUS_TRANSITION"
+          ]
+        },
+        {
+          "name": "cancel",
+          "signature": "cancel(orderId: UUID): Promise\u003cOrder\u003e",
+          "description": "Cancel order with inventory restoration and refund",
+          "steps": [
+            "Find order by ID",
+            "Validate current status is 'pending' or 'confirmed'",
+            "Update status to 'cancelled'",
+            "Restore inventory for all order items via InventoryService",
+            "Initiate refund via PaymentService",
+            "Log cancellation to audit via AuditLogService",
+            "Return cancelled order"
+          ],
+          "error_cases": [
+            "CANCELLATION_NOT_ALLOWED"
+          ]
+        },
+        {
+          "name": "getById",
+          "signature": "getById(orderId: UUID): Promise\u003cOrder\u003e",
+          "description": "Get order by ID",
+          "steps": [
+            "Find order by ID",
+            "Return order with items"
+          ],
+          "error_cases": []
+        }
+      ],
+      "dependencies": [
+        "CustomerService",
+        "CartService",
+        "InventoryService",
+        "PaymentService",
+        "AuditLogService"
+      ],
+      "related_specs": [
+        "TS-BR-AUTH-001",
+        "TS-BR-PRICE-002",
+        "TS-BR-CANCEL-001",
+        "TS-BR-INV-002",
+        "TS-BR-INV-003",
+        "TS-BR-ORDER-001",
+        "TS-BR-ORDER-002",
+        "TS-BR-ORDER-003",
+        "TS-BR-AUDIT-001"
+      ]
+    },
+    {
+      "name": "CheckoutService",
+      "type": "service",
+      "functions": [
+        {
+          "name": "placeOrder",
+          "signature": "placeOrder(customerId: UUID, cartId: UUID, paymentMethod: PaymentMethodDTO, shippingAddress: ShippingAddressDTO): Promise\u003cOrder\u003e",
+          "description": "Complete checkout flow with validation, payment, and order creation",
+          "steps": [
+            "Validate customer exists and emailVerified == true",
+            "Validate cart and all items via validateCart()",
+            "Validate shipping address via ShippingService",
+            "Authorize payment via PaymentService",
+            "If payment fails, throw PAYMENT_REQUIRED",
+            "Create order via OrderService with payment authorization",
+            "Return created order"
+          ],
+          "error_cases": [
+            "REGISTRATION_REQUIRED",
+            "EMAIL_NOT_VERIFIED",
+            "OUT_OF_STOCK",
+            "INSUFFICIENT_STOCK",
+            "BACKORDER_NOT_SUPPORTED",
+            "PAYMENT_REQUIRED",
+            "INCOMPLETE_ADDRESS",
+            "INTERNATIONAL_SHIPPING_NOT_AVAILABLE"
+          ]
+        },
+        {
+          "name": "validateCart",
+          "signature": "validateCart(cartId: UUID): Promise\u003cValidationResult\u003e",
+          "description": "Validate cart for checkout readiness",
+          "steps": [
+            "Get cart via CartService",
+            "For each item, check inventory availableStock",
+            "If any item has availableStock == 0, flag as out of stock",
+            "If any item quantity \u003e availableStock, flag as insufficient",
+            "Return validation result with any issues"
+          ],
+          "error_cases": [
+            "OUT_OF_STOCK",
+            "INSUFFICIENT_STOCK"
+          ]
+        },
+        {
+          "name": "validateStock",
+          "signature": "validateStock(cartItems: CartItem[]): Promise\u003cvoid\u003e",
+          "description": "Atomically validate all items have sufficient stock",
+          "steps": [
+            "For each cart item",
+            "Get availableStock from InventoryService",
+            "If quantity \u003e availableStock, throw BACKORDER_NOT_SUPPORTED",
+            "Return success if all items pass"
+          ],
+          "error_cases": [
+            "BACKORDER_NOT_SUPPORTED"
+          ]
+        }
+      ],
+      "dependencies": [
+        "CustomerService",
+        "CartService",
+        "InventoryService",
+        "PaymentService",
+        "ShippingService",
+        "OrderService"
+      ],
+      "related_specs": [
+        "TS-BR-AUTH-001",
+        "TS-BR-STOCK-001",
+        "TS-BR-INV-002",
+        "TS-BR-CUST-003",
+        "TS-BR-PAY-001"
+      ]
+    },
+    {
+      "name": "PaymentService",
+      "type": "service",
+      "functions": [
+        {
+          "name": "authorize",
+          "signature": "authorize(amount: number, paymentMethod: PaymentMethodDTO): Promise\u003cPaymentAuthorization\u003e",
+          "description": "Authorize payment for order total",
+          "steps": [
+            "Validate payment method details",
+            "Send authorization request to payment gateway",
+            "If successful, return authorization ID and status",
+            "If failed, throw PAYMENT_REQUIRED"
+          ],
+          "error_cases": [
+            "PAYMENT_REQUIRED"
+          ]
+        },
+        {
+          "name": "capture",
+          "signature": "capture(authorizationId: string): Promise\u003cPaymentCapture\u003e",
+          "description": "Capture previously authorized payment",
+          "steps": [
+            "Send capture request to payment gateway",
+            "Update payment status to 'captured'",
+            "Return capture confirmation"
+          ],
+          "error_cases": []
+        },
+        {
+          "name": "refund",
+          "signature": "refund(authorizationId: string): Promise\u003cPaymentRefund\u003e",
+          "description": "Initiate refund for cancelled order",
+          "steps": [
+            "Send refund request to payment gateway",
+            "Create refund record with status 'pending'",
+            "Return refund confirmation"
+          ],
+          "error_cases": []
+        }
+      ],
+      "dependencies": [],
+      "related_specs": [
+        "TS-BR-PAY-001",
+        "TS-BR-PAY-002"
+      ]
+    },
+    {
+      "name": "CategoryService",
+      "type": "service",
+      "functions": [
+        {
+          "name": "create",
+          "signature": "create(data: CreateCategoryDTO): Promise\u003cCategory\u003e",
+          "description": "Create category with depth validation",
+          "steps": [
+            "If parentId provided, find parent category",
+            "Calculate depth = parent.depth + 1 (or 1 if no parent)",
+            "Validate depth \u003c= 3",
+            "Create category record",
+            "Return created category"
+          ],
+          "error_cases": [
+            "CATEGORY_DEPTH_EXCEEDED"
+          ]
+        },
+        {
+          "name": "update",
+          "signature": "update(categoryId: UUID, data: UpdateCategoryDTO): Promise\u003cCategory\u003e",
+          "description": "Update category details",
+          "steps": [
+            "Find category by ID",
+            "Update category fields",
+            "Return updated category"
+          ],
+          "error_cases": []
+        },
+        {
+          "name": "delete",
+          "signature": "delete(categoryId: UUID): Promise\u003cvoid\u003e",
+          "description": "Delete category and handle children",
+          "steps": [
+            "Find category by ID",
+            "Check for child categories",
+            "Delete category record",
+            "Return success"
+          ],
+          "error_cases": []
+        }
+      ],
+      "dependencies": [],
+      "related_specs": [
+        "TS-BR-CAT-001"
+      ]
+    },
+    {
+      "name": "AddressService",
+      "type": "service",
+      "functions": [
+        {
+          "name": "create",
+          "signature": "create(customerId: UUID, data: CreateAddressDTO): Promise\u003cShippingAddress\u003e",
+          "description": "Create shipping address with validation",
+          "steps": [
+            "Validate all required fields present and non-empty",
+            "Validate country is ISO 3166-1 alpha-2",
+            "Validate country matches DOMESTIC_COUNTRY",
+            "Create address record linked to customer",
+            "Return created address"
+          ],
+          "error_cases": [
+            "INCOMPLETE_ADDRESS",
+            "INTERNATIONAL_SHIPPING_NOT_AVAILABLE"
+          ]
+        },
+        {
+          "name": "update",
+          "signature": "update(addressId: UUID, data: UpdateAddressDTO): Promise\u003cShippingAddress\u003e",
+          "description": "Update shipping address with validation",
+          "steps": [
+            "Find address by ID",
+            "Validate all required fields if provided",
+            "Validate country if provided",
+            "Update address record",
+            "Return updated address"
+          ],
+          "error_cases": [
+            "INCOMPLETE_ADDRESS",
+            "INTERNATIONAL_SHIPPING_NOT_AVAILABLE"
+          ]
+        },
+        {
+          "name": "validate",
+          "signature": "validate(address: ShippingAddressDTO): Promise\u003cvoid\u003e",
+          "description": "Validate address fields and domestic shipping",
+          "steps": [
+            "Check recipientName is non-empty",
+            "Check street is non-empty",
+            "Check city is non-empty",
+            "Check state is non-empty",
+            "Check postalCode is non-empty",
+            "Check country is valid ISO code",
+            "Check country matches DOMESTIC_COUNTRY",
+            "Throw appropriate error if any validation fails"
+          ],
+          "error_cases": [
+            "INCOMPLETE_ADDRESS",
+            "INTERNATIONAL_SHIPPING_NOT_AVAILABLE"
+          ]
+        }
+      ],
+      "dependencies": [],
+      "related_specs": [
+        "TS-BR-ADDR-001",
+        "TS-BR-SHIP-002"
+      ]
+    },
+    {
+      "name": "AuditLogService",
+      "type": "service",
+      "functions": [
+        {
+          "name": "log",
+          "signature": "log(entityType: string, entityId: UUID, action: string, beforeValue: object | null, afterValue: object, userId: UUID, reason?: string): Promise\u003cAuditLog\u003e",
+          "description": "Create audit log entry for entity changes",
+          "steps": [
+            "Create audit log record with timestamp",
+            "Store entityType, entityId, action",
+            "Store beforeValue and afterValue as JSONB",
+            "Store userId and optional reason",
+            "Return created audit log entry"
+          ],
+          "error_cases": []
+        },
+        {
+          "name": "getByEntity",
+          "signature": "getByEntity(entityType: string, entityId: UUID): Promise\u003cAuditLog[]\u003e",
+          "description": "Get audit history for an entity",
+          "steps": [
+            "Query audit logs by entityType and entityId",
+            "Order by timestamp descending",
+            "Return list of audit entries"
+          ],
+          "error_cases": []
+        }
+      ],
+      "dependencies": [],
+      "related_specs": [
+        "TS-BR-AUDIT-001",
+        "TS-BR-AUDIT-002",
+        "TS-BR-AUDIT-003"
+      ]
+    },
+    {
+      "name": "CartExpirationJob",
+      "type": "service",
+      "functions": [
+        {
+          "name": "run",
+          "signature": "run(): Promise\u003cvoid\u003e",
+          "description": "Scheduled job to expire inactive carts",
+          "steps": [
+            "Calculate cutoff timestamp for authenticated carts (now - 30 days)",
+            "Calculate cutoff timestamp for guest carts (now - 7 days)",
+            "Delete guest carts where lastActivityAt \u003c guest cutoff",
+            "Delete authenticated carts where lastActivityAt \u003c auth cutoff",
+            "Log number of expired carts"
+          ],
+          "error_cases": []
+        }
+      ],
+      "dependencies": [
+        "CartService"
+      ],
+      "related_specs": [
+        "TS-BR-CART-003"
+      ]
+    }
+  ],
+  "summary": {
+    "endpoints_count": 22,
+    "services_count": 13,
+    "functions_count": 0
+  }
+}

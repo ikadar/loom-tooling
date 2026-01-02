@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/ikadar/loom-cli/internal/claude"
@@ -208,9 +209,6 @@ func runDeriveL3() error {
 		dmContent, _ = os.ReadFile(filepath.Join(inputDir, "../domain-model.md"))
 	}
 
-	l2Input := fmt.Sprintf("## Test Cases\n\n%s\n\n## Technical Specifications\n\n%s",
-		string(tcContent), string(tsContent))
-
 	fmt.Fprintf(os.Stderr, "  Read: test-cases.md (%d bytes)\n", len(tcContent))
 	fmt.Fprintf(os.Stderr, "  Read: tech-specs.md (%d bytes)\n", len(tsContent))
 	fmt.Fprintf(os.Stderr, "  Read: acceptance-criteria.md (%d bytes)\n", len(acContent))
@@ -222,18 +220,42 @@ func runDeriveL3() error {
 	// Create Claude client
 	client := claude.NewClient()
 
-	// Generate L3 documents
-	fmt.Fprintln(os.Stderr, "\nPhase L3-1: Generating API Spec and Implementation Skeletons...")
+	// Phase L3-1a: Generate API Spec
+	fmt.Fprintln(os.Stderr, "\nPhase L3-1a: Generating API Specification...")
 
-	prompt := prompts.DeriveL3 + l2Input
+	apiPrompt := prompts.DeriveL3API + "\n\n" + string(tsContent)
 
-	var result L3Result
-	if err := client.CallJSON(prompt, &result); err != nil {
-		return fmt.Errorf("failed to generate L3 documents: %w", err)
+	var apiResult APISpec
+	if err := client.CallJSON(apiPrompt, &apiResult); err != nil {
+		return fmt.Errorf("failed to generate API spec: %w", err)
 	}
 
-	fmt.Fprintf(os.Stderr, "  Generated: %d endpoints, %d services\n",
-		len(result.APISpec.Paths), len(result.ImplementationSkeletons))
+	fmt.Fprintf(os.Stderr, "  Generated: %d endpoints\n", len(apiResult.Paths))
+
+	// Phase L3-1b: Generate Implementation Skeletons
+	fmt.Fprintln(os.Stderr, "\nPhase L3-1b: Generating Implementation Skeletons...")
+
+	skelPrompt := prompts.DeriveL3Skeletons + "\n\n" + string(tsContent)
+
+	var skelResult struct {
+		ImplementationSkeletons []ImplementationSkeleton `json:"implementation_skeletons"`
+		Summary                 struct {
+			ServicesCount  int `json:"services_count"`
+			FunctionsCount int `json:"functions_count"`
+		} `json:"summary"`
+	}
+	if err := client.CallJSON(skelPrompt, &skelResult); err != nil {
+		return fmt.Errorf("failed to generate implementation skeletons: %w", err)
+	}
+
+	fmt.Fprintf(os.Stderr, "  Generated: %d services\n", len(skelResult.ImplementationSkeletons))
+
+	// Combine into L3Result
+	var result L3Result
+	result.APISpec = apiResult
+	result.ImplementationSkeletons = skelResult.ImplementationSkeletons
+	result.Summary.EndpointsCount = len(apiResult.Paths)
+	result.Summary.ServicesCount = len(skelResult.ImplementationSkeletons)
 
 	// Phase 2: Generate Feature Tickets
 	fmt.Fprintln(os.Stderr, "\nPhase L3-2: Generating Feature Definition Tickets...")
@@ -424,8 +446,10 @@ func writeSkeletons(path string, skeletons []ImplementationSkeleton) error {
 	fmt.Fprintf(f, "Generated: %s\n\n", time.Now().Format(time.RFC3339))
 	fmt.Fprintf(f, "---\n\n")
 
-	for _, skel := range skeletons {
-		fmt.Fprintf(f, "## %s (%s)\n\n", skel.Name, skel.Type)
+	for i, skel := range skeletons {
+		// Generate SKEL-XXX-NNN ID from service name
+		skelID := fmt.Sprintf("SKEL-%s-%03d", extractDomainCode(skel.Name), i+1)
+		fmt.Fprintf(f, "## %s: %s (%s)\n\n", skelID, skel.Name, skel.Type)
 
 		if len(skel.Dependencies) > 0 {
 			fmt.Fprintf(f, "**Dependencies:** %v\n\n", skel.Dependencies)
@@ -677,6 +701,13 @@ func writeDependencyGraph(path string, components []GraphComponent, dependencies
 	fmt.Fprintf(f, "Generated: %s\n\n", time.Now().Format(time.RFC3339))
 	fmt.Fprintf(f, "---\n\n")
 
+	// Build component ID map: original name -> DEP-XXX-NNN
+	compIDMap := make(map[string]string)
+	for i, c := range components {
+		depID := fmt.Sprintf("DEP-%s-%03d", extractDomainCode(c.ID), i+1)
+		compIDMap[c.ID] = depID
+	}
+
 	// Mermaid diagram
 	fmt.Fprintf(f, "## Visual Overview\n\n")
 	fmt.Fprintf(f, "```mermaid\ngraph TD\n")
@@ -687,13 +718,19 @@ func writeDependencyGraph(path string, components []GraphComponent, dependencies
 		} else if c.Type == "domain_service" {
 			shape = "[%s]"
 		}
-		id := sanitizeID(c.ID)
+		id := sanitizeID(compIDMap[c.ID])
 		fmt.Fprintf(f, "    %s"+shape+"\n", id, c.ID)
 	}
 	fmt.Fprintf(f, "\n")
 	for _, d := range dependencies {
-		fromID := sanitizeID(d.From)
-		toID := sanitizeID(d.To)
+		fromID := sanitizeID(compIDMap[d.From])
+		toID := sanitizeID(compIDMap[d.To])
+		if fromID == "" {
+			fromID = sanitizeID(d.From)
+		}
+		if toID == "" {
+			toID = sanitizeID(d.To)
+		}
 		arrow := "-->"
 		if d.Type == "async" {
 			arrow = "-.->|async|"
@@ -704,21 +741,29 @@ func writeDependencyGraph(path string, components []GraphComponent, dependencies
 	}
 	fmt.Fprintf(f, "```\n\n")
 
-	// Components table
+	// Components section with headers for ID detection
 	fmt.Fprintf(f, "## Components\n\n")
-	fmt.Fprintf(f, "| ID | Type | Description |\n")
-	fmt.Fprintf(f, "|---|---|---|\n")
-	for _, c := range components {
-		fmt.Fprintf(f, "| %s | %s | %s |\n", c.ID, c.Type, c.Description)
+	for i, c := range components {
+		depID := fmt.Sprintf("DEP-%s-%03d", extractDomainCode(c.ID), i+1)
+		fmt.Fprintf(f, "### %s: %s\n\n", depID, c.ID)
+		fmt.Fprintf(f, "- **Type:** %s\n", c.Type)
+		fmt.Fprintf(f, "- **Description:** %s\n\n", c.Description)
 	}
-	fmt.Fprintf(f, "\n")
 
-	// Dependencies table
+	// Dependencies section
 	fmt.Fprintf(f, "## Dependencies\n\n")
 	fmt.Fprintf(f, "| From | To | Type | Description |\n")
 	fmt.Fprintf(f, "|---|---|---|---|\n")
 	for _, d := range dependencies {
-		fmt.Fprintf(f, "| %s | %s | %s | %s |\n", d.From, d.To, d.Type, d.Description)
+		fromID := compIDMap[d.From]
+		toID := compIDMap[d.To]
+		if fromID == "" {
+			fromID = d.From
+		}
+		if toID == "" {
+			toID = d.To
+		}
+		fmt.Fprintf(f, "| %s | %s | %s | %s |\n", fromID, toID, d.Type, d.Description)
 	}
 	fmt.Fprintf(f, "\n")
 
@@ -733,4 +778,19 @@ func sanitizeID(id string) string {
 		}
 	}
 	return result
+}
+
+// extractDomainCode extracts a short code from a service name
+// e.g., "ProductService" -> "PROD", "CustomerService" -> "CUST"
+func extractDomainCode(name string) string {
+	// Remove common suffixes
+	name = strings.TrimSuffix(name, "Service")
+	name = strings.TrimSuffix(name, "Controller")
+	name = strings.TrimSuffix(name, "Repository")
+
+	// Take first 4 chars uppercase
+	if len(name) > 4 {
+		name = name[:4]
+	}
+	return strings.ToUpper(name)
 }
