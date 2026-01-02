@@ -10,6 +10,7 @@ import (
 
 	"github.com/ikadar/loom-cli/internal/claude"
 	"github.com/ikadar/loom-cli/internal/generator"
+	"github.com/ikadar/loom-cli/internal/workflow"
 	"github.com/ikadar/loom-cli/prompts"
 )
 
@@ -438,7 +439,7 @@ func runDeriveL2() error {
 
 	// Show interactive mode header
 	if interactive {
-		PrintInteractiveHeader()
+		workflow.PrintInteractiveHeader()
 	}
 
 	// Create Claude client
@@ -596,43 +597,13 @@ func runDeriveL2() error {
 		return fmt.Errorf("failed to write test cases: %w", err)
 	}
 
-	if interactive {
-		content, _ := os.ReadFile(tcPath)
-		action, err := AskApproval(PhaseResult{
-			PhaseName: "Test Cases (TDAI)",
-			FileName:  "test-cases.md",
-			Content:   string(content),
-			ItemCount: len(result.TestCases),
-			ItemType:  "test cases",
-			Summary:   fmt.Sprintf("(P:%d N:%d B:%d H:%d)", tdaiSummary.ByCategory.Positive, tdaiSummary.ByCategory.Negative, tdaiSummary.ByCategory.Boundary, tdaiSummary.ByCategory.Hallucination),
-		})
-		if err != nil {
-			return err
-		}
-		switch action {
-		case ActionQuit:
-			if ConfirmQuit() {
-				return fmt.Errorf("user quit")
-			}
-		case ActionSkip:
-			os.Remove(tcPath)
-			fmt.Fprintf(os.Stderr, "  Skipped: %s\n", tcPath)
-		case ActionEdit:
-			edited, err := EditContent(string(content), "test-cases.md")
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "  Edit error: %v\n", err)
-			} else {
-				os.WriteFile(tcPath, []byte(edited), 0644)
-			}
-			writtenFiles[tcPath] = true
-			fmt.Fprintf(os.Stderr, "  Written (edited): %s\n", tcPath)
-		default: // Approve
-			writtenFiles[tcPath] = true
-			fmt.Fprintf(os.Stderr, "  Written: %s\n", tcPath)
-		}
-	} else {
+	tcSummaryStr := fmt.Sprintf("(P:%d N:%d B:%d H:%d)", tdaiSummary.ByCategory.Positive, tdaiSummary.ByCategory.Negative, tdaiSummary.ByCategory.Boundary, tdaiSummary.ByCategory.Hallucination)
+	tcWriteResult, _, err := workflow.HandleFileApproval(tcPath, "Test Cases (TDAI)", len(result.TestCases), "test cases", tcSummaryStr, interactive)
+	if err != nil {
+		return err
+	}
+	if tcWriteResult.Written {
 		writtenFiles[tcPath] = true
-		fmt.Fprintf(os.Stderr, "  Written: %s\n", tcPath)
 	}
 
 	// Write Tech Specs
@@ -643,42 +614,12 @@ func runDeriveL2() error {
 		return fmt.Errorf("failed to write tech specs: %w", err)
 	}
 
-	if interactive {
-		content, _ := os.ReadFile(tsPath)
-		action, err := AskApproval(PhaseResult{
-			PhaseName: "Tech Specs",
-			FileName:  "tech-specs.md",
-			Content:   string(content),
-			ItemCount: len(result.TechSpecs),
-			ItemType:  "tech specs",
-		})
-		if err != nil {
-			return err
-		}
-		switch action {
-		case ActionQuit:
-			if ConfirmQuit() {
-				return fmt.Errorf("user quit")
-			}
-		case ActionSkip:
-			os.Remove(tsPath)
-			fmt.Fprintf(os.Stderr, "  Skipped: %s\n", tsPath)
-		case ActionEdit:
-			edited, err := EditContent(string(content), "tech-specs.md")
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "  Edit error: %v\n", err)
-			} else {
-				os.WriteFile(tsPath, []byte(edited), 0644)
-			}
-			writtenFiles[tsPath] = true
-			fmt.Fprintf(os.Stderr, "  Written (edited): %s\n", tsPath)
-		default:
-			writtenFiles[tsPath] = true
-			fmt.Fprintf(os.Stderr, "  Written: %s\n", tsPath)
-		}
-	} else {
+	tsWriteResult, _, err := workflow.HandleFileApproval(tsPath, "Tech Specs", len(result.TechSpecs), "tech specs", "", interactive)
+	if err != nil {
+		return err
+	}
+	if tsWriteResult.Written {
 		writtenFiles[tsPath] = true
-		fmt.Fprintf(os.Stderr, "  Written: %s\n", tsPath)
 	}
 
 	// Write Interface Contracts
@@ -689,43 +630,13 @@ func runDeriveL2() error {
 		return fmt.Errorf("failed to write interface contracts: %w", err)
 	}
 
-	if interactive {
-		content, _ := os.ReadFile(icPath)
-		action, err := AskApproval(PhaseResult{
-			PhaseName: "Interface Contracts",
-			FileName:  "interface-contracts.md",
-			Content:   string(content),
-			ItemCount: len(icResult.InterfaceContracts),
-			ItemType:  "contracts",
-			Summary:   fmt.Sprintf("(%d operations)", icResult.Summary.TotalOperations),
-		})
-		if err != nil {
-			return err
-		}
-		switch action {
-		case ActionQuit:
-			if ConfirmQuit() {
-				return fmt.Errorf("user quit")
-			}
-		case ActionSkip:
-			os.Remove(icPath)
-			fmt.Fprintf(os.Stderr, "  Skipped: %s\n", icPath)
-		case ActionEdit:
-			edited, err := EditContent(string(content), "interface-contracts.md")
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "  Edit error: %v\n", err)
-			} else {
-				os.WriteFile(icPath, []byte(edited), 0644)
-			}
-			writtenFiles[icPath] = true
-			fmt.Fprintf(os.Stderr, "  Written (edited): %s\n", icPath)
-		default:
-			writtenFiles[icPath] = true
-			fmt.Fprintf(os.Stderr, "  Written: %s\n", icPath)
-		}
-	} else {
+	icSummary := fmt.Sprintf("(%d operations)", icResult.Summary.TotalOperations)
+	icWriteResult, _, err := workflow.HandleFileApproval(icPath, "Interface Contracts", len(icResult.InterfaceContracts), "contracts", icSummary, interactive)
+	if err != nil {
+		return err
+	}
+	if icWriteResult.Written {
 		writtenFiles[icPath] = true
-		fmt.Fprintf(os.Stderr, "  Written: %s\n", icPath)
 	}
 
 	// Write Aggregate Design
@@ -736,43 +647,13 @@ func runDeriveL2() error {
 		return fmt.Errorf("failed to write aggregate design: %w", err)
 	}
 
-	if interactive {
-		content, _ := os.ReadFile(aggPath)
-		action, err := AskApproval(PhaseResult{
-			PhaseName: "Aggregate Design",
-			FileName:  "aggregate-design.md",
-			Content:   string(content),
-			ItemCount: len(aggResult.Aggregates),
-			ItemType:  "aggregates",
-			Summary:   fmt.Sprintf("(%d behaviors)", aggResult.Summary.TotalBehaviors),
-		})
-		if err != nil {
-			return err
-		}
-		switch action {
-		case ActionQuit:
-			if ConfirmQuit() {
-				return fmt.Errorf("user quit")
-			}
-		case ActionSkip:
-			os.Remove(aggPath)
-			fmt.Fprintf(os.Stderr, "  Skipped: %s\n", aggPath)
-		case ActionEdit:
-			edited, err := EditContent(string(content), "aggregate-design.md")
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "  Edit error: %v\n", err)
-			} else {
-				os.WriteFile(aggPath, []byte(edited), 0644)
-			}
-			writtenFiles[aggPath] = true
-			fmt.Fprintf(os.Stderr, "  Written (edited): %s\n", aggPath)
-		default:
-			writtenFiles[aggPath] = true
-			fmt.Fprintf(os.Stderr, "  Written: %s\n", aggPath)
-		}
-	} else {
+	aggSummary := fmt.Sprintf("(%d behaviors)", aggResult.Summary.TotalBehaviors)
+	aggWriteResult, _, err := workflow.HandleFileApproval(aggPath, "Aggregate Design", len(aggResult.Aggregates), "aggregates", aggSummary, interactive)
+	if err != nil {
+		return err
+	}
+	if aggWriteResult.Written {
 		writtenFiles[aggPath] = true
-		fmt.Fprintf(os.Stderr, "  Written: %s\n", aggPath)
 	}
 
 	// Write Sequence Design
@@ -783,42 +664,12 @@ func runDeriveL2() error {
 		return fmt.Errorf("failed to write sequence design: %w", err)
 	}
 
-	if interactive {
-		content, _ := os.ReadFile(seqPath)
-		action, err := AskApproval(PhaseResult{
-			PhaseName: "Sequence Design",
-			FileName:  "sequence-design.md",
-			Content:   string(content),
-			ItemCount: len(seqResult.Sequences),
-			ItemType:  "sequences",
-		})
-		if err != nil {
-			return err
-		}
-		switch action {
-		case ActionQuit:
-			if ConfirmQuit() {
-				return fmt.Errorf("user quit")
-			}
-		case ActionSkip:
-			os.Remove(seqPath)
-			fmt.Fprintf(os.Stderr, "  Skipped: %s\n", seqPath)
-		case ActionEdit:
-			edited, err := EditContent(string(content), "sequence-design.md")
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "  Edit error: %v\n", err)
-			} else {
-				os.WriteFile(seqPath, []byte(edited), 0644)
-			}
-			writtenFiles[seqPath] = true
-			fmt.Fprintf(os.Stderr, "  Written (edited): %s\n", seqPath)
-		default:
-			writtenFiles[seqPath] = true
-			fmt.Fprintf(os.Stderr, "  Written: %s\n", seqPath)
-		}
-	} else {
+	seqWriteResult, _, err := workflow.HandleFileApproval(seqPath, "Sequence Design", len(seqResult.Sequences), "sequences", "", interactive)
+	if err != nil {
+		return err
+	}
+	if seqWriteResult.Written {
 		writtenFiles[seqPath] = true
-		fmt.Fprintf(os.Stderr, "  Written: %s\n", seqPath)
 	}
 
 	// Write Data Model
@@ -829,43 +680,13 @@ func runDeriveL2() error {
 		return fmt.Errorf("failed to write data model: %w", err)
 	}
 
-	if interactive {
-		content, _ := os.ReadFile(dataPath)
-		action, err := AskApproval(PhaseResult{
-			PhaseName: "Initial Data Model",
-			FileName:  "initial-data-model.md",
-			Content:   string(content),
-			ItemCount: len(dataResult.Tables),
-			ItemType:  "tables",
-			Summary:   fmt.Sprintf("(%d indexes)", dataResult.Summary.TotalIndexes),
-		})
-		if err != nil {
-			return err
-		}
-		switch action {
-		case ActionQuit:
-			if ConfirmQuit() {
-				return fmt.Errorf("user quit")
-			}
-		case ActionSkip:
-			os.Remove(dataPath)
-			fmt.Fprintf(os.Stderr, "  Skipped: %s\n", dataPath)
-		case ActionEdit:
-			edited, err := EditContent(string(content), "initial-data-model.md")
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "  Edit error: %v\n", err)
-			} else {
-				os.WriteFile(dataPath, []byte(edited), 0644)
-			}
-			writtenFiles[dataPath] = true
-			fmt.Fprintf(os.Stderr, "  Written (edited): %s\n", dataPath)
-		default:
-			writtenFiles[dataPath] = true
-			fmt.Fprintf(os.Stderr, "  Written: %s\n", dataPath)
-		}
-	} else {
+	dataSummary := fmt.Sprintf("(%d indexes)", dataResult.Summary.TotalIndexes)
+	dataWriteResult, _, err := workflow.HandleFileApproval(dataPath, "Initial Data Model", len(dataResult.Tables), "tables", dataSummary, interactive)
+	if err != nil {
+		return err
+	}
+	if dataWriteResult.Written {
 		writtenFiles[dataPath] = true
-		fmt.Fprintf(os.Stderr, "  Written: %s\n", dataPath)
 	}
 
 	// Write JSON for further processing
