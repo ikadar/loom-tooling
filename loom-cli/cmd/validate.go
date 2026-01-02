@@ -697,7 +697,7 @@ func outputText(result *ValidationResult) error {
 	fmt.Println("\n========================================")
 	fmt.Println("   VALIDATION RESULTS")
 	fmt.Printf("   Level: %s\n", result.Level)
-	fmt.Println("========================================\n")
+	fmt.Println("========================================")
 
 	// Structural
 	fmt.Println("Structural Validation:")

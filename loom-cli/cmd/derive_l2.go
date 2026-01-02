@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/ikadar/loom-cli/internal/claude"
+	"github.com/ikadar/loom-cli/internal/generator"
 	"github.com/ikadar/loom-cli/prompts"
 )
 
@@ -82,6 +83,56 @@ type TDAISummary struct {
 		NegativeRatio         float64 `json:"negative_ratio"`
 		HasHallucinationTests bool    `json:"has_hallucination_tests"`
 	} `json:"coverage"`
+}
+
+// flattenTestSuites converts generator.TestSuite to local TestCase slice
+func flattenTestSuites(suites []generator.TestSuite) []TestCase {
+	var result []TestCase
+	for _, suite := range suites {
+		for _, tc := range suite.Tests {
+			result = append(result, TestCase{
+				ID:              tc.ID,
+				Name:            tc.Name,
+				Category:        tc.Category,
+				ACRef:           tc.ACRef,
+				BRRefs:          tc.BRRefs,
+				Preconditions:   tc.Preconditions,
+				TestData:        convertTestData(tc.TestData),
+				Steps:           tc.Steps,
+				ExpectedResults: tc.ExpectedResults,
+				ShouldNot:       tc.ShouldNot,
+			})
+		}
+	}
+	return result
+}
+
+// convertTestData converts generator.TestData to local TestData
+func convertTestData(data []generator.TestData) []TestData {
+	result := make([]TestData, len(data))
+	for i, d := range data {
+		result[i] = TestData{
+			Field: d.Field,
+			Value: d.Value,
+			Notes: d.Notes,
+		}
+	}
+	return result
+}
+
+// convertTDAISummary converts generator.TDAISummary to local TDAISummary
+func convertTDAISummary(s generator.TDAISummary) TDAISummary {
+	var result TDAISummary
+	result.Total = s.Total
+	result.ByCategory.Positive = s.ByCategory.Positive
+	result.ByCategory.Negative = s.ByCategory.Negative
+	result.ByCategory.Boundary = s.ByCategory.Boundary
+	result.ByCategory.Hallucination = s.ByCategory.Hallucination
+	result.Coverage.ACsCovered = s.Coverage.ACsCovered
+	result.Coverage.PositiveRatio = s.Coverage.PositiveRatio
+	result.Coverage.NegativeRatio = s.Coverage.NegativeRatio
+	result.Coverage.HasHallucinationTests = s.Coverage.HasHallucinationTests
+	return result
 }
 
 type TechSpec struct {
@@ -393,24 +444,17 @@ func runDeriveL2() error {
 	// Create Claude client
 	client := claude.NewClient()
 
-	// Phase 1: Generate Test Cases from ACs (TDAI methodology)
+	// Phase 1: Generate Test Cases from ACs (TDAI methodology) - CHUNKED
 	fmt.Fprintln(os.Stderr, "\nPhase L2-1: Generating TDAI Test Cases from Acceptance Criteria...")
 
-	tcPrompt := prompts.DeriveTestCases + "\n" + string(acContent)
-
-	var tcResult struct {
-		TestSuites []TestSuite `json:"test_suites"`
-		Summary    TDAISummary `json:"summary"`
-	}
-	if err := client.CallJSON(tcPrompt, &tcResult); err != nil {
+	tcGenerator := generator.NewChunkedTestCaseGenerator(client)
+	tcResult, err := tcGenerator.Generate(string(acContent))
+	if err != nil {
 		return fmt.Errorf("failed to generate test cases: %w", err)
 	}
 
 	// Flatten test suites into test cases for compatibility
-	var allTestCases []TestCase
-	for _, suite := range tcResult.TestSuites {
-		allTestCases = append(allTestCases, suite.Tests...)
-	}
+	allTestCases := flattenTestSuites(tcResult.TestSuites)
 
 	fmt.Fprintf(os.Stderr, "  Generated: %d Test Cases (P:%d N:%d B:%d H:%d)\n",
 		tcResult.Summary.Total,
@@ -533,8 +577,8 @@ func runDeriveL2() error {
 		},
 	}
 
-	// Store TDAI summary for output
-	tdaiSummary := tcResult.Summary
+	// Store TDAI summary for output (convert from generator type)
+	tdaiSummary := convertTDAISummary(tcResult.Summary)
 
 	// Create output directory
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
