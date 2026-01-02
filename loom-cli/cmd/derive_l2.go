@@ -465,29 +465,22 @@ func runDeriveL2() error {
 		tcResult.Summary.ByCategory.Boundary,
 		tcResult.Summary.ByCategory.Hallucination)
 
-	// Phase 2: Generate Tech Specs from BRs
-	fmt.Fprintln(os.Stderr, "\nPhase L2-2: Generating Tech Specs from Business Rules...")
+	// Phases 2-6: Run in parallel
+	fmt.Fprintln(os.Stderr, "\nPhases L2-2 to L2-6: Generating remaining L2 artifacts in parallel...")
 
-	tsPrompt := prompts.DeriveTechSpecs + "\n" + string(brContent)
+	// Prepare inputs
+	l1Input := string(dmContent) + "\n\n---\n\n" + string(brContent) + "\n\n---\n\n" + string(acContent)
+	aggSeqInput := string(dmContent) + "\n\n---\n\n" + string(brContent)
 
-	var tsResult struct {
+	// Define result types for each phase
+	type TechSpecsResult struct {
 		TechSpecs []TechSpec `json:"tech_specs"`
 		Summary   struct {
 			Total int `json:"total"`
 		} `json:"summary"`
 	}
-	if err := client.CallJSON(tsPrompt, &tsResult); err != nil {
-		return fmt.Errorf("failed to generate tech specs: %w", err)
-	}
-	fmt.Fprintf(os.Stderr, "  Generated: %d Tech Specs\n", len(tsResult.TechSpecs))
 
-	// Phase 3: Generate Interface Contracts
-	fmt.Fprintln(os.Stderr, "\nPhase L2-3: Generating Interface Contracts...")
-
-	l1Input := string(dmContent) + "\n\n---\n\n" + string(brContent) + "\n\n---\n\n" + string(acContent)
-	icPrompt := prompts.DeriveInterfaceContracts + "\n" + l1Input
-
-	var icResult struct {
+	type InterfaceContractsResult struct {
 		InterfaceContracts []InterfaceContract `json:"interface_contracts"`
 		SharedTypes        []SharedType        `json:"shared_types"`
 		Summary            struct {
@@ -497,57 +490,25 @@ func runDeriveL2() error {
 			TotalSharedTypes int `json:"total_shared_types"`
 		} `json:"summary"`
 	}
-	if err := client.CallJSON(icPrompt, &icResult); err != nil {
-		return fmt.Errorf("failed to generate interface contracts: %w", err)
-	}
-	fmt.Fprintf(os.Stderr, "  Generated: %d Interface Contracts, %d Operations\n",
-		len(icResult.InterfaceContracts), icResult.Summary.TotalOperations)
 
-	// Phase 4: Generate Aggregate Design
-	fmt.Fprintln(os.Stderr, "\nPhase L2-4: Generating Aggregate Design...")
-
-	aggInput := string(dmContent) + "\n\n---\n\n" + string(brContent)
-	aggPrompt := prompts.DeriveAggregateDesign + "\n" + aggInput
-
-	var aggResult struct {
+	type AggregateResult struct {
 		Aggregates []AggregateDesign `json:"aggregates"`
 		Summary    struct {
-			TotalAggregates  int `json:"total_aggregates"`
-			TotalInvariants  int `json:"total_invariants"`
-			TotalBehaviors   int `json:"total_behaviors"`
-			TotalEvents      int `json:"total_events"`
+			TotalAggregates int `json:"total_aggregates"`
+			TotalInvariants int `json:"total_invariants"`
+			TotalBehaviors  int `json:"total_behaviors"`
+			TotalEvents     int `json:"total_events"`
 		} `json:"summary"`
 	}
-	if err := client.CallJSON(aggPrompt, &aggResult); err != nil {
-		return fmt.Errorf("failed to generate aggregate design: %w", err)
-	}
-	fmt.Fprintf(os.Stderr, "  Generated: %d Aggregates, %d Behaviors\n",
-		len(aggResult.Aggregates), aggResult.Summary.TotalBehaviors)
 
-	// Phase 5: Generate Sequence Design
-	fmt.Fprintln(os.Stderr, "\nPhase L2-5: Generating Sequence Design...")
-
-	seqInput := string(dmContent) + "\n\n---\n\n" + string(brContent)
-	seqPrompt := prompts.DeriveSequenceDesign + "\n" + seqInput
-
-	var seqResult struct {
+	type SequenceResult struct {
 		Sequences []SequenceDesign `json:"sequences"`
 		Summary   struct {
 			TotalSequences int `json:"total_sequences"`
 		} `json:"summary"`
 	}
-	if err := client.CallJSON(seqPrompt, &seqResult); err != nil {
-		return fmt.Errorf("failed to generate sequence design: %w", err)
-	}
-	fmt.Fprintf(os.Stderr, "  Generated: %d Sequences\n", len(seqResult.Sequences))
 
-	// Phase 6: Generate Data Model
-	fmt.Fprintln(os.Stderr, "\nPhase L2-6: Generating Initial Data Model...")
-
-	dataInput := string(dmContent)
-	dataPrompt := prompts.DeriveDataModel + "\n" + dataInput
-
-	var dataResult struct {
+	type DataModelResult struct {
 		Tables  []DataTable `json:"tables"`
 		Enums   []DataEnum  `json:"enums"`
 		Summary struct {
@@ -557,11 +518,102 @@ func runDeriveL2() error {
 			TotalEnums       int `json:"total_enums"`
 		} `json:"summary"`
 	}
-	if err := client.CallJSON(dataPrompt, &dataResult); err != nil {
-		return fmt.Errorf("failed to generate data model: %w", err)
+
+	// Create parallel phases
+	phases := []generator.Phase{
+		{
+			Name: "Tech Specs",
+			Execute: func() (interface{}, error) {
+				var result TechSpecsResult
+				prompt := prompts.DeriveTechSpecs + "\n" + string(brContent)
+				if err := client.CallJSON(prompt, &result); err != nil {
+					return nil, err
+				}
+				return result, nil
+			},
+		},
+		{
+			Name: "Interface Contracts",
+			Execute: func() (interface{}, error) {
+				var result InterfaceContractsResult
+				prompt := prompts.DeriveInterfaceContracts + "\n" + l1Input
+				if err := client.CallJSON(prompt, &result); err != nil {
+					return nil, err
+				}
+				return result, nil
+			},
+		},
+		{
+			Name: "Aggregate Design",
+			Execute: func() (interface{}, error) {
+				var result AggregateResult
+				prompt := prompts.DeriveAggregateDesign + "\n" + aggSeqInput
+				if err := client.CallJSON(prompt, &result); err != nil {
+					return nil, err
+				}
+				return result, nil
+			},
+		},
+		{
+			Name: "Sequence Design",
+			Execute: func() (interface{}, error) {
+				var result SequenceResult
+				prompt := prompts.DeriveSequenceDesign + "\n" + aggSeqInput
+				if err := client.CallJSON(prompt, &result); err != nil {
+					return nil, err
+				}
+				return result, nil
+			},
+		},
+		{
+			Name: "Data Model",
+			Execute: func() (interface{}, error) {
+				var result DataModelResult
+				prompt := prompts.DeriveDataModel + "\n" + string(dmContent)
+				if err := client.CallJSON(prompt, &result); err != nil {
+					return nil, err
+				}
+				return result, nil
+			},
+		},
 	}
-	fmt.Fprintf(os.Stderr, "  Generated: %d Tables, %d Indexes\n",
-		len(dataResult.Tables), dataResult.Summary.TotalIndexes)
+
+	// Execute in parallel (max 3 concurrent to respect rate limits)
+	executor := generator.NewParallelExecutor(3)
+	phaseResults := executor.Execute(phases)
+
+	// Extract results (with error handling)
+	var tsResult TechSpecsResult
+	var icResult InterfaceContractsResult
+	var aggResult AggregateResult
+	var seqResult SequenceResult
+	var dataResult DataModelResult
+
+	for _, pr := range phaseResults {
+		if pr.Error != nil {
+			return fmt.Errorf("failed to generate %s: %w", pr.Name, pr.Error)
+		}
+		switch pr.Name {
+		case "Tech Specs":
+			tsResult = pr.Data.(TechSpecsResult)
+		case "Interface Contracts":
+			icResult = pr.Data.(InterfaceContractsResult)
+		case "Aggregate Design":
+			aggResult = pr.Data.(AggregateResult)
+		case "Sequence Design":
+			seqResult = pr.Data.(SequenceResult)
+		case "Data Model":
+			dataResult = pr.Data.(DataModelResult)
+		}
+	}
+
+	// Print generation summary
+	fmt.Fprintf(os.Stderr, "\nGeneration Summary:\n")
+	fmt.Fprintf(os.Stderr, "  Tech Specs:           %d specs\n", len(tsResult.TechSpecs))
+	fmt.Fprintf(os.Stderr, "  Interface Contracts:  %d contracts, %d operations\n", len(icResult.InterfaceContracts), icResult.Summary.TotalOperations)
+	fmt.Fprintf(os.Stderr, "  Aggregates:           %d aggregates, %d behaviors\n", len(aggResult.Aggregates), aggResult.Summary.TotalBehaviors)
+	fmt.Fprintf(os.Stderr, "  Sequences:            %d sequences\n", len(seqResult.Sequences))
+	fmt.Fprintf(os.Stderr, "  Data Tables:          %d tables, %d indexes\n", len(dataResult.Tables), dataResult.Summary.TotalIndexes)
 
 	// Combine results
 	var result L2Result
