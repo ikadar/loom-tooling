@@ -21,6 +21,15 @@ func toAnchorL2(id string) string {
 	return strings.ToLower(id)
 }
 
+// buildPrompt injects document content into the <context> tag of an XML-structured prompt.
+// This follows the Anthropic best practice of placing documents BEFORE instructions
+// for better context understanding (~30% quality improvement per their research).
+func buildPrompt(promptTemplate, document string) string {
+	// The prompts end with <context>\n</context>
+	// We inject the document between these tags
+	return strings.Replace(promptTemplate, "</context>", document+"\n</context>", 1)
+}
+
 // toLinkL2 creates a markdown link with anchor
 func toLinkL2(id, file string) string {
 	return fmt.Sprintf("[%s](%s#%s)", id, file, toAnchorL2(id))
@@ -614,7 +623,7 @@ func runDeriveL2() error {
 				Name: "Tech Specs",
 				Execute: func() (interface{}, error) {
 					var result TechSpecsResult
-					prompt := prompts.DeriveTechSpecs + "\n" + string(brContent)
+					prompt := buildPrompt(prompts.DeriveTechSpecs, string(brContent))
 					if err := client.CallJSON(prompt, &result); err != nil {
 						return nil, err
 					}
@@ -625,7 +634,7 @@ func runDeriveL2() error {
 				Name: "Interface Contracts",
 				Execute: func() (interface{}, error) {
 					var result InterfaceContractsResult
-					prompt := prompts.DeriveInterfaceContracts + "\n" + l1Input
+					prompt := buildPrompt(prompts.DeriveInterfaceContracts, l1Input)
 					if err := client.CallJSON(prompt, &result); err != nil {
 						return nil, err
 					}
@@ -636,7 +645,7 @@ func runDeriveL2() error {
 				Name: "Aggregate Design",
 				Execute: func() (interface{}, error) {
 					var result AggregateResult
-					prompt := prompts.DeriveAggregateDesign + "\n" + aggSeqInput
+					prompt := buildPrompt(prompts.DeriveAggregateDesign, aggSeqInput)
 					if err := client.CallJSON(prompt, &result); err != nil {
 						return nil, err
 					}
@@ -647,7 +656,7 @@ func runDeriveL2() error {
 				Name: "Sequence Design",
 				Execute: func() (interface{}, error) {
 					var result SequenceResult
-					prompt := prompts.DeriveSequenceDesign + "\n" + aggSeqInput
+					prompt := buildPrompt(prompts.DeriveSequenceDesign, aggSeqInput)
 					if err := client.CallJSON(prompt, &result); err != nil {
 						return nil, err
 					}
@@ -658,7 +667,7 @@ func runDeriveL2() error {
 				Name: "Data Model",
 				Execute: func() (interface{}, error) {
 					var result DataModelResult
-					prompt := prompts.DeriveDataModel + "\n" + string(dmContent)
+					prompt := buildPrompt(prompts.DeriveDataModel, string(dmContent))
 					if err := client.CallJSON(prompt, &result); err != nil {
 						return nil, err
 					}

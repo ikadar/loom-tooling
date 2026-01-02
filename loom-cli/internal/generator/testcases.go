@@ -107,8 +107,8 @@ func (g *ChunkedTestCaseGenerator) Generate(acContent string) (*TestCaseResult, 
 		// Build chunk content
 		chunkContent := buildChunkContent(chunk)
 
-		// Generate for this chunk
-		prompt := prompts.DeriveTestCases + "\n" + chunkContent
+		// Generate for this chunk (inject document into <context> tag)
+		prompt := buildPrompt(prompts.DeriveTestCases, chunkContent)
 
 		var result struct {
 			TestSuites []TestSuite `json:"test_suites"`
@@ -238,4 +238,9 @@ func FlattenTestCases(suites []TestSuite) []TestCase {
 		all = append(all, suite.Tests...)
 	}
 	return all
+}
+
+// buildPrompt injects document content into the <context> tag of an XML-structured prompt.
+func buildPrompt(promptTemplate, document string) string {
+	return strings.Replace(promptTemplate, "</context>", document+"\n</context>", 1)
 }

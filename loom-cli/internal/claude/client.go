@@ -119,13 +119,8 @@ func sanitizeJSON(jsonStr string) string {
 	return result.String()
 }
 
-// CallJSON sends a prompt expecting JSON response
-func (c *Client) CallJSON(prompt string, result interface{}) error {
-	response, err := c.Call(prompt)
-	if err != nil {
-		return err
-	}
-
+// extractJSON tries to extract and parse JSON from a response string
+func extractJSON(response string, result interface{}) error {
 	// Try to extract JSON from markdown code block first
 	codeBlockStart := strings.Index(response, "```json")
 	if codeBlockStart != -1 {
@@ -133,10 +128,8 @@ func (c *Client) CallJSON(prompt string, result interface{}) error {
 		codeBlockEnd := strings.Index(response[codeBlockStart:], "```")
 		if codeBlockEnd != -1 {
 			jsonStr := strings.TrimSpace(response[codeBlockStart : codeBlockStart+codeBlockEnd])
-			// Sanitize JSON - fix line breaks inside strings
 			jsonStr = sanitizeJSON(jsonStr)
 			if err := json.Unmarshal([]byte(jsonStr), result); err != nil {
-				// Show debug info on parse error
 				preview := jsonStr
 				if len(preview) > 500 {
 					preview = preview[:250] + "\n...[truncated]...\n" + preview[len(preview)-250:]
@@ -158,23 +151,62 @@ func (c *Client) CallJSON(prompt string, result interface{}) error {
 	}
 
 	if jsonStart == -1 || jsonEnd == -1 {
-		preview := response
-		if len(preview) > 500 {
-			preview = preview[:500] + "..."
-		}
-		return fmt.Errorf("no JSON found in response: %s", preview)
+		return fmt.Errorf("no JSON markers found")
 	}
 
 	jsonStr := response[jsonStart : jsonEnd+1]
-	// Sanitize JSON - fix line breaks inside strings
 	jsonStr = sanitizeJSON(jsonStr)
 	if err := json.Unmarshal([]byte(jsonStr), result); err != nil {
-		// Show debug info on parse error
 		preview := jsonStr
 		if len(preview) > 500 {
 			preview = preview[:250] + "\n...[truncated]...\n" + preview[len(preview)-250:]
 		}
 		return fmt.Errorf("JSON parse error: %w\nJSON preview:\n%s", err, preview)
 	}
+	return nil
+}
+
+// CallJSON sends a prompt expecting JSON response.
+// If the response doesn't contain valid JSON, it makes a second call
+// to extract JSON from the textual response using the original prompt's schema.
+func (c *Client) CallJSON(prompt string, result interface{}) error {
+	response, err := c.Call(prompt)
+	if err != nil {
+		return err
+	}
+
+	// First attempt: try to extract JSON directly
+	if err := extractJSON(response, result); err == nil {
+		return nil
+	}
+
+	// Second attempt: re-send the original prompt with the textual response,
+	// asking it to convert to the expected JSON format
+	extractPrompt := fmt.Sprintf(`You previously generated this textual response:
+
+<previous_response>
+%s
+</previous_response>
+
+This was supposed to be JSON output. Please convert your response to the EXACT JSON format specified in the original instructions.
+
+Original instructions:
+%s
+
+Now output ONLY the valid JSON, starting with { character. No explanations.`, response, prompt)
+
+	extractedResponse, err := c.Call(extractPrompt)
+	if err != nil {
+		return fmt.Errorf("JSON extraction fallback failed: %w", err)
+	}
+
+	if err := extractJSON(extractedResponse, result); err != nil {
+		preview := response
+		if len(preview) > 500 {
+			preview = preview[:500] + "..."
+		}
+		return fmt.Errorf("no JSON found in response (even after extraction attempt): %s", preview)
+	}
+
 	return nil
 }
