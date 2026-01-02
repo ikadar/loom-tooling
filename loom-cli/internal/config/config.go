@@ -9,14 +9,16 @@ import (
 
 // Config holds all CLI configuration
 type Config struct {
-	InputFile     string
-	InputDir      string
-	OutputDir     string
-	DecisionsFile string
-	AnalysisFile  string // For derive command
-	Format        string // "text" or "json"
-	BatchMode     bool   // Non-interactive mode
-	Verbose       bool
+	InputFile      string
+	InputDir       string
+	OutputDir      string
+	DecisionsFile  string
+	AnalysisFile   string // For derive command
+	VocabularyFile string // Optional domain vocabulary
+	NFRFile        string // Optional non-functional requirements
+	Format         string // "text" or "json"
+	BatchMode      bool   // Non-interactive mode
+	Verbose        bool
 }
 
 // ParseArgsForAnalyze parses arguments for the analyze command
@@ -107,6 +109,20 @@ func ParseArgsForDerive(args []string) (*Config, error) {
 			i++
 			cfg.AnalysisFile = args[i]
 
+		case "--vocabulary":
+			if i+1 >= len(args) {
+				return nil, fmt.Errorf("--vocabulary requires a value")
+			}
+			i++
+			cfg.VocabularyFile = args[i]
+
+		case "--nfr":
+			if i+1 >= len(args) {
+				return nil, fmt.Errorf("--nfr requires a value")
+			}
+			i++
+			cfg.NFRFile = args[i]
+
 		case "--verbose", "-v":
 			cfg.Verbose = true
 		}
@@ -180,4 +196,32 @@ func (cfg *Config) ReadInputFiles() (string, []string, error) {
 	// Combine all contents
 	combined := strings.Join(contents, "\n\n---\n\n")
 	return combined, files, nil
+}
+
+// ReadVocabulary reads the optional domain vocabulary file
+func (cfg *Config) ReadVocabulary() (string, error) {
+	if cfg.VocabularyFile == "" {
+		return "", nil
+	}
+
+	content, err := os.ReadFile(cfg.VocabularyFile)
+	if err != nil {
+		return "", fmt.Errorf("failed to read vocabulary file: %w", err)
+	}
+
+	return string(content), nil
+}
+
+// ReadNFR reads the optional non-functional requirements file
+func (cfg *Config) ReadNFR() (string, error) {
+	if cfg.NFRFile == "" {
+		return "", nil
+	}
+
+	content, err := os.ReadFile(cfg.NFRFile)
+	if err != nil {
+		return "", fmt.Errorf("failed to read NFR file: %w", err)
+	}
+
+	return string(content), nil
 }

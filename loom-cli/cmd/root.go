@@ -88,6 +88,8 @@ Derive Options (L0 → L1):
   --output-dir <path>     Directory for generated L1 documents (required)
   --decisions <path>      Path to decisions.md (to append new decisions)
   --analysis-file <path>  Path to analysis JSON or interview state
+  --vocabulary <path>     Optional domain vocabulary file (enhances domain model)
+  --nfr <path>            Optional non-functional requirements file (adds to BRs/ACs)
 
 Derive-L2 Options (L1 → L2):
   --input-dir <path>      Directory containing L1 docs (acceptance-criteria.md, business-rules.md)

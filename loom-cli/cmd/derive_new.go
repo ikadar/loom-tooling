@@ -146,13 +146,31 @@ func runDeriveNew() error {
 		return fmt.Errorf("domain_model is required in input")
 	}
 
+	// Read optional vocabulary file
+	vocabulary, err := cfg.ReadVocabulary()
+	if err != nil {
+		return err
+	}
+	if vocabulary != "" {
+		fmt.Fprintf(os.Stderr, "  Loaded vocabulary: %d bytes\n", len(vocabulary))
+	}
+
+	// Read optional NFR file
+	nfr, err := cfg.ReadNFR()
+	if err != nil {
+		return err
+	}
+	if nfr != "" {
+		fmt.Fprintf(os.Stderr, "  Loaded NFR: %d bytes\n", len(nfr))
+	}
+
 	// Create Claude client
 	client := claude.NewClient()
 
 	// === PHASE 5a: Derive Domain Model Document ===
 	fmt.Fprintln(os.Stderr, "Phase 5a: Deriving domain-model.md...")
 
-	domainModelDoc, err := deriveDomainModelDoc(client, input.DomainModel, input.InputContent)
+	domainModelDoc, err := deriveDomainModelDoc(client, input.DomainModel, input.InputContent, vocabulary)
 	if err != nil {
 		return fmt.Errorf("domain model derivation failed: %w", err)
 	}
@@ -162,7 +180,7 @@ func runDeriveNew() error {
 	// === PHASE 5b: Derive Bounded Context Map ===
 	fmt.Fprintln(os.Stderr, "\nPhase 5b: Deriving bounded-context-map.md...")
 
-	boundedContextMap, err := deriveBoundedContextMap(client, domainModelDoc)
+	boundedContextMap, err := deriveBoundedContextMap(client, domainModelDoc, vocabulary)
 	if err != nil {
 		return fmt.Errorf("bounded context map derivation failed: %w", err)
 	}
@@ -172,7 +190,7 @@ func runDeriveNew() error {
 	// === PHASE 5c: Derive AC and BR ===
 	fmt.Fprintln(os.Stderr, "\nPhase 5c: Deriving acceptance-criteria.md and business-rules.md...")
 
-	result, err := deriveDocuments(client, input.DomainModel, input.Decisions, input.InputContent)
+	result, err := deriveDocuments(client, input.DomainModel, input.Decisions, input.InputContent, nfr)
 	if err != nil {
 		return fmt.Errorf("derivation failed: %w", err)
 	}
@@ -203,10 +221,15 @@ func runDeriveNew() error {
 }
 
 // Phase 5a: Derive Domain Model document
-func deriveDomainModelDoc(client *claude.Client, dm *domain.Domain, input string) (*DomainModelDoc, error) {
+func deriveDomainModelDoc(client *claude.Client, dm *domain.Domain, input string, vocabulary string) (*DomainModelDoc, error) {
 	domainJSON, _ := json.MarshalIndent(dm, "", "  ")
 
 	prompt := prompts.DeriveDomainModel + "\n" + input + "\n\nEXISTING DOMAIN ANALYSIS:\n" + string(domainJSON)
+
+	// Add vocabulary context if provided
+	if vocabulary != "" {
+		prompt += "\n\n---\n\nDOMAIN VOCABULARY (use these definitions for consistent terminology):\n" + vocabulary
+	}
 
 	var result DomainModelDoc
 	if err := client.CallJSON(prompt, &result); err != nil {
@@ -217,10 +240,15 @@ func deriveDomainModelDoc(client *claude.Client, dm *domain.Domain, input string
 }
 
 // Phase 5b: Derive Bounded Context Map
-func deriveBoundedContextMap(client *claude.Client, domainModelDoc *DomainModelDoc) (*BoundedContextMap, error) {
+func deriveBoundedContextMap(client *claude.Client, domainModelDoc *DomainModelDoc, vocabulary string) (*BoundedContextMap, error) {
 	domainJSON, _ := json.MarshalIndent(domainModelDoc, "", "  ")
 
 	prompt := prompts.DeriveBoundedContext + "\n" + string(domainJSON)
+
+	// Add vocabulary context if provided
+	if vocabulary != "" {
+		prompt += "\n\n---\n\nDOMAIN VOCABULARY (use for ubiquitous language in each context):\n" + vocabulary
+	}
 
 	var result BoundedContextMap
 	if err := client.CallJSON(prompt, &result); err != nil {
@@ -231,11 +259,16 @@ func deriveBoundedContextMap(client *claude.Client, domainModelDoc *DomainModelD
 }
 
 // Phase 5c: Derive AC and BR
-func deriveDocuments(client *claude.Client, dm *domain.Domain, decisions []domain.Decision, input string) (*domain.DerivationResult, error) {
+func deriveDocuments(client *claude.Client, dm *domain.Domain, decisions []domain.Decision, input string, nfr string) (*domain.DerivationResult, error) {
 	domainJSON, _ := json.MarshalIndent(dm, "", "  ")
 	decisionsJSON, _ := json.MarshalIndent(decisions, "", "  ")
 
 	prompt := prompts.DerivationPrompt + "\n\nDOMAIN MODEL:\n" + string(domainJSON) + "\n\nDECISIONS:\n" + string(decisionsJSON)
+
+	// Add NFR context if provided
+	if nfr != "" {
+		prompt += "\n\n---\n\nNON-FUNCTIONAL REQUIREMENTS (incorporate these constraints into business rules and acceptance criteria):\n" + nfr
+	}
 
 	var result struct {
 		AcceptanceCriteria []domain.AcceptanceCriteria `json:"acceptance_criteria"`
