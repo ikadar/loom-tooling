@@ -58,8 +58,8 @@ Commands:
   analyze    Analyze L0 input, discover domain model, find ambiguities
   interview  Conduct iterative structured interview (one question at a time)
   derive     Derive L1 Strategic Design (Domain Model, Bounded Contexts, AC, BR)
-  derive-l2  Derive L2 Tactical Design (Test Cases, Tech Specs, Aggregates, Sequences)
-  derive-l3  Derive L3 Operational Design (API Spec, Services, Events, Dependencies)
+  derive-l2  Derive L2 Tactical Design (Tech Specs, Contracts, Aggregates, Sequences)
+  derive-l3  Derive L3 Operational Design (Test Cases, API Spec, Skeletons, Events)
   validate   Validate documents (structure, traceability, completeness, TDAI)
   version    Show version information
   help       Show this help message
