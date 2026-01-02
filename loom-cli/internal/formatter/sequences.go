@@ -9,8 +9,8 @@ import (
 func FormatSequenceDesign(sequences []SequenceDesign, timestamp string) string {
 	var sb strings.Builder
 
-	sb.WriteString("# Sequence Design\n\n")
-	sb.WriteString(fmt.Sprintf("Generated: %s\n\n", timestamp))
+	fm := DefaultFrontmatter("Sequence Design", timestamp, "L2")
+	sb.WriteString(FormatHeaderWithFrontmatter(fm))
 	sb.WriteString("---\n\n")
 
 	for _, seq := range sequences {

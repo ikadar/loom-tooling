@@ -12,9 +12,9 @@ const L1BasePath = "../l1"
 func FormatTestCases(testCases []TestCase, summary TDAISummary, timestamp string) string {
 	var sb strings.Builder
 
-	// Header
-	sb.WriteString("# TDAI Test Cases\n\n")
-	sb.WriteString(fmt.Sprintf("Generated: %s\n\n", timestamp))
+	// Header with frontmatter (test-cases is L3 per documentation-derivation-strategy.md)
+	fm := DefaultFrontmatter("TDAI Test Cases", timestamp, "L3")
+	sb.WriteString(FormatHeaderWithFrontmatter(fm))
 	sb.WriteString("**Methodology:** Test-Driven AI Development (TDAI)\n\n")
 
 	// Summary

@@ -9,8 +9,8 @@ import (
 func FormatDataModel(tables []DataTable, enums []DataEnum, timestamp string) string {
 	var sb strings.Builder
 
-	sb.WriteString("# Initial Data Model\n\n")
-	sb.WriteString(fmt.Sprintf("Generated: %s\n\n", timestamp))
+	fm := DefaultFrontmatter("Initial Data Model", timestamp, "L2")
+	sb.WriteString(FormatHeaderWithFrontmatter(fm))
 	sb.WriteString("---\n\n")
 
 	// Enums

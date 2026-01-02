@@ -9,8 +9,8 @@ import (
 func FormatTechSpecs(techSpecs []TechSpec, timestamp string) string {
 	var sb strings.Builder
 
-	sb.WriteString("# Technical Specifications\n\n")
-	sb.WriteString(fmt.Sprintf("Generated: %s\n\n", timestamp))
+	fm := DefaultFrontmatter("Technical Specifications", timestamp, "L2")
+	sb.WriteString(FormatHeaderWithFrontmatter(fm))
 	sb.WriteString("---\n\n")
 
 	for _, ts := range techSpecs {

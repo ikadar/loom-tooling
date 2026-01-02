@@ -477,8 +477,9 @@ func writeSkeletons(path string, skeletons []ImplementationSkeleton) error {
 	}
 	defer f.Close()
 
-	fmt.Fprintf(f, "# Implementation Skeletons\n\n")
-	fmt.Fprintf(f, "Generated: %s\n\n", time.Now().Format(time.RFC3339))
+	timestamp := time.Now().Format(time.RFC3339)
+	fm := formatter.DefaultFrontmatter("Implementation Skeletons", timestamp, "L3")
+	fmt.Fprintf(f, "%s", formatter.FormatHeaderWithFrontmatter(fm))
 	fmt.Fprintf(f, "---\n\n")
 
 	for i, skel := range skeletons {
@@ -524,8 +525,9 @@ func writeFeatureTickets(path string, tickets []FeatureTicket) error {
 	}
 	defer f.Close()
 
-	fmt.Fprintf(f, "# Feature Definition Tickets\n\n")
-	fmt.Fprintf(f, "Generated: %s\n\n", time.Now().Format(time.RFC3339))
+	timestamp := time.Now().Format(time.RFC3339)
+	fm := formatter.DefaultFrontmatter("Feature Definition Tickets", timestamp, "L3")
+	fmt.Fprintf(f, "%s", formatter.FormatHeaderWithFrontmatter(fm))
 	fmt.Fprintf(f, "---\n\n")
 
 	for _, t := range tickets {
@@ -588,8 +590,9 @@ func writeServiceBoundaries(path string, services []ServiceBoundary) error {
 	}
 	defer f.Close()
 
-	fmt.Fprintf(f, "# Service Boundaries\n\n")
-	fmt.Fprintf(f, "Generated: %s\n\n", time.Now().Format(time.RFC3339))
+	timestamp := time.Now().Format(time.RFC3339)
+	fm := formatter.DefaultFrontmatter("Service Boundaries", timestamp, "L3")
+	fmt.Fprintf(f, "%s", formatter.FormatHeaderWithFrontmatter(fm))
 	fmt.Fprintf(f, "---\n\n")
 
 	for _, s := range services {
@@ -651,8 +654,9 @@ func writeEventDesign(path string, events []DomainEvent, commands []Command, int
 	}
 	defer f.Close()
 
-	fmt.Fprintf(f, "# Event & Message Design\n\n")
-	fmt.Fprintf(f, "Generated: %s\n\n", time.Now().Format(time.RFC3339))
+	timestamp := time.Now().Format(time.RFC3339)
+	fm := formatter.DefaultFrontmatter("Event & Message Design", timestamp, "L3")
+	fmt.Fprintf(f, "%s", formatter.FormatHeaderWithFrontmatter(fm))
 	fmt.Fprintf(f, "---\n\n")
 
 	// Domain Events
@@ -732,8 +736,9 @@ func writeDependencyGraph(path string, components []GraphComponent, dependencies
 	}
 	defer f.Close()
 
-	fmt.Fprintf(f, "# Dependency Graph\n\n")
-	fmt.Fprintf(f, "Generated: %s\n\n", time.Now().Format(time.RFC3339))
+	timestamp := time.Now().Format(time.RFC3339)
+	fm := formatter.DefaultFrontmatter("Dependency Graph", timestamp, "L3")
+	fmt.Fprintf(f, "%s", formatter.FormatHeaderWithFrontmatter(fm))
 	fmt.Fprintf(f, "---\n\n")
 
 	// Build component ID map: original name -> DEP-XXX-NNN

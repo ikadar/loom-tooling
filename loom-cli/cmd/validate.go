@@ -539,21 +539,488 @@ func validateCompleteness(inputDir string, acIDs []string, tcByAC map[string][]s
 		})
 	}
 
-	// V006: Every Entity has aggregate (simplified)
-	checks = append(checks, ValidationCheck{
-		Rule:    RuleV006,
-		Status:  "skip",
-		Message: "Entity-aggregate validation not yet implemented",
-	})
+	// V006: Every Entity has aggregate
+	v006Check := validateEntityAggregates(inputDir, result)
+	checks = append(checks, v006Check)
 
-	// V007: Every Service has interface contract (simplified)
-	checks = append(checks, ValidationCheck{
-		Rule:    RuleV007,
-		Status:  "skip",
-		Message: "Service-interface contract validation not yet implemented",
-	})
+	// V007: Every Service has interface contract
+	v007Check := validateServiceContracts(inputDir, result)
+	checks = append(checks, v007Check)
 
 	return checks
+}
+
+// EntityInfo holds parsed entity information from domain-model.md
+type EntityInfo struct {
+	ID       string
+	Name     string
+	Type     string // "aggregate_root" or "entity"
+	LineNum  int
+}
+
+// AggregateInfo holds parsed aggregate information from aggregate-design.md
+type AggregateInfo struct {
+	ID              string
+	Name            string
+	RootEntityName  string
+	ChildEntities   []string
+	LineNum         int
+}
+
+func validateEntityAggregates(inputDir string, result *ValidationResult) ValidationCheck {
+	// Try to find domain-model.md and aggregate-design.md
+	domainModelPath := filepath.Join(inputDir, "domain-model.md")
+	aggregateDesignPath := filepath.Join(inputDir, "aggregate-design.md")
+
+	// Check if files exist
+	if _, err := os.Stat(domainModelPath); os.IsNotExist(err) {
+		return ValidationCheck{
+			Rule:    RuleV006,
+			Status:  "skip",
+			Message: "domain-model.md not found",
+		}
+	}
+	if _, err := os.Stat(aggregateDesignPath); os.IsNotExist(err) {
+		return ValidationCheck{
+			Rule:    RuleV006,
+			Status:  "skip",
+			Message: "aggregate-design.md not found",
+		}
+	}
+
+	// Parse entities from domain-model.md
+	entities, err := parseEntitiesFromDomainModel(domainModelPath)
+	if err != nil {
+		return ValidationCheck{
+			Rule:    RuleV006,
+			Status:  "skip",
+			Message: fmt.Sprintf("Could not parse domain-model.md: %v", err),
+		}
+	}
+
+	if len(entities) == 0 {
+		return ValidationCheck{
+			Rule:    RuleV006,
+			Status:  "skip",
+			Message: "No entities found in domain-model.md",
+		}
+	}
+
+	// Parse aggregates from aggregate-design.md
+	aggregates, err := parseAggregatesFromDesign(aggregateDesignPath)
+	if err != nil {
+		return ValidationCheck{
+			Rule:    RuleV006,
+			Status:  "skip",
+			Message: fmt.Sprintf("Could not parse aggregate-design.md: %v", err),
+		}
+	}
+
+	// Build lookup maps
+	aggByName := make(map[string]*AggregateInfo)
+	childEntityNames := make(map[string]bool)
+	for i := range aggregates {
+		agg := &aggregates[i]
+		aggByName[strings.ToLower(agg.Name)] = agg
+		aggByName[strings.ToLower(agg.RootEntityName)] = agg
+		for _, child := range agg.ChildEntities {
+			childEntityNames[strings.ToLower(child)] = true
+		}
+	}
+
+	// Validate: every aggregate_root entity has a corresponding aggregate
+	// Validate: every entity is referenced as child in some aggregate
+	entitiesWithAggregate := 0
+	entitiesWithoutAggregate := 0
+
+	for _, ent := range entities {
+		hasAggregate := false
+		entityNameLower := strings.ToLower(ent.Name)
+
+		if ent.Type == "aggregate_root" {
+			// Check if there's an aggregate for this root
+			if _, ok := aggByName[entityNameLower]; ok {
+				hasAggregate = true
+			}
+		} else {
+			// Check if this entity is a child in some aggregate
+			if childEntityNames[entityNameLower] {
+				hasAggregate = true
+			}
+		}
+
+		if hasAggregate {
+			entitiesWithAggregate++
+		} else {
+			entitiesWithoutAggregate++
+			result.Errors = append(result.Errors, ValidationError{
+				Rule:    RuleV006,
+				Message: fmt.Sprintf("Entity '%s' (%s) has no aggregate", ent.ID, ent.Type),
+				RefID:   ent.ID,
+			})
+		}
+	}
+
+	if entitiesWithoutAggregate == 0 {
+		return ValidationCheck{
+			Rule:    RuleV006,
+			Status:  "pass",
+			Message: fmt.Sprintf("All %d entities have aggregates", entitiesWithAggregate),
+			Count:   entitiesWithAggregate,
+		}
+	}
+
+	return ValidationCheck{
+		Rule:    RuleV006,
+		Status:  "fail",
+		Message: fmt.Sprintf("%d entities have no aggregates", entitiesWithoutAggregate),
+		Count:   entitiesWithoutAggregate,
+	}
+}
+
+func parseEntitiesFromDomainModel(filePath string) ([]EntityInfo, error) {
+	var entities []EntityInfo
+
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	lines := strings.Split(string(content), "\n")
+
+	// Pattern: ### ENT-XXX – Name or ### ENT-XXX: Name
+	entityPattern := regexp.MustCompile(`^###\s+(ENT-[A-Z]+-\d{3})\s*[–:—]\s*(\w+)`)
+	typePattern := regexp.MustCompile(`^\*\*Type:\*\*\s*(\w+)`)
+
+	var currentEntity *EntityInfo
+
+	for i, line := range lines {
+		// Check for entity header
+		if matches := entityPattern.FindStringSubmatch(line); len(matches) > 2 {
+			if currentEntity != nil {
+				entities = append(entities, *currentEntity)
+			}
+			currentEntity = &EntityInfo{
+				ID:      matches[1],
+				Name:    matches[2],
+				LineNum: i + 1,
+				Type:    "entity", // Default
+			}
+		}
+
+		// Check for Type: line
+		if currentEntity != nil {
+			if matches := typePattern.FindStringSubmatch(line); len(matches) > 1 {
+				currentEntity.Type = strings.ToLower(matches[1])
+			}
+		}
+	}
+
+	// Don't forget the last entity
+	if currentEntity != nil {
+		entities = append(entities, *currentEntity)
+	}
+
+	return entities, nil
+}
+
+func parseAggregatesFromDesign(filePath string) ([]AggregateInfo, error) {
+	var aggregates []AggregateInfo
+
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	lines := strings.Split(string(content), "\n")
+
+	// Pattern: ## AGG-XXX – Name
+	aggPattern := regexp.MustCompile(`^##\s+(AGG-[A-Z]+-\d{3})\s*[–:—]\s*(\w+)`)
+	// Pattern: ### Aggregate Root: Name
+	rootPattern := regexp.MustCompile(`^###\s+Aggregate Root:\s*(\w+)`)
+	// Pattern: #### ChildEntityName
+	childPattern := regexp.MustCompile(`^####\s+(\w+)`)
+
+	var currentAgg *AggregateInfo
+	inChildSection := false
+
+	for i, line := range lines {
+		// Check for aggregate header
+		if matches := aggPattern.FindStringSubmatch(line); len(matches) > 2 {
+			if currentAgg != nil {
+				aggregates = append(aggregates, *currentAgg)
+			}
+			currentAgg = &AggregateInfo{
+				ID:            matches[1],
+				Name:          matches[2],
+				LineNum:       i + 1,
+				ChildEntities: []string{},
+			}
+			inChildSection = false
+		}
+
+		if currentAgg != nil {
+			// Check for aggregate root
+			if matches := rootPattern.FindStringSubmatch(line); len(matches) > 1 {
+				currentAgg.RootEntityName = matches[1]
+			}
+
+			// Check for Child Entities section
+			if strings.Contains(line, "### Child Entities") {
+				inChildSection = true
+			}
+
+			// Check for child entity (#### EntityName)
+			if inChildSection {
+				if matches := childPattern.FindStringSubmatch(line); len(matches) > 1 {
+					currentAgg.ChildEntities = append(currentAgg.ChildEntities, matches[1])
+				}
+			}
+
+			// End of child section on next ## or ###
+			if inChildSection && (strings.HasPrefix(line, "### ") && !strings.Contains(line, "Child Entities")) {
+				inChildSection = false
+			}
+		}
+	}
+
+	// Don't forget the last aggregate
+	if currentAgg != nil {
+		aggregates = append(aggregates, *currentAgg)
+	}
+
+	return aggregates, nil
+}
+
+// ServiceInfo holds parsed service information from service-boundaries.md
+type ServiceInfo struct {
+	ID      string
+	Name    string
+	APIBase string
+	LineNum int
+}
+
+// ContractInfo holds parsed interface contract information
+type ContractInfo struct {
+	ID      string
+	Name    string
+	BaseURL string
+	LineNum int
+}
+
+// serviceContractMapping maps service domain keywords to IC domain prefixes
+var serviceContractMapping = map[string][]string{
+	"CUSTOMER":  {"CUST"},
+	"CATALOG":   {"PROD", "CAT"},
+	"SHOPPING":  {"CART"},
+	"CART":      {"CART"},
+	"ORDER":     {"ORDER"},
+	"INVENTORY": {"INV"},
+	"PAYMENT":   {"PAY"},
+	"SHIPPING":  {"SHIP"},
+}
+
+func validateServiceContracts(inputDir string, result *ValidationResult) ValidationCheck {
+	// Try to find service-boundaries.md and interface-contracts.md
+	serviceBoundariesPath := filepath.Join(inputDir, "service-boundaries.md")
+	interfaceContractsPath := filepath.Join(inputDir, "interface-contracts.md")
+
+	// Check if files exist
+	if _, err := os.Stat(serviceBoundariesPath); os.IsNotExist(err) {
+		return ValidationCheck{
+			Rule:    RuleV007,
+			Status:  "skip",
+			Message: "service-boundaries.md not found",
+		}
+	}
+	if _, err := os.Stat(interfaceContractsPath); os.IsNotExist(err) {
+		return ValidationCheck{
+			Rule:    RuleV007,
+			Status:  "skip",
+			Message: "interface-contracts.md not found",
+		}
+	}
+
+	// Parse services from service-boundaries.md
+	services, err := parseServicesFromBoundaries(serviceBoundariesPath)
+	if err != nil {
+		return ValidationCheck{
+			Rule:    RuleV007,
+			Status:  "skip",
+			Message: fmt.Sprintf("Could not parse service-boundaries.md: %v", err),
+		}
+	}
+
+	if len(services) == 0 {
+		return ValidationCheck{
+			Rule:    RuleV007,
+			Status:  "skip",
+			Message: "No services found in service-boundaries.md",
+		}
+	}
+
+	// Parse contracts from interface-contracts.md
+	contracts, err := parseContractsFromFile(interfaceContractsPath)
+	if err != nil {
+		return ValidationCheck{
+			Rule:    RuleV007,
+			Status:  "skip",
+			Message: fmt.Sprintf("Could not parse interface-contracts.md: %v", err),
+		}
+	}
+
+	// Build lookup set for contract domain prefixes
+	contractDomains := make(map[string]bool)
+	for _, contract := range contracts {
+		// Extract domain from IC-XXX-001 format (e.g., IC-CUST-001 -> CUST)
+		parts := strings.Split(contract.ID, "-")
+		if len(parts) >= 2 {
+			contractDomains[parts[1]] = true
+		}
+	}
+
+	// Validate: every service has at least one matching contract
+	servicesWithContract := 0
+	servicesWithoutContract := 0
+
+	for _, svc := range services {
+		hasContract := false
+
+		// Extract service domain (SVC-CUSTOMER -> CUSTOMER)
+		svcDomain := strings.TrimPrefix(svc.ID, "SVC-")
+
+		// Check if any mapped IC domain exists
+		if mappedDomains, ok := serviceContractMapping[svcDomain]; ok {
+			for _, icDomain := range mappedDomains {
+				if contractDomains[icDomain] {
+					hasContract = true
+					break
+				}
+			}
+		}
+
+		// Fallback: direct match (SVC-ORDER -> IC-ORDER)
+		if !hasContract && contractDomains[svcDomain] {
+			hasContract = true
+		}
+
+		if hasContract {
+			servicesWithContract++
+		} else {
+			servicesWithoutContract++
+			result.Errors = append(result.Errors, ValidationError{
+				Rule:    RuleV007,
+				Message: fmt.Sprintf("Service '%s' has no interface contract", svc.ID),
+				RefID:   svc.ID,
+			})
+		}
+	}
+
+	if servicesWithoutContract == 0 {
+		return ValidationCheck{
+			Rule:    RuleV007,
+			Status:  "pass",
+			Message: fmt.Sprintf("All %d services have interface contracts", servicesWithContract),
+			Count:   servicesWithContract,
+		}
+	}
+
+	return ValidationCheck{
+		Rule:    RuleV007,
+		Status:  "fail",
+		Message: fmt.Sprintf("%d services have no interface contracts", servicesWithoutContract),
+		Count:   servicesWithoutContract,
+	}
+}
+
+func parseServicesFromBoundaries(filePath string) ([]ServiceInfo, error) {
+	var services []ServiceInfo
+
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	lines := strings.Split(string(content), "\n")
+
+	// Pattern: ## SVC-XXX: Name or ## SVC-XXX – Name
+	svcPattern := regexp.MustCompile(`^##\s+(SVC-[A-Z]+)[\s:–—]+(.+)`)
+	apiPattern := regexp.MustCompile(`^\*\*API Base:\*\*\s*(.+)`)
+
+	var currentSvc *ServiceInfo
+
+	for i, line := range lines {
+		// Check for service header
+		if matches := svcPattern.FindStringSubmatch(line); len(matches) > 2 {
+			if currentSvc != nil {
+				services = append(services, *currentSvc)
+			}
+			currentSvc = &ServiceInfo{
+				ID:      matches[1],
+				Name:    strings.TrimSpace(matches[2]),
+				LineNum: i + 1,
+			}
+		}
+
+		// Check for API Base line
+		if currentSvc != nil {
+			if matches := apiPattern.FindStringSubmatch(line); len(matches) > 1 {
+				currentSvc.APIBase = strings.TrimSpace(matches[1])
+			}
+		}
+	}
+
+	// Don't forget the last service
+	if currentSvc != nil {
+		services = append(services, *currentSvc)
+	}
+
+	return services, nil
+}
+
+func parseContractsFromFile(filePath string) ([]ContractInfo, error) {
+	var contracts []ContractInfo
+
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	lines := strings.Split(string(content), "\n")
+
+	// Pattern: ## IC-XXX-001 – Name or ## IC-XXX-001: Name
+	icPattern := regexp.MustCompile(`^##\s+(IC-[A-Z]+-\d{3})\s*[–:—]+\s*(.+)`)
+	urlPattern := regexp.MustCompile(`^\*\*Base URL:\*\*\s*(.+)`)
+
+	var currentIC *ContractInfo
+
+	for i, line := range lines {
+		// Check for contract header
+		if matches := icPattern.FindStringSubmatch(line); len(matches) > 2 {
+			if currentIC != nil {
+				contracts = append(contracts, *currentIC)
+			}
+			currentIC = &ContractInfo{
+				ID:      matches[1],
+				Name:    strings.TrimSpace(matches[2]),
+				LineNum: i + 1,
+			}
+		}
+
+		// Check for Base URL line
+		if currentIC != nil {
+			if matches := urlPattern.FindStringSubmatch(line); len(matches) > 1 {
+				currentIC.BaseURL = strings.TrimSpace(matches[1])
+			}
+		}
+	}
+
+	// Don't forget the last contract
+	if currentIC != nil {
+		contracts = append(contracts, *currentIC)
+	}
+
+	return contracts, nil
 }
 
 func validateTDAI(inputDir string, acIDs []string, tcByAC map[string][]string, tcCategories map[string]string, result *ValidationResult) []ValidationCheck {

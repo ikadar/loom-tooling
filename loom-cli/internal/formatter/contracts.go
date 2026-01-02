@@ -9,8 +9,8 @@ import (
 func FormatInterfaceContracts(contracts []InterfaceContract, sharedTypes []SharedType, timestamp string) string {
 	var sb strings.Builder
 
-	sb.WriteString("# Interface Contracts\n\n")
-	sb.WriteString(fmt.Sprintf("Generated: %s\n\n", timestamp))
+	fm := DefaultFrontmatter("Interface Contracts", timestamp, "L2")
+	sb.WriteString(FormatHeaderWithFrontmatter(fm))
 	sb.WriteString("---\n\n")
 
 	// Shared Types section

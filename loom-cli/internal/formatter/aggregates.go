@@ -9,8 +9,8 @@ import (
 func FormatAggregateDesign(aggregates []AggregateDesign, timestamp string) string {
 	var sb strings.Builder
 
-	sb.WriteString("# Aggregate Design\n\n")
-	sb.WriteString(fmt.Sprintf("Generated: %s\n\n", timestamp))
+	fm := DefaultFrontmatter("Aggregate Design", timestamp, "L2")
+	sb.WriteString(FormatHeaderWithFrontmatter(fm))
 	sb.WriteString("---\n\n")
 
 	for _, agg := range aggregates {

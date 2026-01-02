@@ -30,6 +30,8 @@ func Execute() error {
 		return runDeriveL3()
 	case "validate":
 		return runValidate()
+	case "sync-links":
+		return runSyncLinks()
 	case "version":
 		fmt.Printf("loom-cli v%s\n", Version)
 		return nil
@@ -51,6 +53,7 @@ Usage:
   loom-cli derive-l2 [options]   # L1 → L2 (Tactical Design)
   loom-cli derive-l3 [options]   # L2 → L3 (Operational Design)
   loom-cli validate [options]    # Validate generated documents
+  loom-cli sync-links [options]  # Fix missing bidirectional links
   loom-cli version
   loom-cli help
 
@@ -61,6 +64,7 @@ Commands:
   derive-l2  Derive L2 Tactical Design (Tech Specs, Contracts, Aggregates, Sequences)
   derive-l3  Derive L3 Operational Design (Test Cases, API Spec, Skeletons, Events)
   validate   Validate documents (structure, traceability, completeness, TDAI)
+  sync-links Add missing bidirectional references between documents
   version    Show version information
   help       Show this help message
 
@@ -104,6 +108,10 @@ Validate Options:
   --input-dir <path>      Directory containing documents to validate (required)
   --level <L1|L2|L3|ALL>  Validation level (default: ALL)
   --json                  Output results as JSON
+
+Sync-Links Options:
+  --input-dir <path>      Directory containing documents to sync (required)
+  --dry-run               Show what would be changed without modifying files
 
 Validation Rules:
   V001  Every document has IDs

@@ -10,6 +10,7 @@ import (
 	"github.com/ikadar/loom-cli/internal/claude"
 	"github.com/ikadar/loom-cli/internal/config"
 	"github.com/ikadar/loom-cli/internal/domain"
+	"github.com/ikadar/loom-cli/internal/formatter"
 	"github.com/ikadar/loom-cli/prompts"
 )
 
@@ -354,9 +355,10 @@ func toLink(id, file string) string {
 
 func formatAC(acs []domain.AcceptanceCriteria) string {
 	var sb strings.Builder
+	timestamp := time.Now().Format(time.RFC3339)
 
-	sb.WriteString("# Acceptance Criteria\n\n")
-	sb.WriteString(fmt.Sprintf("Generated: %s\n\n", time.Now().Format(time.RFC3339)))
+	fm := formatter.DefaultFrontmatter("Acceptance Criteria", timestamp, "L1")
+	sb.WriteString(formatter.FormatHeaderWithFrontmatter(fm))
 	sb.WriteString("---\n\n")
 
 	for _, ac := range acs {
@@ -390,9 +392,10 @@ func formatAC(acs []domain.AcceptanceCriteria) string {
 
 func formatBR(brs []domain.BusinessRule) string {
 	var sb strings.Builder
+	timestamp := time.Now().Format(time.RFC3339)
 
-	sb.WriteString("# Business Rules\n\n")
-	sb.WriteString(fmt.Sprintf("Generated: %s\n\n", time.Now().Format(time.RFC3339)))
+	fm := formatter.DefaultFrontmatter("Business Rules", timestamp, "L1")
+	sb.WriteString(formatter.FormatHeaderWithFrontmatter(fm))
 	sb.WriteString("---\n\n")
 
 	for _, br := range brs {
@@ -437,9 +440,10 @@ func formatDecisions(decisions []domain.Decision) string {
 
 func formatDomainModel(doc *DomainModelDoc) string {
 	var sb strings.Builder
+	timestamp := time.Now().Format(time.RFC3339)
 
-	sb.WriteString("# Domain Model\n\n")
-	sb.WriteString(fmt.Sprintf("Generated: %s\n\n", time.Now().Format(time.RFC3339)))
+	fm := formatter.DefaultFrontmatter("Domain Model", timestamp, "L1")
+	sb.WriteString(formatter.FormatHeaderWithFrontmatter(fm))
 	sb.WriteString(fmt.Sprintf("**Domain:** %s\n\n", doc.DomainModel.Name))
 	sb.WriteString(fmt.Sprintf("%s\n\n", doc.DomainModel.Description))
 	sb.WriteString("---\n\n")
@@ -540,9 +544,10 @@ func formatDomainModel(doc *DomainModelDoc) string {
 
 func formatBoundedContextMap(bcm *BoundedContextMap) string {
 	var sb strings.Builder
+	timestamp := time.Now().Format(time.RFC3339)
 
-	sb.WriteString("# Bounded Context Map\n\n")
-	sb.WriteString(fmt.Sprintf("Generated: %s\n\n", time.Now().Format(time.RFC3339)))
+	fm := formatter.DefaultFrontmatter("Bounded Context Map", timestamp, "L1")
+	sb.WriteString(formatter.FormatHeaderWithFrontmatter(fm))
 	sb.WriteString("---\n\n")
 
 	// Bounded Contexts
