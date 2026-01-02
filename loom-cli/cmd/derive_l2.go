@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ikadar/loom-cli/internal/checkpoint"
 	"github.com/ikadar/loom-cli/internal/claude"
 	"github.com/ikadar/loom-cli/internal/formatter"
 	"github.com/ikadar/loom-cli/internal/generator"
@@ -391,6 +392,7 @@ func runDeriveL2() error {
 	var inputDir string
 	var outputDir string
 	var interactive bool
+	var resume bool
 
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
@@ -406,6 +408,8 @@ func runDeriveL2() error {
 			}
 		case "--interactive", "-i":
 			interactive = true
+		case "--resume", "-r":
+			resume = true
 		}
 	}
 
@@ -414,6 +418,32 @@ func runDeriveL2() error {
 	}
 	if outputDir == "" {
 		return fmt.Errorf("--output-dir is required")
+	}
+
+	// Create output directory early (needed for checkpoint)
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
+		return fmt.Errorf("failed to create output directory: %w", err)
+	}
+
+	// Initialize checkpoint manager
+	cpMgr := checkpoint.NewManager(outputDir)
+	cpMgr.SetInputDir(inputDir)
+
+	// Handle resume mode
+	if resume {
+		if !cpMgr.HasCheckpoint() {
+			return fmt.Errorf("no checkpoint found in %s, cannot resume", outputDir)
+		}
+		if err := cpMgr.Load(); err != nil {
+			return fmt.Errorf("failed to load checkpoint: %w", err)
+		}
+		cpMgr.PrintStatus()
+		fmt.Fprintln(os.Stderr, "\nResuming from checkpoint...")
+	} else if cpMgr.HasCheckpoint() {
+		// Warn about existing checkpoint
+		fmt.Fprintf(os.Stderr, "\n⚠️  Existing checkpoint found: %s\n", cpMgr.GetFilePath())
+		fmt.Fprintln(os.Stderr, "   Use --resume to continue from checkpoint, or delete it to start fresh.")
+		fmt.Fprintln(os.Stderr, "   Starting fresh (ignoring checkpoint)...\n")
 	}
 
 	// Read L1 documents
@@ -447,16 +477,40 @@ func runDeriveL2() error {
 	client := claude.NewClient()
 
 	// Phase 1: Generate Test Cases from ACs (TDAI methodology) - CHUNKED
-	fmt.Fprintln(os.Stderr, "\nPhase L2-1: Generating TDAI Test Cases from Acceptance Criteria...")
+	var tcResult *generator.TestCaseResult
+	var allTestCases []TestCase
 
-	tcGenerator := generator.NewChunkedTestCaseGenerator(client)
-	tcResult, err := tcGenerator.Generate(string(acContent))
-	if err != nil {
-		return fmt.Errorf("failed to generate test cases: %w", err)
+	if resume && cpMgr.IsPhaseCompleted("TestCases") {
+		fmt.Fprintln(os.Stderr, "\nPhase L2-1: Test Cases (skipped - loaded from checkpoint)")
+		// Load from checkpoint
+		if data, ok := cpMgr.GetPhaseData("TestCases"); ok {
+			if jsonData, err := json.Marshal(data); err == nil {
+				var stored generator.TestCaseResult
+				if err := json.Unmarshal(jsonData, &stored); err == nil {
+					tcResult = &stored
+					allTestCases = flattenTestSuites(tcResult.TestSuites)
+				}
+			}
+		}
+		if tcResult == nil {
+			return fmt.Errorf("failed to restore TestCases from checkpoint")
+		}
+	} else {
+		fmt.Fprintln(os.Stderr, "\nPhase L2-1: Generating TDAI Test Cases from Acceptance Criteria...")
+		cpMgr.StartPhase("TestCases")
+
+		tcGenerator := generator.NewChunkedTestCaseGenerator(client)
+		var err error
+		tcResult, err = tcGenerator.Generate(string(acContent))
+		if err != nil {
+			cpMgr.FailPhase("TestCases", err)
+			return fmt.Errorf("failed to generate test cases: %w", err)
+		}
+
+		// Flatten test suites into test cases for compatibility
+		allTestCases = flattenTestSuites(tcResult.TestSuites)
+		cpMgr.CompletePhase("TestCases", tcResult)
 	}
-
-	// Flatten test suites into test cases for compatibility
-	allTestCases := flattenTestSuites(tcResult.TestSuites)
 
 	fmt.Fprintf(os.Stderr, "  Generated: %d Test Cases (P:%d N:%d B:%d H:%d)\n",
 		tcResult.Summary.Total,
@@ -465,14 +519,7 @@ func runDeriveL2() error {
 		tcResult.Summary.ByCategory.Boundary,
 		tcResult.Summary.ByCategory.Hallucination)
 
-	// Phases 2-6: Run in parallel
-	fmt.Fprintln(os.Stderr, "\nPhases L2-2 to L2-6: Generating remaining L2 artifacts in parallel...")
-
-	// Prepare inputs
-	l1Input := string(dmContent) + "\n\n---\n\n" + string(brContent) + "\n\n---\n\n" + string(acContent)
-	aggSeqInput := string(dmContent) + "\n\n---\n\n" + string(brContent)
-
-	// Define result types for each phase
+	// Define result types for parallel phases (need to be defined before checkpoint restore)
 	type TechSpecsResult struct {
 		TechSpecs []TechSpec `json:"tech_specs"`
 		Summary   struct {
@@ -519,92 +566,145 @@ func runDeriveL2() error {
 		} `json:"summary"`
 	}
 
-	// Create parallel phases
-	phases := []generator.Phase{
-		{
-			Name: "Tech Specs",
-			Execute: func() (interface{}, error) {
-				var result TechSpecsResult
-				prompt := prompts.DeriveTechSpecs + "\n" + string(brContent)
-				if err := client.CallJSON(prompt, &result); err != nil {
-					return nil, err
-				}
-				return result, nil
-			},
-		},
-		{
-			Name: "Interface Contracts",
-			Execute: func() (interface{}, error) {
-				var result InterfaceContractsResult
-				prompt := prompts.DeriveInterfaceContracts + "\n" + l1Input
-				if err := client.CallJSON(prompt, &result); err != nil {
-					return nil, err
-				}
-				return result, nil
-			},
-		},
-		{
-			Name: "Aggregate Design",
-			Execute: func() (interface{}, error) {
-				var result AggregateResult
-				prompt := prompts.DeriveAggregateDesign + "\n" + aggSeqInput
-				if err := client.CallJSON(prompt, &result); err != nil {
-					return nil, err
-				}
-				return result, nil
-			},
-		},
-		{
-			Name: "Sequence Design",
-			Execute: func() (interface{}, error) {
-				var result SequenceResult
-				prompt := prompts.DeriveSequenceDesign + "\n" + aggSeqInput
-				if err := client.CallJSON(prompt, &result); err != nil {
-					return nil, err
-				}
-				return result, nil
-			},
-		},
-		{
-			Name: "Data Model",
-			Execute: func() (interface{}, error) {
-				var result DataModelResult
-				prompt := prompts.DeriveDataModel + "\n" + string(dmContent)
-				if err := client.CallJSON(prompt, &result); err != nil {
-					return nil, err
-				}
-				return result, nil
-			},
-		},
+	// Parallel phases checkpoint data structure
+	type ParallelPhasesData struct {
+		TechSpecs          TechSpecsResult          `json:"tech_specs"`
+		InterfaceContracts InterfaceContractsResult `json:"interface_contracts"`
+		Aggregates         AggregateResult          `json:"aggregates"`
+		Sequences          SequenceResult           `json:"sequences"`
+		DataModel          DataModelResult          `json:"data_model"`
 	}
 
-	// Execute in parallel (max 3 concurrent to respect rate limits)
-	executor := generator.NewParallelExecutor(3)
-	phaseResults := executor.Execute(phases)
-
-	// Extract results (with error handling)
 	var tsResult TechSpecsResult
 	var icResult InterfaceContractsResult
 	var aggResult AggregateResult
 	var seqResult SequenceResult
 	var dataResult DataModelResult
 
-	for _, pr := range phaseResults {
-		if pr.Error != nil {
-			return fmt.Errorf("failed to generate %s: %w", pr.Name, pr.Error)
+	// Phases 2-6: Run in parallel (or restore from checkpoint)
+	if resume && cpMgr.IsPhaseCompleted("ParallelPhases") {
+		fmt.Fprintln(os.Stderr, "\nPhases L2-2 to L2-6: (skipped - loaded from checkpoint)")
+		// Load from checkpoint
+		if data, ok := cpMgr.GetPhaseData("ParallelPhases"); ok {
+			if jsonData, err := json.Marshal(data); err == nil {
+				var stored ParallelPhasesData
+				if err := json.Unmarshal(jsonData, &stored); err == nil {
+					tsResult = stored.TechSpecs
+					icResult = stored.InterfaceContracts
+					aggResult = stored.Aggregates
+					seqResult = stored.Sequences
+					dataResult = stored.DataModel
+				}
+			}
 		}
-		switch pr.Name {
-		case "Tech Specs":
-			tsResult = pr.Data.(TechSpecsResult)
-		case "Interface Contracts":
-			icResult = pr.Data.(InterfaceContractsResult)
-		case "Aggregate Design":
-			aggResult = pr.Data.(AggregateResult)
-		case "Sequence Design":
-			seqResult = pr.Data.(SequenceResult)
-		case "Data Model":
-			dataResult = pr.Data.(DataModelResult)
+		if len(tsResult.TechSpecs) == 0 && len(icResult.InterfaceContracts) == 0 {
+			return fmt.Errorf("failed to restore ParallelPhases from checkpoint")
 		}
+	} else {
+		fmt.Fprintln(os.Stderr, "\nPhases L2-2 to L2-6: Generating remaining L2 artifacts in parallel...")
+		cpMgr.StartPhase("ParallelPhases")
+
+		// Prepare inputs
+		l1Input := string(dmContent) + "\n\n---\n\n" + string(brContent) + "\n\n---\n\n" + string(acContent)
+		aggSeqInput := string(dmContent) + "\n\n---\n\n" + string(brContent)
+
+		// Create parallel phases
+		phases := []generator.Phase{
+			{
+				Name: "Tech Specs",
+				Execute: func() (interface{}, error) {
+					var result TechSpecsResult
+					prompt := prompts.DeriveTechSpecs + "\n" + string(brContent)
+					if err := client.CallJSON(prompt, &result); err != nil {
+						return nil, err
+					}
+					return result, nil
+				},
+			},
+			{
+				Name: "Interface Contracts",
+				Execute: func() (interface{}, error) {
+					var result InterfaceContractsResult
+					prompt := prompts.DeriveInterfaceContracts + "\n" + l1Input
+					if err := client.CallJSON(prompt, &result); err != nil {
+						return nil, err
+					}
+					return result, nil
+				},
+			},
+			{
+				Name: "Aggregate Design",
+				Execute: func() (interface{}, error) {
+					var result AggregateResult
+					prompt := prompts.DeriveAggregateDesign + "\n" + aggSeqInput
+					if err := client.CallJSON(prompt, &result); err != nil {
+						return nil, err
+					}
+					return result, nil
+				},
+			},
+			{
+				Name: "Sequence Design",
+				Execute: func() (interface{}, error) {
+					var result SequenceResult
+					prompt := prompts.DeriveSequenceDesign + "\n" + aggSeqInput
+					if err := client.CallJSON(prompt, &result); err != nil {
+						return nil, err
+					}
+					return result, nil
+				},
+			},
+			{
+				Name: "Data Model",
+				Execute: func() (interface{}, error) {
+					var result DataModelResult
+					prompt := prompts.DeriveDataModel + "\n" + string(dmContent)
+					if err := client.CallJSON(prompt, &result); err != nil {
+						return nil, err
+					}
+					return result, nil
+				},
+			},
+		}
+
+		// Execute in parallel (max 3 concurrent to respect rate limits)
+		executor := generator.NewParallelExecutor(3)
+		phaseResults := executor.Execute(phases)
+
+		// Extract results (with error handling)
+		var parallelErr error
+		for _, pr := range phaseResults {
+			if pr.Error != nil {
+				parallelErr = fmt.Errorf("failed to generate %s: %w", pr.Name, pr.Error)
+				break
+			}
+			switch pr.Name {
+			case "Tech Specs":
+				tsResult = pr.Data.(TechSpecsResult)
+			case "Interface Contracts":
+				icResult = pr.Data.(InterfaceContractsResult)
+			case "Aggregate Design":
+				aggResult = pr.Data.(AggregateResult)
+			case "Sequence Design":
+				seqResult = pr.Data.(SequenceResult)
+			case "Data Model":
+				dataResult = pr.Data.(DataModelResult)
+			}
+		}
+
+		if parallelErr != nil {
+			cpMgr.FailPhase("ParallelPhases", parallelErr)
+			return parallelErr
+		}
+
+		// Save checkpoint with all parallel results
+		cpMgr.CompletePhase("ParallelPhases", ParallelPhasesData{
+			TechSpecs:          tsResult,
+			InterfaceContracts: icResult,
+			Aggregates:         aggResult,
+			Sequences:          seqResult,
+			DataModel:          dataResult,
+		})
 	}
 
 	// Print generation summary
@@ -633,11 +733,6 @@ func runDeriveL2() error {
 
 	// Store TDAI summary for output (convert from generator type)
 	tdaiSummary := convertTDAISummary(tcResult.Summary)
-
-	// Create output directory
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
-		return fmt.Errorf("failed to create output directory: %w", err)
-	}
 
 	// Track which files were written (for interactive mode skips)
 	writtenFiles := make(map[string]bool)
@@ -781,6 +876,11 @@ func runDeriveL2() error {
 	fmt.Fprintf(os.Stderr, "  %s\n", aggPath)
 	fmt.Fprintf(os.Stderr, "  %s\n", seqPath)
 	fmt.Fprintf(os.Stderr, "  %s\n", dataPath)
+
+	// Clean up checkpoint on successful completion
+	if err := cpMgr.Delete(); err != nil {
+		fmt.Fprintf(os.Stderr, "\n⚠️  Warning: failed to delete checkpoint: %v\n", err)
+	}
 
 	return nil
 }
