@@ -92,6 +92,7 @@ Derive Options (L0 → L1):
 Derive-L2 Options (L1 → L2):
   --input-dir <path>      Directory containing L1 docs (acceptance-criteria.md, business-rules.md)
   --output-dir <path>     Directory for generated L2 documents (required)
+  --interactive, -i       Interactive approval mode (preview each file before writing)
 
 Derive-L3 Options (L2 → L3):
   --input-dir <path>      Directory containing L2 docs (test-cases.md, tech-specs.md)
