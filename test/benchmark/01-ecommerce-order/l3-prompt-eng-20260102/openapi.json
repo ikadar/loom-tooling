@@ -1,0 +1,1407 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "E-Commerce API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/addresses": {
+      "post": {
+        "operationId": "addAddress",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "city": {
+                    "maxLength": 100,
+                    "type": "string"
+                  },
+                  "country": {
+                    "pattern": "^[A-Z]{2}$",
+                    "type": "string"
+                  },
+                  "is_default": {
+                    "default": false,
+                    "type": "boolean"
+                  },
+                  "postal_code": {
+                    "maxLength": 20,
+                    "type": "string"
+                  },
+                  "recipient_name": {
+                    "maxLength": 100,
+                    "type": "string"
+                  },
+                  "state": {
+                    "maxLength": 100,
+                    "type": "string"
+                  },
+                  "street": {
+                    "maxLength": 200,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "recipient_name",
+                  "street",
+                  "city",
+                  "state",
+                  "postal_code",
+                  "country"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Address added"
+          },
+          "400": {
+            "description": "Incomplete address or international shipping not available"
+          }
+        },
+        "summary": "Add shipping address",
+        "x-related-specs": [
+          "TS-BR-ADDR-001",
+          "TS-BR-SHIP-002"
+        ]
+      }
+    },
+    "/api/addresses/{addressId}": {
+      "put": {
+        "operationId": "updateAddress",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "addressId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "city": {
+                    "maxLength": 100,
+                    "type": "string"
+                  },
+                  "country": {
+                    "pattern": "^[A-Z]{2}$",
+                    "type": "string"
+                  },
+                  "is_default": {
+                    "type": "boolean"
+                  },
+                  "postal_code": {
+                    "maxLength": 20,
+                    "type": "string"
+                  },
+                  "recipient_name": {
+                    "maxLength": 100,
+                    "type": "string"
+                  },
+                  "state": {
+                    "maxLength": 100,
+                    "type": "string"
+                  },
+                  "street": {
+                    "maxLength": 200,
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Address updated"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "404": {
+            "description": "Address not found"
+          }
+        },
+        "summary": "Update shipping address",
+        "x-related-specs": [
+          "TS-BR-ADDR-001"
+        ]
+      }
+    },
+    "/api/admin/orders": {
+      "get": {
+        "operationId": "adminListOrders",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "enum": [
+                "pending",
+                "confirmed",
+                "shipped",
+                "delivered",
+                "cancelled"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start_date",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end_date",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 20,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated order list with filters"
+          },
+          "401": {
+            "description": "Admin authentication required"
+          }
+        },
+        "summary": "List all orders (admin)",
+        "x-related-specs": [
+          "TS-BR-ORDER-001"
+        ]
+      }
+    },
+    "/api/cart": {
+      "get": {
+        "operationId": "getCart",
+        "responses": {
+          "200": {
+            "description": "Cart with items and totals"
+          },
+          "410": {
+            "description": "Cart expired"
+          }
+        },
+        "summary": "Get current cart with current prices",
+        "x-related-specs": [
+          "TS-BR-CART-001",
+          "TS-BR-CART-003"
+        ]
+      }
+    },
+    "/api/cart/items": {
+      "post": {
+        "operationId": "addCartItem",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "product_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "quantity": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "variant_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "product_id",
+                  "quantity"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Quantity adjusted due to stock limits"
+          },
+          "201": {
+            "description": "Item added to cart"
+          },
+          "400": {
+            "description": "Variant required for this product"
+          },
+          "409": {
+            "description": "Out of stock"
+          }
+        },
+        "summary": "Add item to cart",
+        "x-related-specs": [
+          "TS-BR-STOCK-001",
+          "TS-BR-VAR-002",
+          "TS-BR-CART-002"
+        ]
+      }
+    },
+    "/api/cart/items/{itemId}": {
+      "delete": {
+        "operationId": "removeCartItem",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "itemId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Item removed with undo token"
+          },
+          "404": {
+            "description": "Cart item not found"
+          }
+        },
+        "summary": "Remove item from cart",
+        "x-related-specs": [
+          "TS-BR-CART-002"
+        ]
+      },
+      "put": {
+        "operationId": "updateCartItem",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "itemId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "quantity": {
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "quantity"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cart item updated"
+          },
+          "404": {
+            "description": "Cart item not found"
+          }
+        },
+        "summary": "Update cart item quantity",
+        "x-related-specs": [
+          "TS-BR-CART-002"
+        ]
+      }
+    },
+    "/api/cart/merge": {
+      "post": {
+        "operationId": "mergeCart",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "guest_session_id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "guest_session_id"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Carts merged"
+          },
+          "404": {
+            "description": "Guest cart not found"
+          }
+        },
+        "summary": "Merge guest cart with authenticated user cart",
+        "x-related-specs": [
+          "TS-BR-CART-002"
+        ]
+      }
+    },
+    "/api/categories": {
+      "get": {
+        "operationId": "listCategories",
+        "responses": {
+          "200": {
+            "description": "Category tree up to 3 levels"
+          }
+        },
+        "summary": "List categories with hierarchy",
+        "x-related-specs": [
+          "TS-BR-CAT-001"
+        ]
+      },
+      "post": {
+        "operationId": "createCategory",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "is_active": {
+                    "default": true,
+                    "type": "boolean"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "parent_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Category created"
+          },
+          "400": {
+            "description": "Category depth exceeded"
+          }
+        },
+        "summary": "Create category",
+        "x-related-specs": [
+          "TS-BR-CAT-001"
+        ]
+      }
+    },
+    "/api/checkout/shipping": {
+      "get": {
+        "operationId": "calculateShipping",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "address_id",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Shipping cost (0 if subtotal \u003e= $50)"
+          }
+        },
+        "summary": "Calculate shipping cost",
+        "x-related-specs": [
+          "TS-BR-SHIP-001"
+        ]
+      }
+    },
+    "/api/checkout/tax": {
+      "get": {
+        "operationId": "calculateTax",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "address_id",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tax amount based on shipping state"
+          },
+          "400": {
+            "description": "Address missing state"
+          }
+        },
+        "summary": "Calculate tax based on shipping address",
+        "x-related-specs": [
+          "TS-BR-SHIP-001"
+        ]
+      }
+    },
+    "/api/customers": {
+      "post": {
+        "operationId": "registerCustomer",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "email": {
+                    "format": "email",
+                    "type": "string"
+                  },
+                  "first_name": {
+                    "type": "string"
+                  },
+                  "last_name": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "minLength": 8,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "email",
+                  "password",
+                  "first_name",
+                  "last_name"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Customer registered, verification email sent"
+          },
+          "400": {
+            "description": "Validation error (weak password)"
+          },
+          "409": {
+            "description": "Email already registered"
+          }
+        },
+        "summary": "Register new customer",
+        "x-related-specs": [
+          "TS-BR-CUST-001",
+          "TS-BR-CUST-002"
+        ]
+      }
+    },
+    "/api/customers/{customerId}": {
+      "delete": {
+        "operationId": "deleteCustomer",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "customerId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "confirmation": {
+                    "type": "boolean"
+                  },
+                  "deletion_type": {
+                    "enum": [
+                      "soft_delete",
+                      "full_erasure"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "deletion_type",
+                  "confirmation"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Account deleted"
+          },
+          "400": {
+            "description": "Confirmation required"
+          },
+          "409": {
+            "description": "Has pending orders"
+          }
+        },
+        "summary": "Delete customer account",
+        "x-related-specs": [
+          "TS-BR-CUST-001"
+        ]
+      }
+    },
+    "/api/customers/{customerId}/password": {
+      "put": {
+        "operationId": "changePassword",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "customerId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "current_password": {
+                    "type": "string"
+                  },
+                  "new_password": {
+                    "minLength": 8,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "current_password",
+                  "new_password"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password changed"
+          },
+          "400": {
+            "description": "Weak password"
+          },
+          "401": {
+            "description": "Current password incorrect"
+          }
+        },
+        "summary": "Change customer password",
+        "x-related-specs": [
+          "TS-BR-CUST-002"
+        ]
+      }
+    },
+    "/api/customers/{customerId}/verify-email": {
+      "post": {
+        "operationId": "verifyEmail",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "customerId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "verification_token": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "verification_token"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Email verified"
+          },
+          "400": {
+            "description": "Invalid or expired token"
+          }
+        },
+        "summary": "Verify customer email",
+        "x-related-specs": [
+          "TS-BR-CUST-003"
+        ]
+      }
+    },
+    "/api/inventory/import": {
+      "post": {
+        "operationId": "importInventory",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "file": {
+                    "format": "binary",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Import results with row-by-row errors"
+          },
+          "400": {
+            "description": "Invalid file format"
+          }
+        },
+        "summary": "Bulk import inventory from CSV",
+        "x-related-specs": [
+          "TS-BR-INV-001",
+          "TS-BR-AUDIT-002"
+        ]
+      }
+    },
+    "/api/inventory/{variantId}": {
+      "put": {
+        "operationId": "adjustInventory",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "variantId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "adjustment_type": {
+                    "enum": [
+                      "absolute",
+                      "delta"
+                    ],
+                    "type": "string"
+                  },
+                  "reason": {
+                    "maxLength": 200,
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "adjustment_type",
+                  "value"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Inventory adjusted"
+          },
+          "400": {
+            "description": "Would result in negative inventory"
+          },
+          "404": {
+            "description": "Variant not found"
+          }
+        },
+        "summary": "Adjust inventory",
+        "x-related-specs": [
+          "TS-BR-INV-001",
+          "TS-BR-AUDIT-002"
+        ]
+      }
+    },
+    "/api/orders": {
+      "get": {
+        "operationId": "listOrders",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 20,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated order list"
+          },
+          "401": {
+            "description": "Not authenticated"
+          }
+        },
+        "summary": "List customer orders",
+        "x-related-specs": [
+          "TS-BR-ORDER-001"
+        ]
+      },
+      "post": {
+        "operationId": "createOrder",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "payment_method_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "shipping_address_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "shipping_address_id",
+                  "payment_method_id"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Order created"
+          },
+          "400": {
+            "description": "Empty cart"
+          },
+          "401": {
+            "description": "Registration required"
+          },
+          "402": {
+            "description": "Payment authorization failed"
+          },
+          "403": {
+            "description": "Email not verified"
+          },
+          "409": {
+            "description": "Insufficient stock or backorder not supported"
+          }
+        },
+        "summary": "Place order",
+        "x-related-specs": [
+          "TS-BR-AUTH-001",
+          "TS-BR-STOCK-001",
+          "TS-BR-INV-002",
+          "TS-BR-PAY-001",
+          "TS-BR-PRICE-002",
+          "TS-BR-AUDIT-001"
+        ]
+      }
+    },
+    "/api/orders/{orderId}": {
+      "get": {
+        "operationId": "getOrder",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orderId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Order details with captured prices"
+          },
+          "404": {
+            "description": "Order not found"
+          }
+        },
+        "summary": "Get order details",
+        "x-related-specs": [
+          "TS-BR-ORDER-002",
+          "TS-BR-PRICE-002"
+        ]
+      }
+    },
+    "/api/orders/{orderId}/cancel": {
+      "post": {
+        "operationId": "cancelOrder",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orderId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Order cancelled, refund initiated"
+          },
+          "409": {
+            "description": "Order cannot be cancelled (already shipped)"
+          }
+        },
+        "summary": "Cancel order",
+        "x-related-specs": [
+          "TS-BR-CANCEL-001",
+          "TS-BR-INV-003",
+          "TS-BR-PAY-002",
+          "TS-BR-AUDIT-001"
+        ]
+      }
+    },
+    "/api/orders/{orderId}/status": {
+      "put": {
+        "operationId": "updateOrderStatus",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orderId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "confirmed",
+                      "shipped",
+                      "delivered"
+                    ],
+                    "type": "string"
+                  },
+                  "tracking_number": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "status"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Status updated"
+          },
+          "409": {
+            "description": "Invalid status transition"
+          }
+        },
+        "summary": "Update order status (admin)",
+        "x-related-specs": [
+          "TS-BR-ORDER-001",
+          "TS-BR-AUDIT-001"
+        ]
+      }
+    },
+    "/api/payment-methods": {
+      "post": {
+        "operationId": "addPaymentMethod",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "is_default": {
+                    "default": false,
+                    "type": "boolean"
+                  },
+                  "payment_type": {
+                    "enum": [
+                      "card",
+                      "paypal"
+                    ],
+                    "type": "string"
+                  },
+                  "paypal_authorization": {
+                    "type": "string"
+                  },
+                  "stripe_token": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "payment_type"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Payment method added"
+          },
+          "400": {
+            "description": "Invalid card or unsupported type"
+          }
+        },
+        "summary": "Add payment method",
+        "x-related-specs": [
+          "TS-BR-PAY-001"
+        ]
+      }
+    },
+    "/api/products": {
+      "get": {
+        "operationId": "listProducts",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "category",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "priceMin",
+            "schema": {
+              "minimum": 0,
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "priceMax",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "availability",
+            "schema": {
+              "enum": [
+                "inStock",
+                "all"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "schema": {
+              "enum": [
+                "price_asc",
+                "price_desc",
+                "name_asc",
+                "name_desc"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated product list"
+          },
+          "400": {
+            "description": "Invalid filter parameters"
+          }
+        },
+        "summary": "List products with filtering and pagination",
+        "x-related-specs": [
+          "TS-BR-PROD-001",
+          "TS-BR-PROD-002"
+        ]
+      },
+      "post": {
+        "operationId": "createProduct",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "category_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "description": {
+                    "maxLength": 5000,
+                    "type": "string"
+                  },
+                  "name": {
+                    "maxLength": 200,
+                    "minLength": 2,
+                    "type": "string"
+                  },
+                  "price": {
+                    "minimum": 0.01,
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "name",
+                  "price",
+                  "category_id"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Product created"
+          },
+          "400": {
+            "description": "Validation error"
+          }
+        },
+        "summary": "Create new product",
+        "x-related-specs": [
+          "TS-BR-PRICE-001",
+          "TS-BR-PROD-002",
+          "TS-BR-PROD-003"
+        ]
+      }
+    },
+    "/api/products/{productId}": {
+      "delete": {
+        "operationId": "deleteProduct",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "productId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Product deleted"
+          },
+          "404": {
+            "description": "Product not found"
+          }
+        },
+        "summary": "Delete product (soft delete if has orders)",
+        "x-related-specs": [
+          "TS-BR-PROD-001"
+        ]
+      },
+      "get": {
+        "operationId": "getProduct",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "productId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Product details with variants and stock status"
+          },
+          "404": {
+            "description": "Product not found"
+          }
+        },
+        "summary": "Get product details",
+        "x-related-specs": [
+          "TS-BR-STOCK-001"
+        ]
+      },
+      "put": {
+        "operationId": "updateProduct",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "productId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "category_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "description": {
+                    "maxLength": 5000,
+                    "type": "string"
+                  },
+                  "name": {
+                    "maxLength": 200,
+                    "minLength": 2,
+                    "type": "string"
+                  },
+                  "price": {
+                    "minimum": 0.01,
+                    "type": "number"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Product updated"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "404": {
+            "description": "Product not found"
+          }
+        },
+        "summary": "Update product",
+        "x-related-specs": [
+          "TS-BR-PRICE-001",
+          "TS-BR-PROD-002",
+          "TS-BR-AUDIT-003"
+        ]
+      }
+    },
+    "/api/products/{productId}/images": {
+      "post": {
+        "operationId": "uploadProductImage",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "productId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "image": {
+                    "format": "binary",
+                    "type": "string"
+                  },
+                  "is_primary": {
+                    "default": false,
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "image"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Image uploaded"
+          },
+          "400": {
+            "description": "Image limit exceeded or invalid format"
+          }
+        },
+        "summary": "Upload product image",
+        "x-related-specs": [
+          "TS-BR-PROD-004"
+        ]
+      }
+    },
+    "/api/products/{productId}/variants": {
+      "post": {
+        "operationId": "createVariant",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "productId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "options": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "type": "object"
+                  },
+                  "price_override": {
+                    "minimum": 0.01,
+                    "type": "number"
+                  },
+                  "sku": {
+                    "maxLength": 100,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "sku",
+                  "options"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Variant created"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "409": {
+            "description": "Duplicate SKU"
+          }
+        },
+        "summary": "Create product variant",
+        "x-related-specs": [
+          "TS-BR-VAR-001"
+        ]
+      }
+    }
+  }
+}
