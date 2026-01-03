@@ -372,7 +372,9 @@ Document
 
 | Level | Document | Description |
 |-------|----------|-------------|
+| L0 | [l0-domain-vocabulary.md](l0-domain-vocabulary.md) | Domain Vocabulary (source for this document) |
 | L0 | [l0-loom-cli.md](l0-loom-cli.md) | User Stories |
+| L0 | [l0-nfr.md](l0-nfr.md) | Non-Functional Requirements |
 | L1 | This document | Domain Model |
 | L1 | [l1-business-rules.md](l1-business-rules.md) | Business Rules |
 | L1 | [l1-acceptance-criteria.md](l1-acceptance-criteria.md) | Acceptance Criteria |

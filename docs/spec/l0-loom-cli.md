@@ -143,7 +143,9 @@ The CLI should:
 
 | Level | Document | Description |
 |-------|----------|-------------|
+| L0 | [l0-domain-vocabulary.md](l0-domain-vocabulary.md) | Domain Vocabulary (concepts, definitions) |
 | L0 | This document | User Stories |
+| L0 | [l0-nfr.md](l0-nfr.md) | Non-Functional Requirements |
 | L1 | [l1-domain-model.md](l1-domain-model.md) | Domain Model (entities, relationships) |
 | L1 | [l1-business-rules.md](l1-business-rules.md) | Business Rules (invariants, constraints) |
 | L1 | [l1-acceptance-criteria.md](l1-acceptance-criteria.md) | Acceptance Criteria (Given/When/Then) |

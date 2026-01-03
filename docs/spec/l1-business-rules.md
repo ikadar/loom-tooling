@@ -310,7 +310,9 @@ level: L1
 
 | Level | Document | Description |
 |-------|----------|-------------|
+| L0 | [l0-domain-vocabulary.md](l0-domain-vocabulary.md) | Domain Vocabulary |
 | L0 | [l0-loom-cli.md](l0-loom-cli.md) | User Stories |
+| L0 | [l0-nfr.md](l0-nfr.md) | Non-Functional Requirements (source for NFR-derived rules) |
 | L1 | [l1-domain-model.md](l1-domain-model.md) | Domain Model |
 | L1 | This document | Business Rules |
 | L1 | [l1-acceptance-criteria.md](l1-acceptance-criteria.md) | Acceptance Criteria |
