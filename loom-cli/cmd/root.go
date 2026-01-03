@@ -32,6 +32,8 @@ func Execute() error {
 		return runValidate()
 	case "sync-links":
 		return runSyncLinks()
+	case "cascade":
+		return runCascade()
 	case "version":
 		fmt.Printf("loom-cli v%s\n", Version)
 		return nil
@@ -47,6 +49,7 @@ func printUsage() {
 	fmt.Println(`loom-cli - AI-DOP Documentation Derivation CLI
 
 Usage:
+  loom-cli cascade [options]     # Full derivation: L0 → L1 → L2 → L3 (one command!)
   loom-cli analyze [options]     # L0 → ambiguities
   loom-cli interview [options]   # ambiguities → decisions
   loom-cli derive [options]      # L0+decisions → L1 (Strategic Design)
@@ -58,6 +61,7 @@ Usage:
   loom-cli help
 
 Commands:
+  cascade    Full cascade derivation: L0 → L1 → L2 → L3 in one command
   analyze    Analyze L0 input, discover domain model, find ambiguities
   interview  Conduct iterative structured interview (one question at a time)
   derive     Derive L1 Strategic Design (Domain Model, Bounded Contexts, AC, BR)
@@ -72,6 +76,16 @@ Derivation Flow:
   L0 (User Stories) → analyze → interview → derive → L1 (Strategic Design)
   L1 (Strategic) → derive-l2 → L2 (Tactical Design)
   L2 (Tactical) → derive-l3 → L3 (Operational Design)
+
+Cascade Options (Full Derivation):
+  --input-file <path>     L0 input file (user story)
+  --input-dir <path>      L0 input directory
+  --output-dir <path>     Base output directory (creates l1/, l2/, l3/)
+  --skip-interview        Skip interview, use AI defaults
+  --decisions <path>      Use existing decisions.md
+  --interactive, -i       Interactive approval mode
+  --resume                Resume from previous state
+  --from <level>          Re-derive from level (l1, l2, l3)
 
 Analyze Options:
   --input-file <path>     Path to single L0 input file
@@ -125,7 +139,10 @@ Validation Rules:
   V009  Every AC has hallucination prevention test (TDAI)
   V010  No duplicate IDs
 
-Full Flow Example:
+Cascade Example (Recommended):
+  loom-cli cascade --input-file story.md --output-dir ./specs --skip-interview
+
+Full Flow Example (Manual):
   1. loom-cli analyze --input-file story.md > analysis.json
   2. loom-cli interview --init analysis.json --state state.json
   3. [Answer questions until exit code 0]
