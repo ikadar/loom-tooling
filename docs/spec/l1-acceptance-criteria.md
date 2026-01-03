@@ -448,6 +448,7 @@ specs/
 | L0 | [l0-loom-cli.md](l0-loom-cli.md) | User Stories (source for this document) |
 | L0 | [l0-nfr.md](l0-nfr.md) | Non-Functional Requirements |
 | L1 | [l1-domain-model.md](l1-domain-model.md) | Domain Model |
+| L1 | [l1-bounded-context-map.md](l1-bounded-context-map.md) | Bounded Context Map |
 | L1 | [l1-business-rules.md](l1-business-rules.md) | Business Rules |
 | L1 | This document | Acceptance Criteria |
 | L2 | [l2-cli-interface.md](l2-cli-interface.md) | CLI Interface Contract |

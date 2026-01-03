@@ -314,6 +314,7 @@ level: L1
 | L0 | [l0-loom-cli.md](l0-loom-cli.md) | User Stories |
 | L0 | [l0-nfr.md](l0-nfr.md) | Non-Functional Requirements (source for NFR-derived rules) |
 | L1 | [l1-domain-model.md](l1-domain-model.md) | Domain Model |
+| L1 | [l1-bounded-context-map.md](l1-bounded-context-map.md) | Bounded Context Map |
 | L1 | This document | Business Rules |
 | L1 | [l1-acceptance-criteria.md](l1-acceptance-criteria.md) | Acceptance Criteria |
 | L2 | [l2-cli-interface.md](l2-cli-interface.md) | CLI Interface Contract |

@@ -147,6 +147,7 @@ The CLI should:
 | L0 | This document | User Stories |
 | L0 | [l0-nfr.md](l0-nfr.md) | Non-Functional Requirements |
 | L1 | [l1-domain-model.md](l1-domain-model.md) | Domain Model (entities, relationships) |
+| L1 | [l1-bounded-context-map.md](l1-bounded-context-map.md) | Bounded Context Map |
 | L1 | [l1-business-rules.md](l1-business-rules.md) | Business Rules (invariants, constraints) |
 | L1 | [l1-acceptance-criteria.md](l1-acceptance-criteria.md) | Acceptance Criteria (Given/When/Then) |
 | L2 | [l2-cli-interface.md](l2-cli-interface.md) | CLI Interface Contract (commands, options, exit codes) |
