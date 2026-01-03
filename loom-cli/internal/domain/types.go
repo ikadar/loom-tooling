@@ -102,7 +102,7 @@ type Decision struct {
 	Question   string    `json:"question"`
 	Answer     string    `json:"answer"`
 	DecidedAt  time.Time `json:"decided_at"`
-	Source     string    `json:"source"` // "user", "default", "existing"
+	Source     string    `json:"source"` // "user", "default", "existing", "user_accepted_suggested"
 	Category   string    `json:"category"`
 	Subject    string    `json:"subject"`
 }

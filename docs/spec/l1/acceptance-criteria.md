@@ -1,10 +1,17 @@
+---
+title: "Loom CLI Acceptance Criteria"
+generated: 2025-01-03T14:30:00Z
+status: draft
+level: L1
+---
+
 # Loom CLI Acceptance Criteria
 
 ## Overview
 
 This document defines the acceptance criteria for loom-cli in Given/When/Then format. Each criterion is traceable to user stories and will be verified by test cases.
 
-**Traceability:** Derived from [l0-loom-cli.md](l0-loom-cli.md) user stories.
+**Traceability:** Derived from [loom-cli.md](../l0/loom-cli.md) user stories.
 
 ---
 
@@ -171,7 +178,7 @@ This document defines the acceptance criteria for loom-cli in Given/When/Then fo
 
 ## US-004: Derive Tactical Design (L2)
 
-### AC-L2-001: Derive L2 from L1
+### AC-TAC-001: Derive L2 from L1
 
 **Given** a directory containing L1 documents (acceptance-criteria.md, business-rules.md, domain-model.md)
 **When** I run `loom-cli derive-l2 --input-dir ./l1 --output-dir ./l2`
@@ -187,7 +194,7 @@ This document defines the acceptance criteria for loom-cli in Given/When/Then fo
 
 ---
 
-### AC-L2-002: Parallel Phase Execution
+### AC-TAC-002: Parallel Phase Execution
 
 **Given** L1 documents
 **When** I run `loom-cli derive-l2 --input-dir ./l1 --output-dir ./l2`
@@ -199,24 +206,25 @@ This document defines the acceptance criteria for loom-cli in Given/When/Then fo
 
 ---
 
-### AC-L2-003: Resume from Checkpoint
+### AC-TAC-003: Resume from Checkpoint
 
-**Given** a previously interrupted L2 derivation with checkpoint
-**When** I run `loom-cli derive-l2 --input-dir ./l1 --output-dir ./l2 --resume`
-**Then** completed phases are skipped
+**Given** a previously interrupted cascade derivation with checkpoint
+**When** I run `loom-cli cascade --output-dir ./specs --resume`
+**Then** completed phases (including L2) are skipped
 **And** derivation continues from last incomplete phase
 
 **Related BR:** BR-DRV-003
 
 ---
 
-### AC-L2-004: Interactive Approval
+### AC-TAC-004: Interactive Approval
 
 **Given** L1 documents
 **When** I run `loom-cli derive-l2 --input-dir ./l1 --output-dir ./l2 --interactive`
 **Then** each generated file is previewed before writing
-**And** I can approve, skip, or abort
-**And** skipped files are not written
+**And** I can choose from: [A]pprove, [E]dit, [R]egenerate, [S]kip, [Q]uit
+**And** approved files are written, skipped files are not written
+**And** edit opens content in $EDITOR, regenerate retries AI generation
 
 **Related BR:** BR-DRV-004
 
@@ -224,7 +232,7 @@ This document defines the acceptance criteria for loom-cli in Given/When/Then fo
 
 ## US-005: Derive Operational Design (L3)
 
-### AC-L3-001: Derive L3 from L2
+### AC-OPS-001: Derive L3 from L2
 
 **Given** a directory containing L2 documents
 **When** I run `loom-cli derive-l3 --input-dir ./l2 --output-dir ./l3`
@@ -241,7 +249,7 @@ This document defines the acceptance criteria for loom-cli in Given/When/Then fo
 
 ---
 
-### AC-L3-002: TDAI Test Generation
+### AC-OPS-002: TDAI Test Generation
 
 **Given** L2 documents with acceptance criteria references
 **When** I derive L3 test cases
@@ -253,7 +261,7 @@ This document defines the acceptance criteria for loom-cli in Given/When/Then fo
 
 ---
 
-### AC-L3-003: OpenAPI JSON Format
+### AC-OPS-003: OpenAPI JSON Format
 
 **Given** L2 interface contracts
 **When** I derive L3 openapi.json
@@ -444,12 +452,12 @@ specs/
 
 | Level | Document | Description |
 |-------|----------|-------------|
-| L0 | [l0-domain-vocabulary.md](l0-domain-vocabulary.md) | Domain Vocabulary |
-| L0 | [l0-loom-cli.md](l0-loom-cli.md) | User Stories (source for this document) |
-| L0 | [l0-nfr.md](l0-nfr.md) | Non-Functional Requirements |
-| L1 | [l1-domain-model.md](l1-domain-model.md) | Domain Model |
-| L1 | [l1-bounded-context-map.md](l1-bounded-context-map.md) | Bounded Context Map |
-| L1 | [l1-business-rules.md](l1-business-rules.md) | Business Rules |
+| L0 | [domain-vocabulary.md](../l0/domain-vocabulary.md) | Domain Vocabulary |
+| L0 | [loom-cli.md](../l0/loom-cli.md) | User Stories (source for this document) |
+| L0 | [nfr.md](../l0/nfr.md) | Non-Functional Requirements |
+| L1 | [domain-model.md](domain-model.md) | Domain Model |
+| L1 | [bounded-context-map.md](bounded-context-map.md) | Bounded Context Map |
+| L1 | [business-rules.md](business-rules.md) | Business Rules |
 | L1 | This document | Acceptance Criteria |
-| L1 | [l1-decisions.md](l1-decisions.md) | Design Decisions |
-| L2 | [l2-cli-interface.md](l2-cli-interface.md) | CLI Interface Contract |
+| L0 | [decisions.md](../l0/decisions.md) | Design Decisions (interview output) |
+| L2 | [interface-contracts.md](../l2/interface-contracts.md) | CLI Interface Contract |

@@ -1,3 +1,10 @@
+---
+title: "Loom CLI Interface Contract"
+generated: 2025-01-03T14:30:00Z
+status: draft
+level: L2
+---
+
 # Loom CLI Interface Contract
 
 ## Overview
@@ -10,14 +17,17 @@ This document defines the complete CLI interface specification for loom-cli. It 
 
 | Level | Document | Description |
 |-------|----------|-------------|
-| L0 | [l0-domain-vocabulary.md](l0-domain-vocabulary.md) | Domain Vocabulary |
-| L0 | [l0-loom-cli.md](l0-loom-cli.md) | User Stories |
-| L0 | [l0-nfr.md](l0-nfr.md) | Non-Functional Requirements |
-| L1 | [l1-domain-model.md](l1-domain-model.md) | Domain Model |
-| L1 | [l1-bounded-context-map.md](l1-bounded-context-map.md) | Bounded Context Map |
-| L1 | [l1-business-rules.md](l1-business-rules.md) | Business Rules |
-| L1 | [l1-acceptance-criteria.md](l1-acceptance-criteria.md) | Acceptance Criteria (source for this document) |
-| L1 | [l1-decisions.md](l1-decisions.md) | Design Decisions |
+| L0 | [domain-vocabulary.md](../l0/domain-vocabulary.md) | Domain Vocabulary |
+| L0 | [loom-cli.md](../l0/loom-cli.md) | User Stories |
+| L0 | [nfr.md](../l0/nfr.md) | Non-Functional Requirements |
+| L1 | [domain-model.md](../l1/domain-model.md) | Domain Model |
+| L1 | [bounded-context-map.md](../l1/bounded-context-map.md) | Bounded Context Map |
+| L1 | [business-rules.md](../l1/business-rules.md) | Business Rules |
+| L1 | [acceptance-criteria.md](../l1/acceptance-criteria.md) | Acceptance Criteria (source for this document) |
+| L0 | [decisions.md](../l0/decisions.md) | Design Decisions (L0→L1) |
+| L1 | [decisions.md](../l1/decisions.md) | Design Decisions (L1→L2) |
+| L2 | [decisions.md](decisions.md) | Design Decisions (L2→L3) |
+| L2 | [prompt-catalog.md](prompt-catalog.md) | Prompt Catalog |
 | L2 | This document | CLI Interface Contract |
 
 ## Global Behavior
@@ -40,7 +50,7 @@ This document defines the complete CLI interface specification for loom-cli. It 
 
 ## Commands
 
-### analyze
+### IC-ANL-001: analyze
 
 **Traces to:** US-001
 
@@ -66,7 +76,7 @@ loom-cli analyze [options]
 
 ---
 
-### interview
+### IC-INT-001: interview
 
 **Traces to:** US-002
 
@@ -83,7 +93,7 @@ loom-cli interview [options]
 | `--init <path>` | string | - | Initialize interview from analysis JSON file |
 | `--state <path>` | string | Yes | Path to interview state file |
 | `--answer <json>` | string | - | Answer as JSON: `{"question_id":"...", "answer":"...", "source":"user"}` |
-| `--grouped` | flag | - | Show all questions at once (grouped mode) |
+| `--grouped`, `-g` | flag | - | Show all questions at once (grouped mode) |
 | `--answers <json>` | string | - | Batch answers as JSON array |
 
 **Workflow:**
@@ -99,7 +109,7 @@ loom-cli interview [options]
 
 ---
 
-### derive
+### IC-DRV-001: derive
 
 **Traces to:** US-003
 
@@ -128,7 +138,7 @@ loom-cli derive [options]
 
 ---
 
-### derive-l2
+### IC-DRV-002: derive-l2
 
 **Traces to:** US-004
 
@@ -144,12 +154,11 @@ loom-cli derive-l2 [options]
 |--------|------|----------|-------------|
 | `--input-dir <path>` | string | Yes | Directory containing L1 documents |
 | `--output-dir <path>` | string | Yes | Output directory for L2 documents |
-| `--resume` | flag | - | Resume from checkpoint |
-| `--interactive` | flag | - | Interactive approval mode |
+| `--interactive`, `-i` | flag | - | Interactive approval mode |
 
 **Execution:**
 - Phases run in parallel (max 3 concurrent) where independent
-- Checkpoint saved after each phase for resume capability
+- Resume capability available via `cascade --resume`
 
 **Output:**
 - `{output-dir}/tech-specs.md`
@@ -160,7 +169,7 @@ loom-cli derive-l2 [options]
 
 ---
 
-### derive-l3
+### IC-DRV-003: derive-l3
 
 **Traces to:** US-005
 
@@ -185,10 +194,11 @@ loom-cli derive-l3 [options]
 - `{output-dir}/service-boundaries.md`
 - `{output-dir}/event-message-design.md`
 - `{output-dir}/dependency-graph.md`
+- `{output-dir}/l3-output.json` (combined JSON output)
 
 ---
 
-### validate
+### IC-VAL-001: validate
 
 **Traces to:** US-006
 
@@ -223,7 +233,7 @@ loom-cli validate [options]
 
 ---
 
-### sync-links
+### IC-SYN-001: sync-links
 
 **Traces to:** US-007
 
@@ -242,7 +252,7 @@ loom-cli sync-links [options]
 
 ---
 
-### cascade
+### IC-CAS-001: cascade
 
 **Traces to:** US-008
 
@@ -261,8 +271,8 @@ loom-cli cascade [options]
 | `--output-dir <path>` | string | Yes | Base output directory |
 | `--skip-interview` | flag | - | Skip interview, use AI-suggested defaults |
 | `--decisions <path>` | string | - | Use existing decisions file |
-| `--interactive` | flag | - | Interactive approval at each level |
-| `--resume` | flag | - | Resume from interrupted state |
+| `--interactive`, `-i` | flag | - | Interactive approval at each level |
+| `--resume`, `-r` | flag | - | Resume from interrupted state |
 | `--from <level>` | string | - | Re-derive from specific level (l1, l2, l3) |
 
 \* Either `--input-file` or `--input-dir` required
@@ -314,7 +324,7 @@ Phase status values: `pending`, `running`, `completed`, `failed`
 
 ---
 
-### help
+### IC-HLP-001: help
 
 **Traces to:** US-009
 
@@ -328,7 +338,7 @@ loom-cli -h
 
 ---
 
-### version
+### IC-VER-001: version
 
 **Traces to:** US-009
 
@@ -337,6 +347,8 @@ Displays version information.
 ```
 loom-cli version
 ```
+
+**Output:** `loom-cli vX.Y.Z` (e.g., `loom-cli v0.3.0`)
 
 ---
 

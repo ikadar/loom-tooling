@@ -1,10 +1,17 @@
+---
+title: "Loom CLI Bounded Context Map"
+generated: 2025-01-03T14:30:00Z
+status: draft
+level: L1
+---
+
 # Loom CLI Bounded Context Map
 
 ## Overview
 
 This document defines the bounded contexts for loom-cli and their relationships. It maps the domain boundaries and integration patterns between contexts.
 
-**Traceability:** Derived from [l0-domain-vocabulary.md](l0-domain-vocabulary.md) and [l0-loom-cli.md](l0-loom-cli.md).
+**Traceability:** Derived from [domain-vocabulary.md](../l0/domain-vocabulary.md) and [loom-cli.md](../l0/loom-cli.md).
 
 ---
 
@@ -274,12 +281,12 @@ If scaling requires:
 
 | Level | Document | Description |
 |-------|----------|-------------|
-| L0 | [l0-domain-vocabulary.md](l0-domain-vocabulary.md) | Domain Vocabulary |
-| L0 | [l0-loom-cli.md](l0-loom-cli.md) | User Stories |
-| L0 | [l0-nfr.md](l0-nfr.md) | Non-Functional Requirements |
-| L1 | [l1-domain-model.md](l1-domain-model.md) | Domain Model |
+| L0 | [domain-vocabulary.md](../l0/domain-vocabulary.md) | Domain Vocabulary |
+| L0 | [loom-cli.md](../l0/loom-cli.md) | User Stories |
+| L0 | [nfr.md](../l0/nfr.md) | Non-Functional Requirements |
+| L1 | [domain-model.md](domain-model.md) | Domain Model |
 | L1 | This document | Bounded Context Map |
-| L1 | [l1-business-rules.md](l1-business-rules.md) | Business Rules |
-| L1 | [l1-acceptance-criteria.md](l1-acceptance-criteria.md) | Acceptance Criteria |
-| L1 | [l1-decisions.md](l1-decisions.md) | Design Decisions |
-| L2 | [l2-cli-interface.md](l2-cli-interface.md) | CLI Interface Contract |
+| L1 | [business-rules.md](business-rules.md) | Business Rules |
+| L1 | [acceptance-criteria.md](acceptance-criteria.md) | Acceptance Criteria |
+| L0 | [decisions.md](../l0/decisions.md) | Design Decisions (interview output) |
+| L2 | [interface-contracts.md](../l2/interface-contracts.md) | CLI Interface Contract |

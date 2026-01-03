@@ -1,10 +1,17 @@
+---
+title: "Loom CLI Business Rules"
+generated: 2025-01-03T14:30:00Z
+status: draft
+level: L1
+---
+
 # Loom CLI Business Rules
 
 ## Overview
 
 This document defines the business rules that govern loom-cli behavior. These rules are invariants that must be enforced by the implementation.
 
-**Traceability:** Derived from [l0-loom-cli.md](l0-loom-cli.md) user stories.
+**Traceability:** Derived from [loom-cli.md](../l0/loom-cli.md) user stories.
 
 ---
 
@@ -310,12 +317,12 @@ level: L1
 
 | Level | Document | Description |
 |-------|----------|-------------|
-| L0 | [l0-domain-vocabulary.md](l0-domain-vocabulary.md) | Domain Vocabulary |
-| L0 | [l0-loom-cli.md](l0-loom-cli.md) | User Stories |
-| L0 | [l0-nfr.md](l0-nfr.md) | Non-Functional Requirements (source for NFR-derived rules) |
-| L1 | [l1-domain-model.md](l1-domain-model.md) | Domain Model |
-| L1 | [l1-bounded-context-map.md](l1-bounded-context-map.md) | Bounded Context Map |
+| L0 | [domain-vocabulary.md](../l0/domain-vocabulary.md) | Domain Vocabulary |
+| L0 | [loom-cli.md](../l0/loom-cli.md) | User Stories |
+| L0 | [nfr.md](../l0/nfr.md) | Non-Functional Requirements (source for NFR-derived rules) |
+| L1 | [domain-model.md](domain-model.md) | Domain Model |
+| L1 | [bounded-context-map.md](bounded-context-map.md) | Bounded Context Map |
 | L1 | This document | Business Rules |
-| L1 | [l1-acceptance-criteria.md](l1-acceptance-criteria.md) | Acceptance Criteria |
-| L1 | [l1-decisions.md](l1-decisions.md) | Design Decisions |
-| L2 | [l2-cli-interface.md](l2-cli-interface.md) | CLI Interface Contract |
+| L1 | [acceptance-criteria.md](acceptance-criteria.md) | Acceptance Criteria |
+| L0 | [decisions.md](../l0/decisions.md) | Design Decisions (interview output) |
+| L2 | [interface-contracts.md](../l2/interface-contracts.md) | CLI Interface Contract |

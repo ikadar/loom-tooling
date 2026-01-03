@@ -1,10 +1,19 @@
+---
+title: "Loom CLI Design Decisions"
+generated: 2025-01-03T14:30:00Z
+status: draft
+level: L0
+---
+
 # Loom CLI Design Decisions
 
 ## Overview
 
-This document records the design decisions made during L1 derivation that are not explicitly specified in the L0 foundational documents. These decisions fill gaps, resolve ambiguities, and make architectural choices necessary for implementation.
+This document records design decisions that fill gaps and resolve ambiguities in the foundational L0 documents (User Stories, Domain Vocabulary, NFRs). These decisions are the output of the interview phase and serve as input for L1 derivation.
 
-**Format:** Each decision is documented as if it were the result of a structured interview question, with the decision rationale and alternatives considered.
+**Format:** Each decision is documented as the result of a structured interview question, with the decision rationale and alternatives considered.
+
+**Traceability:** Decisions inform derivation of [domain-model.md](../l1/domain-model.md), [bounded-context-map.md](../l1/bounded-context-map.md), [business-rules.md](../l1/business-rules.md), and [acceptance-criteria.md](../l1/acceptance-criteria.md).
 
 ---
 
@@ -129,12 +138,13 @@ This document records the design decisions made during L1 derivation that are no
 
 **Question:** How should decision sources be categorized?
 
-**Decision:** Three sources: `user`, `ai`, `existing`
+**Decision:** Four sources: `user`, `default`, `existing`, `user_accepted_suggested`
 
 **Rationale:**
 - `user` - human explicitly provided the answer
-- `ai` - AI suggested default (used with `--skip-interview`)
+- `default` - AI suggested default (used with `--skip-interview`)
 - `existing` - loaded from previous decisions file
+- `user_accepted_suggested` - user accepted AI suggestion without modification
 - Enables audit trail and distinguishes human vs AI decisions
 
 **Alternatives considered:**
@@ -191,7 +201,7 @@ This document records the design decisions made during L1 derivation that are no
 
 **Source:** ai
 
-**Affects:** l1-acceptance-criteria.md, l2-cli-interface.md
+**Affects:** l1-acceptance-criteria.md, interface-contracts.md
 
 ---
 
@@ -214,7 +224,7 @@ This document records the design decisions made during L1 derivation that are no
 
 **Source:** ai
 
-**Affects:** l1-acceptance-criteria.md, l2-cli-interface.md
+**Affects:** l1-acceptance-criteria.md, interface-contracts.md
 
 ---
 
@@ -237,7 +247,7 @@ This document records the design decisions made during L1 derivation that are no
 
 **Source:** ai
 
-**Affects:** l1-acceptance-criteria.md, l2-cli-interface.md
+**Affects:** l1-acceptance-criteria.md, interface-contracts.md
 
 ---
 
@@ -260,7 +270,7 @@ This document records the design decisions made during L1 derivation that are no
 
 **Source:** ai
 
-**Affects:** l1-acceptance-criteria.md, l2-cli-interface.md
+**Affects:** l1-acceptance-criteria.md, interface-contracts.md
 
 ---
 
@@ -430,6 +440,333 @@ This document records the design decisions made during L1 derivation that are no
 
 ---
 
+## L1 Document ID Prefixes
+
+### DEC-019: Entity ID Prefix
+
+**Question:** What prefix should entity IDs use?
+
+**Decision:** `ENT-{CONTEXT}` format (e.g., ENT-ORDER, ENT-CUST)
+
+**Rationale:**
+- `ENT` is more explicit than single letter `E`
+- Context suffix without number allows flexible entity naming
+- Matches validation regex in implementation
+
+**Alternatives considered:**
+- `E-XXX-NNN` - rejected, single letter less readable
+- `ENTITY-XXX` - rejected, too long
+
+**Source:** ai
+
+**Affects:** l1-domain-model.md, validate.go
+
+---
+
+### DEC-020: Bounded Context ID Prefix
+
+**Question:** What prefix should bounded context IDs use?
+
+**Decision:** `BC-{CONTEXT}` format (e.g., BC-DRV, BC-INT, BC-VAL, BC-CLI)
+
+**Rationale:**
+- `BC` clearly indicates Bounded Context
+- Short context suffix (3-4 chars) keeps IDs readable
+- No number needed as contexts are few
+
+**Source:** ai
+
+**Affects:** l1-bounded-context-map.md
+
+---
+
+## L2 Document ID Prefixes
+
+### DEC-021: L2 Document ID Prefixes
+
+**Question:** What prefixes should L2 document elements use?
+
+**Decision:** The following prefixes:
+- `TS-XXX-NNN` - Tech Specs
+- `IC-XXX-NNN` - Interface Contracts
+- `OP-XXX-NNN` - Operations (within Interface Contracts)
+- `AGG-XXX-NNN` - Aggregates
+- `SEQ-XXX-NNN` - Sequences
+- `TBL-XXX-NNN` - Tables (Data Model)
+
+**Rationale:**
+- Short, meaningful prefixes
+- Consistent with L1 pattern
+- Each document type has unique prefix
+
+**Source:** ai
+
+**Affects:** l1-domain-model.md (Document Type Catalog), interface-contracts.md
+
+---
+
+## L3 Document ID Prefixes
+
+### DEC-022: L3 Document ID Prefixes
+
+**Question:** What prefixes should L3 document elements use?
+
+**Decision:** The following prefixes:
+- `TC-AC-XXX-NNN-{TYPE}{NN}` - Test Cases (TYPE: P=positive, N=negative, B=boundary, H=hallucination)
+- `EVT-XXX-NNN` - Domain Events
+- `CMD-XXX-NNN` - Commands
+- `INT-XXX-NNN` - Integration Events
+- `SVC-{CONTEXT}` - Services
+- `SKEL-XXX-NNN` - Implementation Skeletons
+- `FDT-NNN` - Feature Definition Tickets
+- `DEP-XXX-NNN` - Dependencies
+
+**Rationale:**
+- Test case ID encodes source AC and test type
+- Event/Command distinction supports CQRS patterns
+- Service IDs use context name without number
+
+**Source:** ai
+
+**Affects:** l1-domain-model.md (Document Type Catalog), validate.go
+
+---
+
+## CLI Flag Decisions
+
+### DEC-023: Analyze Command Flags
+
+**Question:** What flags should the analyze command support?
+
+**Decision:**
+- `--input-file <path>` - Single input file
+- `--input-dir <path>` - Directory of input files
+- `--decisions <path>` - Existing decisions file to filter resolved ambiguities
+
+**Rationale:**
+- Consistent with other commands (input-file/input-dir pattern)
+- Decisions flag enables incremental analysis
+
+**Source:** ai
+
+**Affects:** interface-contracts.md
+
+---
+
+### DEC-024: Interview Command Flags
+
+**Question:** What flags should the interview command support?
+
+**Decision:**
+- `--init <path>` - Initialize from analysis JSON
+- `--state <path>` - Interview state file path
+- `--answer <json>` - Single answer JSON
+- `--answers <json>` - Batch answers JSON array
+- `--grouped`, `-g` - Show all questions at once
+
+**Rationale:**
+- `--init` separates initialization from continuation
+- `--answers` (plural) enables batch mode for automation
+- `-g` short flag for common grouped mode
+
+**Source:** ai
+
+**Affects:** interface-contracts.md
+
+---
+
+### DEC-025: Derive Command Flags
+
+**Question:** What flags should the derive (L1) command support?
+
+**Decision:**
+- `--output-dir <path>` - Output directory (required)
+- `--analysis-file <path>` - Analysis JSON or interview state
+- `--decisions <path>` - Existing decisions to append
+- `--vocabulary <path>` - Domain vocabulary for accuracy
+- `--nfr <path>` - NFR file for business rules
+
+**Rationale:**
+- `--analysis-file` name indicates it accepts analysis output
+- Optional vocabulary/nfr enhance derivation quality
+
+**Source:** ai
+
+**Affects:** interface-contracts.md
+
+---
+
+### DEC-026: Cascade Re-derive Flag
+
+**Question:** How should cascade support re-derivation from a specific level?
+
+**Decision:** `--from <level>` flag with values: l1, l2, l3
+
+**Rationale:**
+- Intuitive "from this level" semantics
+- Lowercase level names match directory structure
+- Enables partial re-derivation without full restart
+
+**Source:** ai
+
+**Affects:** interface-contracts.md
+
+---
+
+### DEC-027: Short Flags
+
+**Question:** Which flags should have short versions?
+
+**Decision:**
+- `-i` for `--interactive`
+- `-g` for `--grouped`
+- `-r` for `--resume`
+
+**Rationale:**
+- Only most commonly used flags get short versions
+- Avoids short flag collision
+- Matches Unix convention
+
+**Source:** ai
+
+**Affects:** interface-contracts.md
+
+---
+
+## Validation Decisions
+
+### DEC-028: Validation Rule Level Mapping
+
+**Question:** Which validation rules apply to which levels?
+
+**Decision:**
+| Rule | Level |
+|------|-------|
+| V001-V004, V010 | ALL |
+| V006, V007 | L2+ |
+| V005, V008, V009 | L3 |
+
+**Rationale:**
+- Structural rules (V001-V004, V010) apply universally
+- Entity/Service completeness (V006-V007) requires L2 docs
+- Test coverage (V005, V008, V009) requires L3 docs
+
+**Source:** ai
+
+**Affects:** l1-business-rules.md, validate.go
+
+---
+
+## Document Format Decisions
+
+### DEC-029: Frontmatter Status Values
+
+**Question:** What status values should documents have?
+
+**Decision:** Three values: `draft`, `review`, `approved`
+
+**Rationale:**
+- `draft` - initial generated state
+- `review` - under human review
+- `approved` - ready for use
+- Simple workflow, extensible later
+
+**Source:** ai
+
+**Affects:** l1-business-rules.md (BR-DOC-001)
+
+---
+
+### DEC-030: Version String Format
+
+**Question:** What format should the version command output?
+
+**Decision:** `loom-cli vX.Y.Z` format (e.g., `loom-cli v0.3.0`)
+
+**Rationale:**
+- Includes tool name for clarity in logs
+- `v` prefix is common convention
+- Semantic versioning (X.Y.Z)
+
+**Source:** ai
+
+**Affects:** interface-contracts.md, root.go
+
+---
+
+## Interactive Mode Decisions
+
+### DEC-031: Interactive Mode Actions
+
+**Question:** What actions should interactive mode support?
+
+**Decision:** Five actions:
+- `[A]pprove` - Accept and write file
+- `[E]dit` - Open in $EDITOR
+- `[R]egenerate` - Generate again with AI
+- `[S]kip` - Skip this file
+- `[Q]uit` - Exit derivation
+
+**Rationale:**
+- Approve is default (Enter key)
+- Edit enables manual refinement
+- Regenerate retries AI generation
+- Skip allows partial derivation
+- Quit provides clean exit
+
+**Alternatives considered:**
+- Only approve/skip/abort - rejected as Edit and Regenerate are valuable
+- Numbered options - rejected, letter keys are faster
+
+**Source:** ai
+
+**Affects:** l1-acceptance-criteria.md, interactive.go
+
+---
+
+## DDD Pattern Decisions
+
+### DEC-032: Context Relationship Patterns
+
+**Question:** What DDD relationship patterns should be used?
+
+**Decision:** Four patterns:
+- **Upstream/Downstream** - Data flow direction
+- **Conformist** - Downstream adopts upstream's model
+- **ACL (Anti-Corruption Layer)** - Translate external model
+- **Shared Kernel** - Common types across contexts
+
+**Rationale:**
+- Standard DDD strategic patterns
+- Cover common integration scenarios
+- ACL specifically for Claude API integration
+
+**Source:** ai
+
+**Affects:** l1-bounded-context-map.md
+
+---
+
+### DEC-033: Shared Kernel Types
+
+**Question:** What types should be in the Shared Kernel?
+
+**Decision:**
+- `DerivationLevel` enum (L0, L1, L2, L3)
+- Document ID patterns
+- `Frontmatter` value object
+
+**Rationale:**
+- These types used across all bounded contexts
+- Centralized definition prevents inconsistency
+- Minimal shared surface area
+
+**Source:** ai
+
+**Affects:** l1-bounded-context-map.md, l1-domain-model.md
+
+---
+
 ## Summary
 
 | ID | Decision | Source |
@@ -452,11 +789,26 @@ This document records the design decisions made during L1 derivation that are no
 | DEC-016 | ID format pattern | ai |
 | DEC-017 | ID number format (3 digits, zero-padded) | ai |
 | DEC-018 | Context abbreviation length (3-4 chars) | ai |
+| DEC-019 | Entity ID prefix (ENT-XXX) | ai |
+| DEC-020 | Bounded Context ID prefix (BC-XXX) | ai |
+| DEC-021 | L2 document ID prefixes | ai |
+| DEC-022 | L3 document ID prefixes | ai |
+| DEC-023 | Analyze command flags | ai |
+| DEC-024 | Interview command flags | ai |
+| DEC-025 | Derive command flags | ai |
+| DEC-026 | Cascade re-derive flag (--from) | ai |
+| DEC-027 | Short flags (-i, -g, -r) | ai |
+| DEC-028 | Validation rule level mapping | ai |
+| DEC-029 | Frontmatter status values | ai |
+| DEC-030 | Version string format | ai |
+| DEC-031 | Interactive mode actions | ai |
+| DEC-032 | Context relationship patterns | ai |
+| DEC-033 | Shared Kernel types | ai |
 
 **Statistics:**
-- Total decisions: 18
-- Source: user: 2 (11%)
-- Source: ai: 16 (89%)
+- Total decisions: 33
+- Source: user: 2 (6%)
+- Source: ai: 31 (94%)
 
 ---
 
@@ -464,12 +816,12 @@ This document records the design decisions made during L1 derivation that are no
 
 | Level | Document | Description |
 |-------|----------|-------------|
-| L0 | [l0-domain-vocabulary.md](l0-domain-vocabulary.md) | Domain Vocabulary |
-| L0 | [l0-loom-cli.md](l0-loom-cli.md) | User Stories |
-| L0 | [l0-nfr.md](l0-nfr.md) | Non-Functional Requirements |
-| L1 | [l1-domain-model.md](l1-domain-model.md) | Domain Model |
-| L1 | [l1-bounded-context-map.md](l1-bounded-context-map.md) | Bounded Context Map |
-| L1 | [l1-business-rules.md](l1-business-rules.md) | Business Rules |
-| L1 | [l1-acceptance-criteria.md](l1-acceptance-criteria.md) | Acceptance Criteria |
-| L1 | This document | Design Decisions |
-| L2 | [l2-cli-interface.md](l2-cli-interface.md) | CLI Interface Contract |
+| L0 | [domain-vocabulary.md](domain-vocabulary.md) | Domain Vocabulary |
+| L0 | [loom-cli.md](loom-cli.md) | User Stories |
+| L0 | [nfr.md](nfr.md) | Non-Functional Requirements |
+| L0 | This document | Design Decisions (interview output) |
+| L1 | [domain-model.md](../l1/domain-model.md) | Domain Model |
+| L1 | [bounded-context-map.md](../l1/bounded-context-map.md) | Bounded Context Map |
+| L1 | [business-rules.md](../l1/business-rules.md) | Business Rules |
+| L1 | [acceptance-criteria.md](../l1/acceptance-criteria.md) | Acceptance Criteria |
+| L2 | [interface-contracts.md](../l2/interface-contracts.md) | CLI Interface Contract |

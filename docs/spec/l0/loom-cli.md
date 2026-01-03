@@ -1,3 +1,10 @@
+---
+title: "Loom CLI User Stories"
+generated: 2025-01-03T14:30:00Z
+status: draft
+level: L0
+---
+
 # Loom CLI - AI-Assisted Documentation Derivation Tool
 
 ## Overview
@@ -143,12 +150,12 @@ The CLI should:
 
 | Level | Document | Description |
 |-------|----------|-------------|
-| L0 | [l0-domain-vocabulary.md](l0-domain-vocabulary.md) | Domain Vocabulary (concepts, definitions) |
+| L0 | [domain-vocabulary.md](domain-vocabulary.md) | Domain Vocabulary (concepts, definitions) |
 | L0 | This document | User Stories |
-| L0 | [l0-nfr.md](l0-nfr.md) | Non-Functional Requirements |
-| L1 | [l1-domain-model.md](l1-domain-model.md) | Domain Model (entities, relationships) |
-| L1 | [l1-bounded-context-map.md](l1-bounded-context-map.md) | Bounded Context Map |
-| L1 | [l1-business-rules.md](l1-business-rules.md) | Business Rules (invariants, constraints) |
-| L1 | [l1-acceptance-criteria.md](l1-acceptance-criteria.md) | Acceptance Criteria (Given/When/Then) |
-| L1 | [l1-decisions.md](l1-decisions.md) | Design Decisions |
-| L2 | [l2-cli-interface.md](l2-cli-interface.md) | CLI Interface Contract (commands, options, exit codes) |
+| L0 | [nfr.md](nfr.md) | Non-Functional Requirements |
+| L1 | [domain-model.md](../l1/domain-model.md) | Domain Model (entities, relationships) |
+| L1 | [bounded-context-map.md](../l1/bounded-context-map.md) | Bounded Context Map |
+| L1 | [business-rules.md](../l1/business-rules.md) | Business Rules (invariants, constraints) |
+| L1 | [acceptance-criteria.md](../l1/acceptance-criteria.md) | Acceptance Criteria (Given/When/Then) |
+| L0 | [decisions.md](decisions.md) | Design Decisions (interview output) |
+| L2 | [interface-contracts.md](../l2/interface-contracts.md) | CLI Interface Contract (commands, options, exit codes) |

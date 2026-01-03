@@ -261,7 +261,6 @@ func findL1Files(dir string) ([]string, error) {
 
 func findL2Files(dir string) ([]string, error) {
 	patterns := []string{
-		"test-cases.md",
 		"tech-specs.md",
 		"interface-contracts.md",
 		"aggregate-design.md",
@@ -273,6 +272,7 @@ func findL2Files(dir string) ([]string, error) {
 
 func findL3Files(dir string) ([]string, error) {
 	patterns := []string{
+		"test-cases.md",
 		"openapi.json",
 		"implementation-skeletons.md",
 		"feature-tickets.md",

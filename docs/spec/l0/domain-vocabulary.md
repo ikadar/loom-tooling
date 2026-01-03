@@ -1,3 +1,10 @@
+---
+title: "Loom CLI Domain Vocabulary"
+generated: 2025-01-03T14:30:00Z
+status: draft
+level: L0
+---
+
 # Loom CLI Domain Vocabulary
 
 ## Overview
@@ -236,11 +243,11 @@ This document defines the core domain concepts, terms, and their relationships f
 | Level | Document | Description |
 |-------|----------|-------------|
 | L0 | This document | Domain Vocabulary |
-| L0 | [l0-loom-cli.md](l0-loom-cli.md) | User Stories |
-| L0 | [l0-nfr.md](l0-nfr.md) | Non-Functional Requirements |
-| L1 | [l1-domain-model.md](l1-domain-model.md) | Domain Model (derived from vocabulary) |
-| L1 | [l1-bounded-context-map.md](l1-bounded-context-map.md) | Bounded Context Map |
-| L1 | [l1-business-rules.md](l1-business-rules.md) | Business Rules |
-| L1 | [l1-acceptance-criteria.md](l1-acceptance-criteria.md) | Acceptance Criteria |
-| L1 | [l1-decisions.md](l1-decisions.md) | Design Decisions |
-| L2 | [l2-cli-interface.md](l2-cli-interface.md) | CLI Interface Contract |
+| L0 | [loom-cli.md](loom-cli.md) | User Stories |
+| L0 | [nfr.md](nfr.md) | Non-Functional Requirements |
+| L1 | [domain-model.md](../l1/domain-model.md) | Domain Model (derived from vocabulary) |
+| L1 | [bounded-context-map.md](../l1/bounded-context-map.md) | Bounded Context Map |
+| L1 | [business-rules.md](../l1/business-rules.md) | Business Rules |
+| L1 | [acceptance-criteria.md](../l1/acceptance-criteria.md) | Acceptance Criteria |
+| L0 | [decisions.md](decisions.md) | Design Decisions (interview output) |
+| L2 | [interface-contracts.md](../l2/interface-contracts.md) | CLI Interface Contract |
