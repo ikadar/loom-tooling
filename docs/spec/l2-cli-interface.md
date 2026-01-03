@@ -17,6 +17,7 @@ This document defines the complete CLI interface specification for loom-cli. It 
 | L1 | [l1-bounded-context-map.md](l1-bounded-context-map.md) | Bounded Context Map |
 | L1 | [l1-business-rules.md](l1-business-rules.md) | Business Rules |
 | L1 | [l1-acceptance-criteria.md](l1-acceptance-criteria.md) | Acceptance Criteria (source for this document) |
+| L1 | [l1-decisions.md](l1-decisions.md) | Design Decisions |
 | L2 | This document | CLI Interface Contract |
 
 ## Global Behavior

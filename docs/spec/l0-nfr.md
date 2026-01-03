@@ -314,4 +314,5 @@ This document defines the non-functional requirements (NFRs) for loom-cli. These
 | L1 | [l1-bounded-context-map.md](l1-bounded-context-map.md) | Bounded Context Map |
 | L1 | [l1-business-rules.md](l1-business-rules.md) | Business Rules (includes NFR-derived rules) |
 | L1 | [l1-acceptance-criteria.md](l1-acceptance-criteria.md) | Acceptance Criteria |
+| L1 | [l1-decisions.md](l1-decisions.md) | Design Decisions |
 | L2 | [l2-cli-interface.md](l2-cli-interface.md) | CLI Interface Contract |
