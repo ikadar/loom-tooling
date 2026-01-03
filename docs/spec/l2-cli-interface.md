@@ -4,7 +4,17 @@
 
 This document defines the complete CLI interface specification for loom-cli. It serves as the L2 (Tactical Design) interface contract, derived from L0 user stories.
 
-**Traceability:** All commands and options trace back to user stories in `l0-loom-cli.md`.
+**Traceability:** Commands trace to user stories (L0) and implement acceptance criteria (L1).
+
+## Related Documents
+
+| Level | Document | Description |
+|-------|----------|-------------|
+| L0 | [l0-loom-cli.md](l0-loom-cli.md) | User Stories |
+| L1 | [l1-domain-model.md](l1-domain-model.md) | Domain Model |
+| L1 | [l1-business-rules.md](l1-business-rules.md) | Business Rules |
+| L1 | [l1-acceptance-criteria.md](l1-acceptance-criteria.md) | Acceptance Criteria |
+| L2 | This document | CLI Interface Contract |
 
 ## Global Behavior
 
