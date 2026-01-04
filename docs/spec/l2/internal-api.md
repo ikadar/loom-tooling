@@ -491,6 +491,152 @@ func FormatDataModel(tables []DataTable, enums []DataEnum) string
 func FormatFrontmatter(title string, level string) string
 ```
 
+### L4 Architecture Formatting
+
+```go
+type L4Architecture struct {
+    Pattern            string           `json:"pattern"` // clean, hexagonal, layered
+    Language           string           `json:"language"`
+    Rationale          string           `json:"rationale"`
+    Layers             []L4Layer        `json:"layers"`
+    DependencyInjection L4DIConfig      `json:"dependency_injection"`
+    ErrorHandling      L4ErrorConfig    `json:"error_handling"`
+}
+
+type L4Layer struct {
+    Name        string   `json:"name"`
+    Purpose     string   `json:"purpose"`
+    AllowedDeps []string `json:"allowed_deps"`
+    Packages    []string `json:"packages"`
+}
+
+type L4DIConfig struct {
+    Pattern               string `json:"pattern"` // constructor, framework
+    InterfacesLocation    string `json:"interfaces_location"`
+    ImplementationsLocation string `json:"implementations_location"`
+    Example               string `json:"example"`
+}
+
+type L4ErrorConfig struct {
+    Pattern     string `json:"pattern"`
+    ErrorType   string `json:"error_type"`
+    Propagation string `json:"propagation"`
+    CodePrefix  string `json:"code_prefix"`
+}
+
+// FormatL4Architecture formats architecture design as markdown
+func FormatL4Architecture(arch L4Architecture, decisions []L4Decision, aggregateMapping []L4AggregateMapping) string
+```
+
+### L4 Patterns Formatting
+
+```go
+type L4Pattern struct {
+    ID                  string   `json:"id"`
+    Name                string   `json:"name"`
+    Problem             string   `json:"problem"`
+    SourceRefs          []string `json:"source_refs"`
+    AppliesTo           []string `json:"applies_to"`
+    Interface           L4Code   `json:"interface"`
+    ImplementationNotes []string `json:"implementation_notes"`
+    ExampleUsage        string   `json:"example_usage"`
+}
+
+type L4Code struct {
+    Name     string `json:"name"`
+    Language string `json:"language"`
+    Code     string `json:"code"`
+}
+
+// FormatL4Patterns formats patterns design as markdown
+func FormatL4Patterns(patterns []L4Pattern, languagePatterns []L4LanguagePattern) string
+```
+
+### L4 Coding Standards Formatting
+
+```go
+type L4CodingStandard struct {
+    ID           string   `json:"id"`
+    Category     string   `json:"category"` // naming, error_handling, testing, documentation
+    Title        string   `json:"title"`
+    Rule         string   `json:"rule"`
+    GoodExamples []string `json:"good_examples"`
+    BadExamples  []string `json:"bad_examples"`
+    Rationale    string   `json:"rationale"`
+}
+
+type L4ErrorHandlingConfig struct {
+    ErrorType      L4Code            `json:"error_type"`
+    ErrorCodes     L4ErrorCodeConfig `json:"error_codes"`
+    WrappingPattern string           `json:"wrapping_pattern"`
+}
+
+// FormatL4CodingStandards formats coding standards as markdown
+func FormatL4CodingStandards(standards []L4CodingStandard, errorConfig L4ErrorHandlingConfig, tooling L4Tooling) string
+```
+
+### L4 Project Structure Formatting
+
+```go
+type L4ProjectStructure struct {
+    Language       string              `json:"language"`
+    RootStructure  L4RootStructure     `json:"root_structure"`
+    PackageStructure []L4PackageStructure `json:"package_structure"`
+    ServiceMapping []L4ServiceMapping  `json:"service_mapping"`
+    TestStructure  L4TestStructure     `json:"test_structure"`
+}
+
+type L4RootStructure struct {
+    Directories []L4Directory `json:"directories"`
+    Files       []L4File      `json:"files"`
+}
+
+type L4Directory struct {
+    Path           string   `json:"path"`
+    Purpose        string   `json:"purpose"`
+    Contains       []string `json:"contains"`
+    Subdirectories []string `json:"subdirectories,omitempty"`
+}
+
+// FormatL4ProjectStructure formats project structure as markdown
+func FormatL4ProjectStructure(structure L4ProjectStructure) string
+```
+
+### L4 Testing Strategy Formatting
+
+```go
+type L4TestingStrategy struct {
+    Language       string                `json:"language"`
+    Methodology    string                `json:"methodology"` // tdd, code-first
+    TestFramework  L4TestFramework       `json:"test_framework"`
+    TestPyramid    L4TestPyramid         `json:"test_pyramid"`
+    TestCaseMapping []L4TestCaseMapping  `json:"test_case_mapping"`
+    MockingStrategy L4MockingStrategy    `json:"mocking_strategy"`
+    Fixtures       L4Fixtures            `json:"fixtures"`
+    TDDWorkflow    *L4TDDWorkflow        `json:"tdd_workflow,omitempty"`
+    Coverage       L4Coverage            `json:"coverage"`
+}
+
+type L4TestCaseMapping struct {
+    L3TestCase  string `json:"l3_test_case"`
+    ACRef       string `json:"ac_ref"`
+    Category    string `json:"category"`
+    TestType    string `json:"test_type"` // unit, integration, e2e
+    File        string `json:"file"`
+    Function    string `json:"function"`
+    Description string `json:"description"`
+}
+
+type L4TDDWorkflow struct {
+    Enabled       bool     `json:"enabled"`
+    Steps         []string `json:"steps"`
+    CIEnforcement L4CIConfig `json:"ci_enforcement"`
+}
+
+// FormatL4TestingStrategy formats testing strategy as markdown
+func FormatL4TestingStrategy(strategy L4TestingStrategy) string
+```
+
 ---
 
 ## internal/workflow
@@ -551,6 +697,13 @@ var (
     DeriveServiceBoundaries  string  // derive-service-boundaries.md
     DeriveEventDesign        string  // derive-event-design.md
     DeriveDependencyGraph    string  // derive-dependency-graph.md
+
+    // L4 prompts
+    DeriveL4Architecture     string  // derive-l4-architecture.md
+    DeriveL4Patterns         string  // derive-l4-patterns.md
+    DeriveL4CodingStandards  string  // derive-l4-coding-standards.md
+    DeriveL4ProjectStructure string  // derive-l4-project-structure.md
+    DeriveL4TestingStrategy  string  // derive-l4-testing-strategy.md
 )
 ```
 

@@ -6,89 +6,48 @@ Ez a mappa a loom-cli teljes specifikációját tartalmazza L0→L1→L2→L3 hi
 
 Te egy Go fejlesztő vagy, aki a specifikáció alapján implementálja a loom-cli-t.
 
-**FONTOS:**
-- Mielőtt bármit implementálsz, olvasd el az ÖSSZES spec dokumentumot!
-- Készíts tervet és kérd a user jóváhagyását!
-- Minden implementált kód TRACE-ELJEN a specifikációhoz!
+**KRITIKUS SZABÁLYOK:**
+1. Fázisonként haladj - NE ugorj előre!
+2. Minden fázishoz van részletes prompt az `implementation/` mappában
+3. Minden fázis végén ellenőrizd a checklistet
+4. Minden kód TRACE-ELJEN a specifikációhoz!
 
 ---
 
-## Implementációs Roadmap
+## Implementációs Fázisok
 
-### Fázis 1: Spec Megértése (NE UGORJ ÁT!)
+**Master Checklist:** `implementation/checklist.md`
 
-**Olvasd el az ÖSSZES dokumentumot:**
+| Fázis | Prompt | Mit implementál |
+|-------|--------|-----------------|
+| 1 | `implementation/phase-1-core.md` | main.go, cmd/root.go, domain/types.go |
+| 2 | `implementation/phase-2-claude.md` | claude/client.go, claude/retry.go |
+| 3 | `implementation/phase-3-commands.md` | 10 cmd/*.go fájl |
+| 4 | `implementation/phase-4-formatter.md` | 9 formatter fájl |
+| 5 | `implementation/phase-5-generator.md` | generator/testcases.go, parallel.go |
+| 6 | `implementation/phase-6-workflow.md` | workflow, config, checkpoint, interview |
+| 7 | `implementation/phase-7-prompts.md` | 21 prompt fájl |
 
-```
-L0 (Requirements):
-□ l0/loom-cli.md              # User stories - MIT csinál a CLI
-□ l0/nfr.md                   # Non-functional requirements
-□ l0/domain-vocabulary.md     # Domain fogalmak
-□ l0/decisions.md             # MIÉRT döntések (DEC-001 - DEC-031)
+### Hogyan használd
 
-L1 (Strategic Design):
-□ l1/domain-model.md          # Entitások, kapcsolatok
-□ l1/acceptance-criteria.md   # Elfogadási kritériumok
-□ l1/business-rules.md        # Üzleti szabályok
-□ l1/bounded-context-map.md   # Kontextus határok
-□ l1/decisions.md             # L1→L2 döntések (DEC-L1-001 - DEC-L1-017)
+1. **Olvasd el** az adott fázis promptját
+2. **Implementáld** az ott felsorolt fájlokat
+3. **Ellenőrizd** a Definition of Done checklistet
+4. **Futtasd** `go build` - HIBA NÉLKÜL kell fusson
+5. **Jelöld meg** a checklist.md-ben
+6. **Lépj tovább** a következő fázisra
 
-L2 (Tactical Design):
-□ l2/interface-contracts.md   # CLI parancsok, opciók
-□ l2/package-structure.md     # Go package struktúra
-□ l2/internal-api.md          # Internal Go APIs
-□ l2/aggregate-design.md      # Core Go structs
-□ l2/tech-specs.md            # Algoritmusok, implementáció
-□ l2/sequence-design.md       # Végrehajtási flow-k
-□ l2/initial-data-model.md    # JSON sémák
-□ l2/decisions.md             # L2→L3 döntések
-□ l2/prompts/                 # 21 prompt file
+### Spec Olvasási Sorrend (fázisonként!)
 
-L3 (Operational Design):
-□ l3/test-cases.md            # Teszt esetek referencia
-□ l3/implementation-skeletons.md  # Kód vázlatok
-```
-
-### Fázis 1b: Terv Készítése
-
-1. Készíts implementációs tervet a spec alapján
-2. Minden komponenshez írd meg melyik spec dokumentumból származik
-3. **Kérd a user jóváhagyását a tervhez!**
-
-### Fázis 2: Core Infrastructure
-
-| Fájl | Spec Forrás |
-|------|-------------|
-| `main.go` + `go.mod` | l2/package-structure.md PKG-001 |
-| `cmd/root.go` | l2/interface-contracts.md, l2/tech-specs.md TS-ARCH-001 |
-| `internal/domain/types.go` | l2/internal-api.md, l2/aggregate-design.md |
-| `internal/claude/client.go` | l2/internal-api.md, l2/tech-specs.md TS-ARCH-002 |
-| `internal/claude/retry.go` | l2/tech-specs.md TS-RETRY-001/002, DEC-L1-015 |
-| `prompts/prompts.go` | l2/internal-api.md PKG-011 |
-| `prompts/*.md` | l2/prompts/ (mind a 21 fájl) |
-
-### Fázis 3: Parancsok
-
-| Fájl | Spec Forrás |
-|------|-------------|
-| `cmd/analyze.go` | IC-ANL-001, TS-ARCH-001a, SEQ-CAS-001 |
-| `cmd/interview.go` | IC-INT-001, TS-ARCH-001c, SEQ-INT-001/002 |
-| `cmd/derive_new.go` | IC-DRV-001, TS-ARCH-001b |
-| `cmd/derive_l2.go` | IC-DRV-002, SEQ-DRV-001 |
-| `cmd/derive_l3.go` | IC-DRV-003 |
-| `cmd/validate.go` | IC-VAL-001, SEQ-VAL-001, BR-VAL-001/002/003 |
-| `cmd/sync_links.go` | IC-SYN-001, SEQ-SYN-001 |
-| `cmd/cascade.go` | IC-CAS-001, SEQ-CAS-001/002, AGG-CAS-001 |
-| `cmd/interactive.go` | TS-ARCH-004, DEC-L1-016/017 |
-
-### Fázis 4: Tesztelés
+Minden fázis promptja megmondja mely spec dokumentumokat kell előtte elolvasni.
+A legfontosabbak:
 
 ```
-□ go build -o loom-cli .
-□ Teszt: cascade --skip-interview (benchmark data)
-□ Teszt: validate --level ALL
-□ Teszt: interactive mode (-i flag)
-□ Összehasonlítás: referencia output vs generált output
+l2/interface-contracts.md     # CLI parancsok, opciók, exit codes
+l2/package-structure.md       # Go package struktúra
+l2/internal-api.md            # Internal Go APIs
+l2/tech-specs.md              # Implementation algorithms
+l2/prompt-catalog.md          # Prompt struktúra szabvány
 ```
 
 ---
@@ -117,20 +76,6 @@ func runAnalyze() error {
 1. ÁLLJ MEG
 2. Jelezd a usernek melyik dokumentumok mondanak ellent
 3. Várd meg a tisztázást
-
----
-
-## Spec Olvasási Sorrend
-
-```
-1. l2/interface-contracts.md     # CLI parancsok, opciók, exit codes
-2. l2/package-structure.md       # Go package struktúra
-3. l2/internal-api.md            # Internal Go APIs
-4. l2/aggregate-design.md        # Core Go structs
-5. l2/tech-specs.md              # Implementation algorithms
-6. l2/sequence-design.md         # Execution flows
-7. l2/prompts/                   # 21 prompt file (go:embed)
-```
 
 ---
 

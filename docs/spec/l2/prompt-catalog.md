@@ -73,6 +73,13 @@ var (
     DeriveServiceBoundaries string // derive-service-boundaries.md
     DeriveEventDesign     string // derive-event-design.md
     DeriveDependencyGraph string // derive-dependency-graph.md
+
+    // L4 Derivation prompts
+    DeriveL4Architecture     string // derive-l4-architecture.md
+    DeriveL4Patterns         string // derive-l4-patterns.md
+    DeriveL4CodingStandards  string // derive-l4-coding-standards.md
+    DeriveL4ProjectStructure string // derive-l4-project-structure.md
+    DeriveL4TestingStrategy  string // derive-l4-testing-strategy.md
 )
 ```
 

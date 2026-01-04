@@ -198,6 +198,77 @@ loom-cli derive-l3 [options]
 
 ---
 
+### IC-DRV-004: derive-l4
+
+**Traces to:** US-010 (new)
+
+Derives L4 (Implementation Design) documents from L3 and project configuration.
+
+```
+loom-cli derive-l4 [options]
+```
+
+**Options:**
+
+| Option | Type | Required | Description |
+|--------|------|----------|-------------|
+| `--input-dir <path>` | string | Yes | Directory containing L2 and L3 documents |
+| `--output-dir <path>` | string | Yes | Output directory for L4 documents |
+| `--config <path>` | string | - | Path to loom.config.yaml (default: ./loom.config.yaml) |
+| `--language <lang>` | string | - | Override language from config (go, typescript, python) |
+
+**Output:**
+- `{output-dir}/architecture.md` - Layers, boundaries, DI patterns
+- `{output-dir}/patterns.md` - Design patterns per component
+- `{output-dir}/coding-standards.md` - Naming, error handling, docs
+- `{output-dir}/project-structure.md` - Directory layout, file naming
+- `{output-dir}/testing-strategy.md` - Test pyramid, mocking, fixtures
+
+**Traceability:**
+- architecture.md traces to l2/aggregate-design.md, l2/sequence-design.md
+- patterns.md traces to l2/tech-specs.md, l3/implementation-skeletons.md
+- project-structure.md traces to l3/service-boundaries.md
+- testing-strategy.md traces to l3/test-cases.md
+
+---
+
+### IC-GEN-001: generate
+
+**Traces to:** US-011 (new)
+
+Generates implementation code from L4 specifications.
+
+```
+loom-cli generate [options]
+```
+
+**Options:**
+
+| Option | Type | Required | Description |
+|--------|------|----------|-------------|
+| `--input-dir <path>` | string | Yes | Directory containing L1-L4 documents |
+| `--output-dir <path>` | string | Yes | Output directory for generated code |
+| `--config <path>` | string | - | Path to loom.config.yaml |
+| `--dry-run` | flag | - | Show what would be generated without writing |
+| `--component <name>` | string | - | Generate specific component only |
+
+**Output:**
+- Generated source code following L4 project-structure.md
+- Generated test files from L3 test-cases.md and L4 testing-strategy.md
+- Traceability comments linking to spec elements
+
+**Pre-generation Validation:**
+- Verifies L4 completeness
+- Checks all source references
+- Validates config
+
+**Post-generation Validation:**
+- Runs generated tests
+- Verifies coverage thresholds
+- Runs linter
+
+---
+
 ### IC-VAL-001: validate
 
 **Traces to:** US-006
@@ -300,6 +371,13 @@ loom-cli cascade [options]
 │   ├── service-boundaries.md
 │   ├── event-message-design.md
 │   └── dependency-graph.md
+├── l4/
+│   ├── architecture.md
+│   ├── patterns.md
+│   ├── coding-standards.md
+│   ├── project-structure.md
+│   └── testing-strategy.md
+├── loom.config.yaml (if not exists)
 └── .cascade-state.json
 ```
 
@@ -315,7 +393,8 @@ Tracks progress for resume capability:
     "interview": { "status": "completed", "timestamp": "..." },
     "derive-l1": { "status": "completed", "timestamp": "..." },
     "derive-l2": { "status": "completed", "timestamp": "..." },
-    "derive-l3": { "status": "completed", "timestamp": "..." }
+    "derive-l3": { "status": "completed", "timestamp": "..." },
+    "derive-l4": { "status": "completed", "timestamp": "..." }
   }
 }
 ```

@@ -406,6 +406,91 @@ type ValidationSummary struct {
 
 ---
 
+### AGG-L4-001: L4 Derivation Aggregate
+
+**Aggregate Root:** L4DerivationState
+
+**Purpose:** Tracks the state and outputs of L4 (Implementation Design) derivation.
+
+**File:** `cmd/derive_l4.go`, `internal/domain/types.go`
+
+```go
+// L4DerivationState is the aggregate root for L4 derivation
+type L4DerivationState struct {
+    Language     string           `json:"language"`     // go, typescript, python
+    Methodology  string           `json:"methodology"`  // tdd, code-first
+    Config       L4Config         `json:"config"`
+    Outputs      L4Outputs        `json:"outputs"`
+    SourceRefs   L4SourceRefs     `json:"source_refs"`
+    Timestamp    time.Time        `json:"timestamp"`
+}
+
+// L4Config from loom.config.yaml
+type L4Config struct {
+    Language       string           `yaml:"language"`
+    Framework      string           `yaml:"framework"`
+    Methodology    string           `yaml:"methodology"`
+    Architecture   L4ArchConfig     `yaml:"architecture"`
+    Testing        L4TestConfig     `yaml:"testing"`
+    LanguageConfig map[string]any   `yaml:"-"` // go, typescript, python specific
+}
+
+type L4ArchConfig struct {
+    Pattern string   `yaml:"pattern"` // clean, hexagonal, layered
+    Layers  []string `yaml:"layers"`
+}
+
+type L4TestConfig struct {
+    CoverageMinimum int  `yaml:"minimum"`
+    NegativeRatio   int  `yaml:"negative_ratio"`
+    Hallucination   bool `yaml:"hallucination_tests"`
+}
+
+// L4Outputs tracks which files were generated
+type L4Outputs struct {
+    Architecture    *L4FileOutput `json:"architecture,omitempty"`
+    Patterns        *L4FileOutput `json:"patterns,omitempty"`
+    CodingStandards *L4FileOutput `json:"coding_standards,omitempty"`
+    ProjectStructure *L4FileOutput `json:"project_structure,omitempty"`
+    TestingStrategy *L4FileOutput `json:"testing_strategy,omitempty"`
+}
+
+type L4FileOutput struct {
+    File      string    `json:"file"`
+    Generated time.Time `json:"generated"`
+    ItemCount int       `json:"item_count"`
+}
+
+// L4SourceRefs tracks what L2/L3 documents were used as input
+type L4SourceRefs struct {
+    L2Aggregates  []string `json:"l2_aggregates"`
+    L2Sequences   []string `json:"l2_sequences"`
+    L2TechSpecs   []string `json:"l2_tech_specs"`
+    L3TestCases   []string `json:"l3_test_cases"`
+    L3Services    []string `json:"l3_services"`
+    L3Skeletons   []string `json:"l3_skeletons"`
+}
+```
+
+**Invariants:**
+- Language must be one of: go, typescript, python
+- Methodology must be one of: tdd, code-first
+- Architecture pattern must be one of: clean, hexagonal, layered
+- All L4 outputs must trace back to L2/L3 source documents
+
+**Lifecycle:**
+1. Created by derive-l4 command
+2. Config loaded from loom.config.yaml
+3. L2/L3 documents read as input
+4. 5 L4 documents generated
+5. State persisted to `.l4-state.json`
+
+**Related Entity:** E-L4-001 (L4DerivationState)
+
+**Related Commands:** IC-DRV-004, IC-GEN-001
+
+---
+
 ## Value Objects
 
 ### VO-001: CascadeConfig
@@ -486,7 +571,10 @@ const (
 │       │                                             │    │
 │       ├── PhaseState["derive-l1"]                  │    │
 │       ├── PhaseState["derive-l2"]                  │    │
-│       └── PhaseState["derive-l3"]                  │    │
+│       ├── PhaseState["derive-l3"]                  │    │
+│       └── PhaseState["derive-l4"]                  │    │
+│                   │                                 │    │
+│                   └──> L4DerivationState           │    │
 │                                                     │    │
 │  ValidationResult ◄─────────────────────────────────┘    │
 │       │                                                  │
@@ -506,6 +594,7 @@ const (
 | CascadeState | JSON file | `.cascade-state.json` |
 | InterviewState | JSON file | `.interview-state.json` |
 | AnalysisResult | JSON file | `.analysis.json` |
+| L4DerivationState | JSON file | `.l4-state.json` |
 | ValidationResult | stdout (JSON or text) | - |
 
 **File Location:** `{output-dir}/` for cascade, current directory otherwise.

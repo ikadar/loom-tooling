@@ -35,11 +35,12 @@ sequenceDiagram
     participant D1 as Derive L1
     participant D2 as Derive L2
     participant D3 as Derive L3
+    participant D4 as Derive L4
     participant API as Claude API
     participant FS as File System
 
     U->>C: loom-cli cascade --input-file story.md --output-dir ./specs
-    C->>FS: Create l1/, l2/, l3/ directories
+    C->>FS: Create l1/, l2/, l3/, l4/ directories
     C->>C: Load or create CascadeState
 
     rect rgb(200, 220, 240)
@@ -98,6 +99,21 @@ sequenceDiagram
         API-->>D3: L3 content (collected)
         D3->>FS: Write l3/*.md files
         D3-->>C: Phase complete
+    end
+
+    rect rgb(200, 240, 220)
+        Note over C,API: Phase 6: Derive L4
+        C->>D4: runCascadeDeriveL4()
+        D4->>FS: Load loom.config.yaml
+        D4->>FS: Read l2/*.md and l3/*.md files
+        D4->>API: Architecture prompt
+        D4->>API: Patterns prompt
+        D4->>API: Coding standards prompt
+        D4->>API: Project structure prompt
+        D4->>API: Testing strategy prompt
+        API-->>D4: L4 content (collected)
+        D4->>FS: Write l4/*.md files
+        D4-->>C: Phase complete
     end
 
     C->>FS: Update .cascade-state.json (completed)
@@ -390,6 +406,159 @@ sequenceDiagram
     end
 
     S-->>U: Exit 0
+```
+
+---
+
+## SEQ-L4-001: L4 Derivation
+
+**Traces to:** IC-DRV-004, US-010
+
+**Actors:**
+- Derive L4 Command
+- Claude API
+- File System
+- Config Loader
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant D as Derive L4
+    participant CFG as Config
+    participant API as Claude API
+    participant FS as File System
+
+    U->>D: loom-cli derive-l4 --input-dir ./specs --output-dir ./specs/l4
+    D->>CFG: Load loom.config.yaml
+    CFG-->>D: Config (language, methodology, etc.)
+    D->>FS: Read L2/*.md and L3/*.md files
+
+    rect rgb(200, 220, 240)
+        Note over D,API: Phase 1: Architecture
+        D->>D: Build context (aggregates, sequences, config)
+        D->>API: derive-l4-architecture prompt
+        API-->>D: architecture.md JSON
+        D->>D: Format to markdown
+        D->>FS: Write l4/architecture.md
+    end
+
+    rect rgb(220, 240, 200)
+        Note over D,API: Phase 2: Patterns
+        D->>D: Build context (tech-specs, skeletons, architecture)
+        D->>API: derive-l4-patterns prompt
+        API-->>D: patterns.md JSON
+        D->>D: Format to markdown
+        D->>FS: Write l4/patterns.md
+    end
+
+    rect rgb(240, 220, 200)
+        Note over D,API: Phase 3: Coding Standards
+        D->>D: Build context (config, language idioms)
+        D->>API: derive-l4-coding-standards prompt
+        API-->>D: coding-standards.md JSON
+        D->>D: Format to markdown
+        D->>FS: Write l4/coding-standards.md
+    end
+
+    rect rgb(240, 200, 220)
+        Note over D,API: Phase 4: Project Structure
+        D->>D: Build context (service-boundaries, architecture)
+        D->>API: derive-l4-project-structure prompt
+        API-->>D: project-structure.md JSON
+        D->>D: Format to markdown
+        D->>FS: Write l4/project-structure.md
+    end
+
+    rect rgb(220, 200, 240)
+        Note over D,API: Phase 5: Testing Strategy
+        D->>D: Build context (test-cases, config.methodology)
+        D->>API: derive-l4-testing-strategy prompt
+        API-->>D: testing-strategy.md JSON
+        D->>D: Format to markdown
+        D->>FS: Write l4/testing-strategy.md
+    end
+
+    D-->>U: Exit 0, print summary
+```
+
+---
+
+## SEQ-GEN-001: Code Generation
+
+**Traces to:** IC-GEN-001, US-011
+
+**Actors:**
+- Generate Command
+- Claude API
+- File System
+- Validator
+- Test Runner
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant G as Generate
+    participant V as Validator
+    participant API as Claude API
+    participant FS as File System
+    participant T as TestRunner
+
+    U->>G: loom-cli generate --input-dir ./specs --output-dir ./src
+
+    rect rgb(200, 220, 240)
+        Note over G,V: Phase 1: Pre-generation Validation
+        G->>V: Validate L4 completeness
+        V->>FS: Check all L4 files exist
+        V->>V: Check source references
+        V-->>G: Validation result
+        alt Validation failed
+            G-->>U: Exit 1, print errors
+        end
+    end
+
+    rect rgb(220, 240, 200)
+        Note over G,API: Phase 2: Code Generation
+        G->>FS: Read L4/project-structure.md
+        G->>FS: Create directory structure
+
+        loop For each component
+            G->>FS: Read L4/*.md context
+            G->>API: Generate component code
+            API-->>G: Code with traceability comments
+            G->>FS: Write source file
+        end
+    end
+
+    rect rgb(240, 220, 200)
+        Note over G,API: Phase 3: Test Generation
+        G->>FS: Read L3/test-cases.md
+        G->>FS: Read L4/testing-strategy.md
+
+        loop For each test case mapping
+            G->>API: Generate test code
+            API-->>G: Test code
+            G->>FS: Write test file
+        end
+    end
+
+    rect rgb(240, 200, 220)
+        Note over G,T: Phase 4: Post-generation Validation
+        G->>T: Run generated tests
+        T-->>G: Test results
+
+        alt Tests failed
+            G-->>U: Exit 1, print failures
+        else Tests passed
+            G->>T: Check coverage
+            T-->>G: Coverage report
+
+            alt Coverage below threshold
+                G-->>U: Exit 1, coverage warning
+            end
+        end
+    end
+
+    G-->>U: Exit 0, print summary
 ```
 
 ---
