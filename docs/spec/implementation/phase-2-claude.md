@@ -147,6 +147,45 @@ Attempt 3: 8s (capped at 30s)
 
 ---
 
+## Pattern Követelmények
+
+**ADAPTER PATTERN / ACL (DP-ADP-001):**
+
+A `internal/claude/` package egy **Anti-Corruption Layer (ACL)** a külső Claude CLI-hez:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Domain (internal/domain/)                                  │
+│    - Nem tud a Claude CLI-ről                               │
+│    - Csak interface-eket használ                            │
+└──────────────────────────┬──────────────────────────────────┘
+                           │ depends on
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Adapter (internal/claude/)                                 │
+│    - Claude CLI wrapper                                     │
+│    - exec.Command("claude", ...)                            │
+│    - JSON extraction, retry logic                           │
+│    - Konvertál: Claude response → Domain types              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Ellenőrzés:**
+- Domain package NEM importálja a claude package-et közvetlenül
+- Minden Claude hívás a claude.Client-en keresztül történik
+
+**FACTORY PATTERN (DP-FAC-001):**
+
+```go
+// ✅ HELYES
+client := claude.NewClient()
+
+// ❌ HIBÁS
+client := &claude.Client{SessionID: "..."}
+```
+
+---
+
 ## Definition of Done
 
 ```
@@ -167,6 +206,8 @@ Attempt 3: 8s (capped at 30s)
 ☐ isRetryableError() classifies errors correctly
 ☐ Minden fájl tartalmaz traceability kommentet
 ☐ `go build` HIBA NÉLKÜL fut
+☐ **PATTERN:** NewClient() factory használata
+☐ **PATTERN:** Domain nem importálja közvetlenül a claude package-et
 ```
 
 ---

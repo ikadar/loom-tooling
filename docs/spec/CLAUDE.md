@@ -94,6 +94,36 @@ func runAnalyze() error {
 
 ---
 
+## Kritikus Pattern Döntések
+
+**KÖTELEZŐ:** Minden kódnak követnie kell ezeket a pattern szabályokat!
+
+| Scope | Pattern | Szabály | Ellenőrzés |
+|-------|---------|---------|------------|
+| Minden aggregate | **Factory** | `New{Name}()` függvény validációval | Nincs közvetlen struct literal |
+| External service | **Adapter** | Interface a domain-ben + impl infrastructure/ alatt | Nincs közvetlen API hívás domain-ből |
+| Cross-aggregate | **Observer** | Domain Event, ne közvetlen hívás | Aggregate nem hív másik aggregate-et |
+| Több repo művelet | **Unit of Work** | Ha van, UoW pattern használata | Nincs több repo.Save() egy use case-ben UoW nélkül |
+
+### Kód komment pattern trace-hez
+
+```go
+// Implements: DP-FAC-001 (Factory Pattern)
+// See: l2/aggregate-design.md
+func NewOrder(customerID string, items []OrderItem) (*Order, error) {
+    // validation...
+}
+```
+
+### Ha pattern döntés NINCS a spec-ben
+
+1. **NE implementáld** önkényesen
+2. Kérdezd meg a usert
+3. Ha kell, ADD HOZZÁ a megfelelő spec dokumentumhoz
+4. Csak utána implementáld
+
+---
+
 ## Teszt Adat
 
 **Input (L0):**

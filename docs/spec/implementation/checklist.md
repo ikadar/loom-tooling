@@ -46,6 +46,12 @@ Ez a master checklist követi az összes implementációs fázis állapotát.
 ☐ All files have traceability comments
 ```
 
+**Pattern Check:**
+```
+☐ FACTORY: Minden domain type-hoz van New{Type}() constructor (ha van invariáns)
+☐ FACTORY: Nincs közvetlen struct literal exportált aggregate-re
+```
+
 **Phase Complete:** ☐
 
 ---
@@ -68,6 +74,13 @@ Ez a master checklist követi az összes implementációs fázis állapotát.
 ☐ DefaultRetryConfig() returns 3/2s/30s
 ☐ isRetryableError() classifies correctly
 ☐ go build succeeds
+```
+
+**Pattern Check:**
+```
+☐ ADAPTER (ACL): Claude CLI = external service, internal/claude/ = adapter layer
+☐ ADAPTER: Domain nem függ közvetlenül a claude CLI-től
+☐ FACTORY: NewClient() constructor használata
 ```
 
 **Phase Complete:** ☐
@@ -105,6 +118,13 @@ Ez a master checklist követi az összes implementációs fázis állapotát.
 ☐ cascade: orchestrates phases, state persistence
 ☐ interactive: preview (20 lines), editor selection
 ☐ go build succeeds
+```
+
+**Pattern Check:**
+```
+☐ FACADE: Cascade command = Facade a teljes derivációs workflow-hoz
+☐ CHAIN OF RESP: Cascade phases egymás után futnak, bármely megállíthatja
+☐ FACTORY: Minden result struct New*() constructorral jön létre
 ```
 
 **Phase Complete:** ☐

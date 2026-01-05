@@ -161,6 +161,30 @@ const (
 
 ---
 
+## Pattern Követelmények
+
+**FACTORY PATTERN (DP-FAC-001):**
+
+Minden aggregate/entity struct-hoz **kötelező** `New{Type}()` constructor:
+
+```go
+// ✅ HELYES - Factory pattern
+func NewAnalyzeResult(domain Domain, entities []Entity) *AnalyzeResult {
+    return &AnalyzeResult{
+        Domain:   domain,
+        Entities: entities,
+        // ... validation, defaults
+    }
+}
+
+// ❌ HIBÁS - Közvetlen struct literal
+result := &AnalyzeResult{Domain: d, Entities: e}
+```
+
+**Ellenőrzés:** Nincs közvetlen struct literal exportált aggregate-re a kódban.
+
+---
+
 ## Definition of Done
 
 ```
@@ -173,6 +197,8 @@ const (
 ☐ MaxGroupSize, MaxPreviewLines, MaxLineWidth constants definiálva
 ☐ `go build` HIBA NÉLKÜL fut (stub functions OK)
 ☐ Minden fájl tartalmaz traceability kommentet
+☐ **PATTERN:** Minden aggregate-hez van New{Type}() constructor
+☐ **PATTERN:** Nincs közvetlen struct literal exportált aggregate-re
 ```
 
 ---
