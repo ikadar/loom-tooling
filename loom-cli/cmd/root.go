@@ -18,8 +18,12 @@ func Execute() error {
 	command := os.Args[1]
 
 	switch command {
+	case "init":
+		return runInit()
 	case "analyze":
 		return runAnalyze()
+	case "analyze-v2":
+		return runAnalyzeV2()
 	case "interview":
 		return runInterview()
 	case "derive":
@@ -49,6 +53,7 @@ func printUsage() {
 	fmt.Println(`loom-cli - AI-DOP Documentation Derivation CLI
 
 Usage:
+  loom-cli init [options]        # Initialize project state tracking
   loom-cli cascade [options]     # Full derivation: L0 → L1 → L2 → L3 (one command!)
   loom-cli analyze [options]     # L0 → ambiguities
   loom-cli interview [options]   # ambiguities → decisions
@@ -61,6 +66,7 @@ Usage:
   loom-cli help
 
 Commands:
+  init       Initialize derivation state tracking (.loom directory)
   cascade    Full cascade derivation: L0 → L1 → L2 → L3 in one command
   analyze    Analyze L0 input, discover domain model, find ambiguities
   interview  Conduct iterative structured interview (one question at a time)
@@ -76,6 +82,11 @@ Derivation Flow:
   L0 (User Stories) → analyze → interview → derive → L1 (Strategic Design)
   L1 (Strategic) → derive-l2 → L2 (Tactical Design)
   L2 (Tactical) → derive-l3 → L3 (Operational Design)
+
+Init Options:
+  --project-dir <path>  Project root directory (default: current directory)
+  --force               Overwrite existing state file
+  --scan                Scan existing documents and build initial state
 
 Cascade Options (Full Derivation):
   --input-file <path>     L0 input file (user story)
