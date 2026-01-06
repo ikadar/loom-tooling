@@ -1,0 +1,76 @@
+{
+  "bounded_contexts": [
+    {
+      "id": "BC-ORDER",
+      "name": "Order Management",
+      "purpose": "Handles all order-related operations including creation, modification, and fulfillment tracking",
+      "core_entities": ["Order", "OrderItem"],
+      "aggregates": ["Order"],
+      "ubiquitous_language": {
+        "Order": "A customer's request to purchase products",
+        "OrderItem": "A single product line within an order",
+        "Fulfillment": "The process of preparing and shipping an order",
+        "Submit": "Confirm an order for processing"
+      },
+      "key_events": ["OrderCreated", "OrderSubmitted", "OrderCancelled", "OrderShipped"],
+      "external_dependencies": ["CustomerService", "PaymentService", "InventoryService"]
+    },
+    {
+      "id": "BC-CUSTOMER",
+      "name": "Customer Management",
+      "purpose": "Manages customer registration, profiles, and authentication",
+      "core_entities": ["Customer"],
+      "aggregates": ["Customer"],
+      "ubiquitous_language": {
+        "Customer": "A registered user who can place orders",
+        "Registration": "The process of creating a new customer account",
+        "Profile": "Customer's personal and contact information"
+      },
+      "key_events": ["CustomerRegistered", "CustomerUpdated", "CustomerDeactivated"],
+      "external_dependencies": ["AuthenticationService", "NotificationService"]
+    },
+    {
+      "id": "BC-CATALOG",
+      "name": "Product Catalog",
+      "purpose": "Manages product information, pricing, and availability",
+      "core_entities": ["Product", "Category"],
+      "aggregates": ["Product"],
+      "ubiquitous_language": {
+        "Product": "An item available for purchase",
+        "SKU": "Stock Keeping Unit - unique product identifier",
+        "Catalog": "The collection of all available products"
+      },
+      "key_events": ["ProductCreated", "ProductUpdated", "PriceChanged"],
+      "external_dependencies": ["InventoryService"]
+    }
+  ],
+  "context_relationships": [
+    {
+      "upstream": "BC-CUSTOMER",
+      "downstream": "BC-ORDER",
+      "pattern": "Customer-Supplier",
+      "description": "Order context consumes customer data for order association",
+      "data_flow": ["customerId", "customerName", "shippingAddress"]
+    },
+    {
+      "upstream": "BC-CATALOG",
+      "downstream": "BC-ORDER",
+      "pattern": "Customer-Supplier",
+      "description": "Order context uses product information for line items",
+      "data_flow": ["productId", "productName", "unitPrice"]
+    },
+    {
+      "upstream": "BC-ORDER",
+      "downstream": "BC-CATALOG",
+      "pattern": "Published Language",
+      "description": "Catalog receives inventory updates based on order events",
+      "data_flow": ["OrderCreated.items", "OrderCancelled.items"]
+    }
+  ],
+  "context_map_diagram": "graph LR\n    BC-CUSTOMER -->|Customer-Supplier| BC-ORDER\n    BC-CATALOG -->|Customer-Supplier| BC-ORDER\n    BC-ORDER -->|Published Language| BC-CATALOG",
+  "summary": {
+    "total_contexts": 3,
+    "total_relationships": 3,
+    "integration_patterns_used": ["Customer-Supplier", "Published Language"]
+  }
+}

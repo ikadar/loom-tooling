@@ -1,0 +1,170 @@
+{
+  "domain_model": {
+    "name": "E-Commerce Order Management",
+    "description": "Domain model for managing customer orders, products, and fulfillment",
+    "bounded_contexts": ["Order Management", "Customer Management", "Product Catalog"]
+  },
+  "entities": [
+    {
+      "id": "ENT-ORDER",
+      "name": "Order",
+      "type": "aggregate_root",
+      "purpose": "Manages the lifecycle of a customer order from creation to fulfillment",
+      "attributes": [
+        {"name": "orderId", "type": "UUID", "constraints": "NOT NULL, UNIQUE"},
+        {"name": "customerId", "type": "UUID", "constraints": "NOT NULL"},
+        {"name": "status", "type": "OrderStatus", "constraints": "NOT NULL"},
+        {"name": "totalAmount", "type": "Money", "constraints": "NOT NULL, >= 0"},
+        {"name": "createdAt", "type": "DateTime", "constraints": "NOT NULL"},
+        {"name": "updatedAt", "type": "DateTime", "constraints": "NOT NULL"}
+      ],
+      "invariants": [
+        "Order total must equal sum of line items",
+        "Order cannot be modified after being shipped",
+        "Order must have at least one line item"
+      ],
+      "operations": [
+        {
+          "name": "CreateOrder",
+          "signature": "CreateOrder(customerId: UUID, items: OrderItem[]): Order",
+          "preconditions": ["Customer exists", "All items are available"],
+          "postconditions": ["Order created with PENDING status", "Inventory reserved"]
+        },
+        {
+          "name": "AddItem",
+          "signature": "AddItem(productId: UUID, quantity: int): void",
+          "preconditions": ["Order is in DRAFT status", "Product exists", "Quantity > 0"],
+          "postconditions": ["Item added to order", "Total recalculated"]
+        },
+        {
+          "name": "SubmitOrder",
+          "signature": "SubmitOrder(): void",
+          "preconditions": ["Order has items", "Customer payment verified"],
+          "postconditions": ["Status changed to SUBMITTED", "OrderSubmitted event emitted"]
+        },
+        {
+          "name": "CancelOrder",
+          "signature": "CancelOrder(reason: string): void",
+          "preconditions": ["Order is not shipped or delivered"],
+          "postconditions": ["Status changed to CANCELLED", "Inventory released"]
+        }
+      ],
+      "events": [
+        {"name": "OrderCreated", "trigger": "CreateOrder", "payload": ["orderId", "customerId", "timestamp"]},
+        {"name": "OrderSubmitted", "trigger": "SubmitOrder", "payload": ["orderId", "totalAmount", "timestamp"]},
+        {"name": "OrderCancelled", "trigger": "CancelOrder", "payload": ["orderId", "reason", "timestamp"]}
+      ],
+      "relationships": [
+        {"target": "Customer", "type": "belongs_to", "cardinality": "many-to-one"},
+        {"target": "OrderItem", "type": "contains", "cardinality": "one-to-many"}
+      ]
+    },
+    {
+      "id": "ENT-ORDER-ITEM",
+      "name": "OrderItem",
+      "type": "entity",
+      "purpose": "Represents a single line item within an order",
+      "attributes": [
+        {"name": "lineNumber", "type": "int", "constraints": "NOT NULL"},
+        {"name": "productId", "type": "UUID", "constraints": "NOT NULL"},
+        {"name": "quantity", "type": "int", "constraints": "NOT NULL, > 0"},
+        {"name": "unitPrice", "type": "Money", "constraints": "NOT NULL"},
+        {"name": "subtotal", "type": "Money", "constraints": "NOT NULL"}
+      ],
+      "invariants": [
+        "Subtotal equals quantity times unit price",
+        "Quantity must be positive"
+      ],
+      "operations": [
+        {
+          "name": "UpdateQuantity",
+          "signature": "UpdateQuantity(newQuantity: int): void",
+          "preconditions": ["Quantity > 0", "Parent order is in DRAFT status"],
+          "postconditions": ["Quantity updated", "Subtotal recalculated"]
+        }
+      ],
+      "events": [],
+      "relationships": [
+        {"target": "Order", "type": "belongs_to", "cardinality": "many-to-one"},
+        {"target": "Product", "type": "references", "cardinality": "many-to-one"}
+      ]
+    },
+    {
+      "id": "ENT-CUSTOMER",
+      "name": "Customer",
+      "type": "aggregate_root",
+      "purpose": "Represents a customer who can place orders",
+      "attributes": [
+        {"name": "customerId", "type": "UUID", "constraints": "NOT NULL, UNIQUE"},
+        {"name": "email", "type": "Email", "constraints": "NOT NULL, UNIQUE"},
+        {"name": "name", "type": "string", "constraints": "NOT NULL"},
+        {"name": "shippingAddress", "type": "Address", "constraints": ""},
+        {"name": "status", "type": "CustomerStatus", "constraints": "NOT NULL"}
+      ],
+      "invariants": [
+        "Email must be unique across all customers",
+        "Customer must have valid email format"
+      ],
+      "operations": [
+        {
+          "name": "Register",
+          "signature": "Register(email: Email, name: string): Customer",
+          "preconditions": ["Email is unique"],
+          "postconditions": ["Customer created with ACTIVE status"]
+        },
+        {
+          "name": "UpdateAddress",
+          "signature": "UpdateAddress(address: Address): void",
+          "preconditions": ["Customer is active"],
+          "postconditions": ["Address updated"]
+        }
+      ],
+      "events": [
+        {"name": "CustomerRegistered", "trigger": "Register", "payload": ["customerId", "email", "timestamp"]}
+      ],
+      "relationships": [
+        {"target": "Order", "type": "has_many", "cardinality": "one-to-many"}
+      ]
+    }
+  ],
+  "value_objects": [
+    {
+      "id": "VO-MONEY",
+      "name": "Money",
+      "purpose": "Represents a monetary value with currency",
+      "attributes": [
+        {"name": "amount", "type": "decimal", "constraints": ">= 0"},
+        {"name": "currency", "type": "string", "constraints": "ISO 4217"}
+      ],
+      "operations": ["add", "subtract", "multiply", "equals"]
+    },
+    {
+      "id": "VO-ADDRESS",
+      "name": "Address",
+      "purpose": "Represents a physical shipping address",
+      "attributes": [
+        {"name": "street", "type": "string", "constraints": "NOT NULL"},
+        {"name": "city", "type": "string", "constraints": "NOT NULL"},
+        {"name": "postalCode", "type": "string", "constraints": "NOT NULL"},
+        {"name": "country", "type": "string", "constraints": "ISO 3166-1"}
+      ],
+      "operations": ["format", "validate"]
+    },
+    {
+      "id": "VO-EMAIL",
+      "name": "Email",
+      "purpose": "Represents a validated email address",
+      "attributes": [
+        {"name": "value", "type": "string", "constraints": "Valid email format"}
+      ],
+      "operations": ["validate", "normalize"]
+    }
+  ],
+  "summary": {
+    "aggregate_roots": 2,
+    "entities": 3,
+    "value_objects": 3,
+    "total_operations": 8,
+    "total_events": 4
+  }
+}

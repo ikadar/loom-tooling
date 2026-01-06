@@ -1,0 +1,81 @@
+{
+  "entities": [
+    {
+      "name": "Order",
+      "mentioned_attributes": ["orderId", "status", "totalAmount", "createdAt"],
+      "mentioned_operations": ["create", "submit", "cancel", "addItem"],
+      "mentioned_states": ["DRAFT", "PENDING", "SUBMITTED", "SHIPPED", "DELIVERED", "CANCELLED"]
+    },
+    {
+      "name": "OrderItem",
+      "mentioned_attributes": ["productId", "quantity", "unitPrice", "subtotal"],
+      "mentioned_operations": ["add", "update", "remove"],
+      "mentioned_states": []
+    },
+    {
+      "name": "Customer",
+      "mentioned_attributes": ["customerId", "email", "name", "address"],
+      "mentioned_operations": ["register", "updateProfile", "deactivate"],
+      "mentioned_states": ["ACTIVE", "INACTIVE", "SUSPENDED"]
+    },
+    {
+      "name": "Product",
+      "mentioned_attributes": ["productId", "name", "price", "stock"],
+      "mentioned_operations": ["create", "updatePrice", "checkAvailability"],
+      "mentioned_states": ["AVAILABLE", "OUT_OF_STOCK", "DISCONTINUED"]
+    }
+  ],
+  "operations": [
+    {
+      "name": "CreateOrder",
+      "actor": "Customer",
+      "trigger": "User action",
+      "target": "Order",
+      "mentioned_inputs": ["customerId", "items"],
+      "mentioned_rules": ["Customer must exist", "Items must be available"]
+    },
+    {
+      "name": "SubmitOrder",
+      "actor": "Customer",
+      "trigger": "User action",
+      "target": "Order",
+      "mentioned_inputs": ["orderId"],
+      "mentioned_rules": ["Order must have items", "Payment must be verified"]
+    },
+    {
+      "name": "CancelOrder",
+      "actor": "Customer or Admin",
+      "trigger": "User action",
+      "target": "Order",
+      "mentioned_inputs": ["orderId", "reason"],
+      "mentioned_rules": ["Order not shipped", "Within cancellation window"]
+    },
+    {
+      "name": "RegisterCustomer",
+      "actor": "Visitor",
+      "trigger": "User action",
+      "target": "Customer",
+      "mentioned_inputs": ["email", "name", "password"],
+      "mentioned_rules": ["Email must be unique", "Email format valid"]
+    }
+  ],
+  "relationships": [
+    {"from": "Order", "to": "Customer", "type": "belongs_to", "cardinality": "many-to-one"},
+    {"from": "Order", "to": "OrderItem", "type": "contains", "cardinality": "one-to-many"},
+    {"from": "OrderItem", "to": "Product", "type": "references", "cardinality": "many-to-one"},
+    {"from": "Customer", "to": "Order", "type": "has_many", "cardinality": "one-to-many"}
+  ],
+  "business_rules": [
+    "Order total must equal sum of item subtotals",
+    "Orders can only be modified in DRAFT status",
+    "Customer email must be unique",
+    "Minimum order amount required",
+    "Inventory must be reserved on order creation"
+  ],
+  "ui_mentions": [
+    "Shopping cart page",
+    "Order summary view",
+    "Customer registration form",
+    "Order history list"
+  ]
+}

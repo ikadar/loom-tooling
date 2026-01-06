@@ -1,0 +1,54 @@
+{
+  "ambiguities": [
+    {
+      "id": "AMB-DEF-001",
+      "category": "missing_definition",
+      "subject": "Order",
+      "question": "What is the minimum order amount?",
+      "severity": "critical",
+      "suggested_answer": "$10.00 USD",
+      "options": ["$5.00", "$10.00", "$25.00", "No minimum"],
+      "checklist_item": "Define minimum order amount"
+    },
+    {
+      "id": "AMB-DEF-002",
+      "category": "missing_definition",
+      "subject": "Order",
+      "question": "What is the maximum time window for order cancellation?",
+      "severity": "important",
+      "suggested_answer": "24 hours after submission",
+      "options": ["1 hour", "24 hours", "48 hours", "Until shipped"],
+      "checklist_item": "Define cancellation window"
+    },
+    {
+      "id": "AMB-DEF-003",
+      "category": "missing_definition",
+      "subject": "Order",
+      "question": "What is the maximum number of items per order?",
+      "severity": "minor",
+      "suggested_answer": "100 items",
+      "options": ["50", "100", "200", "Unlimited"],
+      "checklist_item": "Define maximum items per order"
+    },
+    {
+      "id": "AMB-BRG-001",
+      "category": "business_rule_gap",
+      "subject": "Order",
+      "question": "Can orders be modified after submission?",
+      "severity": "critical",
+      "suggested_answer": "No, orders cannot be modified after submission",
+      "options": ["Yes, until payment", "Yes, until shipped", "No, never after submission"],
+      "checklist_item": "Clarify order modification rules"
+    },
+    {
+      "id": "AMB-REL-001",
+      "category": "unclear_relationship",
+      "subject": "Order-Customer",
+      "question": "Can a guest user (without account) place an order?",
+      "severity": "important",
+      "suggested_answer": "No, customers must register first",
+      "options": ["Yes, with email only", "No, must register", "Yes, with optional registration"],
+      "checklist_item": "Define guest checkout policy"
+    }
+  ]
+}

@@ -1,0 +1,123 @@
+{
+  "acceptance_criteria": [
+    {
+      "id": "AC-ORD-001",
+      "title": "Create Order",
+      "given": "A registered customer with valid payment method",
+      "when": "The customer creates a new order with at least one item",
+      "then": "The system creates an order with PENDING status and reserves inventory for all items",
+      "error_cases": [
+        "ERROR when customer does not exist → CUSTOMER_NOT_FOUND",
+        "ERROR when no items provided → EMPTY_ORDER_NOT_ALLOWED",
+        "ERROR when item quantity exceeds available stock → INSUFFICIENT_STOCK"
+      ],
+      "source_refs": ["US-001", "US-002"],
+      "decision_refs": ["AMB-DEF-001"]
+    },
+    {
+      "id": "AC-ORD-002",
+      "title": "Add Item to Order",
+      "given": "An existing order in DRAFT status",
+      "when": "The customer adds a product with specified quantity",
+      "then": "The item is added to the order and the total is recalculated",
+      "error_cases": [
+        "ERROR when order is not in DRAFT status → ORDER_NOT_MODIFIABLE",
+        "ERROR when product does not exist → PRODUCT_NOT_FOUND",
+        "ERROR when quantity is less than 1 → INVALID_QUANTITY"
+      ],
+      "source_refs": ["US-001"],
+      "decision_refs": []
+    },
+    {
+      "id": "AC-ORD-003",
+      "title": "Submit Order",
+      "given": "An order with at least one item and verified payment",
+      "when": "The customer submits the order",
+      "then": "The order status changes to SUBMITTED and an OrderSubmitted event is emitted",
+      "error_cases": [
+        "ERROR when order has no items → EMPTY_ORDER_NOT_ALLOWED",
+        "ERROR when payment verification fails → PAYMENT_FAILED"
+      ],
+      "source_refs": ["US-003"],
+      "decision_refs": ["AMB-BRG-001"]
+    },
+    {
+      "id": "AC-ORD-004",
+      "title": "Cancel Order",
+      "given": "An order that has not been shipped",
+      "when": "The customer or admin cancels the order with a reason",
+      "then": "The order status changes to CANCELLED and inventory is released",
+      "error_cases": [
+        "ERROR when order is already shipped → ORDER_ALREADY_SHIPPED",
+        "ERROR when order is already cancelled → ORDER_ALREADY_CANCELLED"
+      ],
+      "source_refs": ["US-004"],
+      "decision_refs": ["AMB-DEF-002"]
+    },
+    {
+      "id": "AC-CUST-001",
+      "title": "Register Customer",
+      "given": "A visitor with a unique email address",
+      "when": "The visitor registers with email, name, and password",
+      "then": "A new customer account is created with ACTIVE status",
+      "error_cases": [
+        "ERROR when email already exists → EMAIL_ALREADY_REGISTERED",
+        "ERROR when email format is invalid → INVALID_EMAIL_FORMAT"
+      ],
+      "source_refs": ["US-010"],
+      "decision_refs": []
+    }
+  ],
+  "business_rules": [
+    {
+      "id": "BR-ORD-001",
+      "title": "Order Total Calculation",
+      "rule": "Order total must equal the sum of all line item subtotals plus applicable taxes and shipping",
+      "invariant": "total = sum(items.subtotal) + taxes + shipping",
+      "enforcement": "Calculated on item add/remove/update",
+      "error_code": "ORDER_TOTAL_MISMATCH",
+      "source_refs": ["US-001", "US-002"],
+      "decision_refs": []
+    },
+    {
+      "id": "BR-ORD-002",
+      "title": "Order Modification Window",
+      "rule": "Orders can only be modified while in DRAFT or PENDING status",
+      "invariant": "order.status IN (DRAFT, PENDING) for modifications",
+      "enforcement": "Checked before any order modification operation",
+      "error_code": "ORDER_NOT_MODIFIABLE",
+      "source_refs": ["US-001"],
+      "decision_refs": ["AMB-BRG-001"]
+    },
+    {
+      "id": "BR-ORD-003",
+      "title": "Minimum Order Amount",
+      "rule": "Orders must have a minimum total amount of $10.00",
+      "invariant": "order.total >= 10.00 USD",
+      "enforcement": "Checked on order submission",
+      "error_code": "ORDER_BELOW_MINIMUM",
+      "source_refs": [],
+      "decision_refs": ["AMB-DEF-001"]
+    },
+    {
+      "id": "BR-ORD-004",
+      "title": "Maximum Items Per Order",
+      "rule": "A single order cannot contain more than 100 line items",
+      "invariant": "count(order.items) <= 100",
+      "enforcement": "Checked on item addition",
+      "error_code": "MAX_ITEMS_EXCEEDED",
+      "source_refs": [],
+      "decision_refs": ["AMB-DEF-003"]
+    },
+    {
+      "id": "BR-CUST-001",
+      "title": "Unique Customer Email",
+      "rule": "Each customer must have a unique email address in the system",
+      "invariant": "email is unique across all customers",
+      "enforcement": "Checked on registration and email update",
+      "error_code": "EMAIL_ALREADY_REGISTERED",
+      "source_refs": ["US-010"],
+      "decision_refs": []
+    }
+  ]
+}

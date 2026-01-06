@@ -354,7 +354,7 @@ func runDeriveL2() error {
 		// Warn about existing checkpoint
 		fmt.Fprintf(os.Stderr, "\n⚠️  Existing checkpoint found: %s\n", cpMgr.GetFilePath())
 		fmt.Fprintln(os.Stderr, "   Use --resume to continue from checkpoint, or delete it to start fresh.")
-		fmt.Fprintln(os.Stderr, "   Starting fresh (ignoring checkpoint)...\n")
+		fmt.Fprintln(os.Stderr, "   Starting fresh (ignoring checkpoint)...")
 	}
 
 	// Read L1 documents
