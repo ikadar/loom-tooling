@@ -38,6 +38,12 @@ func Execute() error {
 		return runSyncLinks()
 	case "cascade":
 		return runCascade()
+	case "status":
+		return runStatus()
+	case "rederive":
+		return runRederive()
+	case "migrate":
+		return runMigrate()
 	case "version":
 		fmt.Printf("loom-cli v%s\n", Version)
 		return nil
@@ -60,6 +66,9 @@ Usage:
   loom-cli derive [options]      # L0+decisions → L1 (Strategic Design)
   loom-cli derive-l2 [options]   # L1 → L2 (Tactical Design)
   loom-cli derive-l3 [options]   # L2 → L3 (Operational Design)
+  loom-cli status [options]      # Show derivation status (stale artifacts)
+  loom-cli rederive [options]    # Re-derive stale artifacts
+  loom-cli migrate [options]     # Migrate existing project to LOOM format
   loom-cli validate [options]    # Validate generated documents
   loom-cli sync-links [options]  # Fix missing bidirectional links
   loom-cli version
@@ -73,6 +82,9 @@ Commands:
   derive     Derive L1 Strategic Design (Domain Model, Bounded Contexts, AC, BR)
   derive-l2  Derive L2 Tactical Design (Tech Specs, Contracts, Aggregates, Sequences)
   derive-l3  Derive L3 Operational Design (Test Cases, API Spec, Skeletons, Events)
+  status     Show derivation status and stale artifacts
+  rederive   Re-derive stale artifacts (update from upstream changes)
+  migrate    Migrate existing project to LOOM-marked format
   validate   Validate documents (structure, traceability, completeness, TDAI)
   sync-links Add missing bidirectional references between documents
   version    Show version information
@@ -128,6 +140,30 @@ Derive-L2 Options (L1 → L2):
 Derive-L3 Options (L2 → L3):
   --input-dir <path>      Directory containing L2 docs (test-cases.md, tech-specs.md)
   --output-dir <path>     Directory for generated L3 documents (required)
+
+Status Options:
+  --project-dir <path>    Project root directory (default: current directory)
+  --verbose               Show detailed artifact information
+  --layer <l0|l1|l2|l3>   Filter by layer
+  --format <text|json>    Output format (default: text)
+  --plan                  Show derivation plan for stale artifacts
+
+Rederive Options:
+  --project-dir <path>    Project root directory (default: current directory)
+  --layer <l1|l2|l3>      Only derive artifacts in this layer
+  --all                   Derive all stale artifacts
+  --dry-run               Preview without making changes
+  --verbose               Show detailed output
+  --preserve-manual       Keep manual sections during re-derivation (default: true)
+  --interactive           Confirm each derivation
+  <artifact-ids>          Specific artifact IDs to derive (positional args)
+
+Migrate Options:
+  --project-dir <path>    Project root directory (default: current directory)
+  --dry-run               Preview without making changes
+  --backup-dir <path>     Directory for backups (default: .loom/backups)
+  --verbose               Show detailed output
+  --force                 Force migration even if markers exist
 
 Validate Options:
   --input-dir <path>      Directory containing documents to validate (required)
